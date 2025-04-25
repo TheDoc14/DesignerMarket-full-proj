@@ -1,0 +1,63 @@
+# כלליים
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.tsbuildinfo
+*.swp
+
+# IDEs
+.vscode/
+.idea/
+
+# לוגים
+logs/
+*.log
+
+# Babel
+.babel-cache/
+
+# בדיקות
+coverage/
+
+# Parcel, TurboRepo, Next.js
+.cache/
+.next/
+.turbo/
+.parcel-cache/
+
+# ספציפיים ל־frontend ו־backend
+/front-end/node_modules/
+/front-end/build/
+/front-end/dist/
+/front-end/.env
+/front-end/.next
+/front-end/.turbo
+/front-end/.parcel-cache
+
+/back-end/node_modules/
+/back-end/build/
+/back-end/dist/
+/back-end/.env
+/back-end/.next
+/back-end/.turbo
+/back-end/.parcel-cache
+
+# Storybook
+storybook-static/
+
+# Docker
+docker-compose.override.yml
+*.local.yml
+
+# מסדי נתונים מקומיים
+*.sqlite
+*.db
+*.realm
