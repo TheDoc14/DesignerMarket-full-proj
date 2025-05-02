@@ -1,4 +1,3 @@
-// src/components/styled/StyledForm.jsx
 import styled from 'styled-components';
 
 const StyledForm = styled.form`

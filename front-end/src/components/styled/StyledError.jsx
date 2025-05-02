@@ -1,4 +1,3 @@
-// src/components/styled/StyledError.jsx
 import styled from 'styled-components';
 
 const StyledError = styled.p`

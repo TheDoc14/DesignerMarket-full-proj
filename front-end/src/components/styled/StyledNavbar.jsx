@@ -1,4 +1,3 @@
-// src/components/StyledNavbar.jsx
 import styled from 'styled-components';
 
 export const NavbarContainer = styled.nav`

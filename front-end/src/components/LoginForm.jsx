@@ -1,5 +1,6 @@
-// src/components/LoginForm.jsx
 import React, { useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import StyledInput from './styled/StyledInput';
 import StyledButton from './styled/StyledButton';
 import StyledForm from './styled/StyledForm';
@@ -13,21 +14,44 @@ function LoginForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleSubmit = (e) => {
+  const navigate = useNavigate();
+
+  const handleLogin = async (e) => {
     e.preventDefault();
 
     if (!email || !password) {
-      setError('Please fill in all fields.');
+      setError('נא למלא את כל השדות');
       setSuccess('');
-    } else {
+      return;
+    }
+
+    try {
+      const res = await axios.post('http://localhost:5000/api/auth/login', {
+        email,
+        password
+      });
+
+      const { token, user } = res.data;
+
+      // שמירת הטוקן והמשתמש ב-localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
       setError('');
-      setSuccess('Login successful!');
-      console.log('Login:', { email, password });
+      setSuccess(`שלום ${user.username}! התחברת בהצלחה 😊`);
+
+      setTimeout(() => {
+        navigate('/profile');
+      }, 2000);
+
+    } catch (err) {
+      setSuccess('');
+      setError(err.response?.data?.message || 'שגיאה בהתחברות');
     }
   };
 
   return (
-    <StyledForm onSubmit={handleSubmit}>
+    <StyledForm onSubmit={handleLogin}>
       <h2>Login</h2>
       {error && <StyledError>{error}</StyledError>}
       {success && <StyledSuccess>{success}</StyledSuccess>}

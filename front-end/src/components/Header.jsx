@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import React from 'react';
 import StyledHeader from './styled/StyledHeader';
 

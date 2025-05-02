@@ -1,4 +1,3 @@
-// src/components/styled/StyledFooter.jsx
 import styled from 'styled-components';
 
 const StyledFooter = styled.footer`

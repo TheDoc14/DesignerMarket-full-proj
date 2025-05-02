@@ -1,4 +1,3 @@
-// src/components/StyledHeader.jsx
 import styled from 'styled-components';
 
 const StyledHeader = styled.header`
