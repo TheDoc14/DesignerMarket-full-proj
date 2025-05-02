@@ -1,6 +1,8 @@
+// back-end/models/Project.model.js
+
 const mongoose = require('mongoose');
 
-// סכמה של קובץ בודד
+// סכמה לייצוג קובץ בודד בפרויקט
 const fileSchema = new mongoose.Schema({
   filename: {
     type: String,
@@ -17,22 +19,25 @@ const fileSchema = new mongoose.Schema({
   }
 }, { _id: true });
 
-// סכמה של פרויקט
+// סכמה מרכזית עבור פרויקט
 const projectSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Project title is required'],
     minlength: 3,
-    maxlength: 100,
+    maxlength: 100
   },
   description: {
     type: String,
     required: [true, 'Project description is required'],
-    minlength: 10,
+    minlength: 10
   },
   files: {
     type: [fileSchema],
-    validate: [arrayLimit, '{PATH} exceeds the limit of 10 files']
+    validate: {
+      validator: arr => arr.length <= 10,
+      message: 'Max 10 files allowed'
+    }
   },
   mainImageId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -41,27 +46,25 @@ const projectSchema = new mongoose.Schema({
   price: {
     type: Number,
     required: [true, 'Price is required'],
-    min: 0,
+    min: 0
   },
   category: {
     type: String,
-    enum: ['product', 'graphic', 'architecture', 'fashion', 'other'],
-    default: 'other',
+    enum: ['product','graphic','architecture','fashion','other'],
+    default: 'other'
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+    required: [true, 'Creator is required']
   },
   isSold: {
     type: Boolean,
-    default: false,
+    default: false
   }
 }, { timestamps: true });
 
-// פונקציה שמגבילה עד 10 קבצים
-function arrayLimit(val) {
-  return val.length <= 10;
-}
-
-module.exports = mongoose.model('Project', projectSchema);
+// אם כבר קיים מודל בשם 'Project' – לא לרשום מחדש
+module.exports = mongoose.models.Project
+  ? mongoose.models.Project
+  : mongoose.model('Project', projectSchema);
