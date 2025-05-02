@@ -3,12 +3,16 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes=require('./routes/auth.routes')
+const profileRoutes = require('./routes/profile.routes');
+const projectsRoutes =require('./routes/project.routes')
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth',authRoutes);
+app.use('/api/profile', profileRoutes);
+app.use('/api/projects',projectsRoutes)
+
 
 
 async function startServer() {
