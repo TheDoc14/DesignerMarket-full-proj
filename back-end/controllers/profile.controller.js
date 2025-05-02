@@ -1,4 +1,4 @@
-const User = require('../models/User.model');
+const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
 
 // שליפת פרופיל משתמש מחובר
