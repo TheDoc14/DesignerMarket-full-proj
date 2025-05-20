@@ -31,6 +31,14 @@ const userSchema = new mongoose.Schema({
   profileImage: {
     type: String,
     default: ''
+  },
+  // שדות לאימות מייל
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verificationToken: {
+    type: String
   }
 }, { timestamps: true });
 

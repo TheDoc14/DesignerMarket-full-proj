@@ -1,12 +1,15 @@
 const express = require('express');
-const { registerUser, loginUser } = require('../controllers/auth.controller');
-
 const router = express.Router();
 
-// רישום משתמש
+const { registerUser, verifyEmail, loginUser } = require('../controllers/auth.controller');
+
+// Registration – יוצר משתמש ושולח מייל אימות
 router.post('/register', registerUser);
 
-// התחברות משתמש
+// Email Verification – מהקישור שנשלח למייל
+router.get('/verify-email', verifyEmail);
+
+// Login – מתבצע רק לאחר אימות המייל
 router.post('/login', loginUser);
 
 module.exports = router;
