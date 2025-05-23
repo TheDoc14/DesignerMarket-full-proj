@@ -1,27 +1,43 @@
-import React from 'react';
+// src/App.jsx
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import GlobalStyles from './styles/GlobalStyles';
 import ProfilePage from './pages/ProfilePage';
+import EmailVerificationNotice from './pages/EmailVerificationNotice';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import GlobalStyles from './styles/GlobalStyles';
 
-const App = () => {
+function App() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const savedUser =
+      JSON.parse(localStorage.getItem('user')) ||
+      JSON.parse(sessionStorage.getItem('user'));
+
+    if (savedUser) {
+      setUser(savedUser);
+    }
+  }, []);
+
   return (
     <Router>
-      <GlobalStyles/>
-      <Header />
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-
-      </Routes>
+      <GlobalStyles />
+      <Navbar user={user} setUser={setUser} />
+      <main>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage setUser={setUser} />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/email-verification-notice" element={<EmailVerificationNotice />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/profile" element={<ProfilePage user={user} />} />
+        </Routes>
+      </main>
       <Footer />
     </Router>
   );
