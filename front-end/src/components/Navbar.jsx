@@ -1,19 +1,51 @@
-import React from 'react';
+// src/components/Navbar.jsx
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { NavbarContainer, NavList, NavItem, NavLink } from './styled/StyledNavbar';
+import {
+  NavbarContainer,
+  NavList,
+  NavItem,
+  NavLink,
+  ProfileWrapper
+} from './styled/StyledNavbar';
+import { ProfileImage } from './styled/StyledProfileMenu';
+import ProfileMenu from './ProfileMenu';
 
-function Navbar() {
+function Navbar({ user, setUser }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  const toggleMenu = () => {
+    setMenuOpen((prev) => !prev);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <NavbarContainer>
       <NavList>
         <NavItem>
           <NavLink as={Link} to="/">Home</NavLink>
         </NavItem>
-        <NavItem>
-          <NavLink as={Link} to="/login">Login</NavLink>
-        </NavItem>
-        <NavItem>
-          <NavLink as={Link} to="/register">Register</NavLink>
+
+        <NavItem ref={menuRef} style={{ position: 'relative' }}>
+          <ProfileWrapper onClick={toggleMenu} style={{ position: 'relative' }}>
+            <ProfileImage
+              src={user?.profileImage && user.profileImage.trim() !== ''
+                ? user.profileImage
+                : '/images/defaultAvatar.png'}
+              alt="Profile"
+            />
+          </ProfileWrapper>
+          {menuOpen && <ProfileMenu user={user} setUser={setUser} />}
         </NavItem>
       </NavList>
     </NavbarContainer>

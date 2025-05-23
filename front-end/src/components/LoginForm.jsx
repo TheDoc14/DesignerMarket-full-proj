@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import StyledForm from './styled/StyledForm';
 import StyledInput from './styled/StyledInput';
 import StyledButton from './styled/StyledButton';
-import StyledForm from './styled/StyledForm';
 import StyledError from './styled/StyledError';
 import StyledSuccess from './styled/StyledSuccess';
 import { FaEnvelope, FaLock } from 'react-icons/fa';
 
-function LoginForm() {
+function LoginForm({ setUser }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -21,7 +22,6 @@ function LoginForm() {
 
     if (!email || !password) {
       setError('נא למלא את כל השדות');
-      setSuccess('');
       return;
     }
 
@@ -33,26 +33,47 @@ function LoginForm() {
 
       const { token, user } = res.data;
 
-      // שמירת הטוקן והמשתמש ב-localStorage
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      if (!user.isVerified) {
+        setError('החשבון שלך לא אומת. בדוק את האימייל שלך.');
+        return;
+      }
+
+      // שמירת המידע בהתאם ל"זכור אותי"
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('token', token);
+      storage.setItem('user', JSON.stringify(user));
+      setUser(user);
 
       setError('');
-      setSuccess(`שלום ${user.username}! התחברת בהצלחה 😊`);
+      setSuccess(`שלום ${user.username}, התחברת בהצלחה 😊`);
 
       setTimeout(() => {
         navigate('/profile');
-      }, 2000);
+      }, 2500);
 
     } catch (err) {
       setSuccess('');
-      setError(err.response?.data?.message || 'שגיאה בהתחברות');
+
+      const serverMessage =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.response?.data?.errors?.[0]?.msg;
+
+      if (serverMessage) {
+        setError(serverMessage);
+      } else if (err.response?.status === 403) {
+        setError('האימייל שלך לא אומת. בדוק את תיבת הדואר שלך.');
+      } else if (err.response?.status === 400) {
+        setError('אימייל או סיסמה שגויים');
+      } else {
+        setError('שגיאה בהתחברות');
+      }
     }
   };
 
   return (
     <StyledForm onSubmit={handleLogin}>
-      <h2>Login</h2>
+      <h2>התחברות</h2>
       {error && <StyledError>{error}</StyledError>}
       {success && <StyledSuccess>{success}</StyledSuccess>}
 
@@ -60,7 +81,7 @@ function LoginForm() {
         <StyledInput.IconWrapper><FaEnvelope /></StyledInput.IconWrapper>
         <StyledInput.Input
           type="email"
-          placeholder="Email"
+          placeholder="אימייל"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -70,13 +91,30 @@ function LoginForm() {
         <StyledInput.IconWrapper><FaLock /></StyledInput.IconWrapper>
         <StyledInput.Input
           type="password"
-          placeholder="Password"
+          placeholder="סיסמה"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </StyledInput.InputWrapper>
 
-      <StyledButton type="submit">Login</StyledButton>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        marginBottom: '10px'
+      }}>
+        <label style={{ fontSize: '0.9rem', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            style={{ marginRight: '5px' }}
+          />
+          זכור אותי
+        </label>
+      </div>
+
+      <StyledButton type="submit">התחבר</StyledButton>
     </StyledForm>
   );
 }
