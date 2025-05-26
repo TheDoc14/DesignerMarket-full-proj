@@ -29,6 +29,7 @@ const registerUser = async (req, res) => {
 
     // טוקן אימות מייל
     const verificationToken = generateVerificationToken();
+    
 
     const user = new User({
       username,
@@ -64,7 +65,7 @@ const verifyEmail = async (req, res) => {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
     user.isVerified = true;
-    user.verificationToken = undefined;
+    user.verificationToken = '';
     await user.save();
     res.json({ message: 'Email verified successfully' });
   } catch (error) {
