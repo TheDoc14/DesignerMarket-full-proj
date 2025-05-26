@@ -1,32 +1,51 @@
+// middlewares/multer.middleware.js
 const multer = require('multer');
-const path  = require('path');
+const path = require('path');
+const fs = require('fs');
 
-// הגדרת אחסון הקבצים בתיקייה uploads/
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    // מוסיף חותמת זמן לשם הקובץ המקורי למניעת התנגשויות
-    cb(null, `${Date.now()}-${file.originalname}`);
+// סוגי קבצים מותרים
+const allowed = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|ppt|pptx/;
+
+// פונקציית יצירת multer לפי תיקייה וגבול גודל
+const createMulter = (targetFolder) => {
+  const fullPath = path.join('uploads', targetFolder);
+
+  // יצירת תיקייה אם לא קיימת
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
   }
-});
 
-// פילטר לסוגי קבצים מותרים בלבד
-const fileFilter = (req, file, cb) => {
-  const allowed = /jpeg|jpg|png|gif|mp4|avi|mov|pdf/;
-  const extOk   = allowed.test(path.extname(file.originalname).toLowerCase());
-  const mimeOk  = allowed.test(file.mimetype);
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, fullPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueName = `${Date.now()}-${file.originalname}`;
+      cb(null, uniqueName);
+    }
+  });
 
-  if (extOk && mimeOk) {
-    cb(null, true);
-  } else {
-    cb(new Error('Unsupported file type'), false);
-  }
+  const fileFilter = (req, file, cb) => {
+    const extOk = allowed.test(path.extname(file.originalname).toLowerCase());
+    const mimeOk = allowed.test(file.mimetype);
+    if (extOk && mimeOk) {
+      cb(null, true);
+    } else {
+      cb(new Error('Unsupported file type'), false);
+    }
+  };
+
+  return multer({
+    storage,
+    fileFilter,
+    limits: {
+      fileSize: targetFolder === 'projects' ? 100 * 1024 * 1024 : 20 * 1024 * 1024 // פרויקטים: 100MB, השאר: 20MB
+    }
+  });
 };
 
-module.exports = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 20 * 1024 * 1024 } // עד 20MB לכל קובץ
-});
+module.exports = {
+  uploadApproval: createMulter('approvalDocuments'),
+  uploadProject: createMulter('projects'),
+  uploadProfile: createMulter('profileImages')
+};

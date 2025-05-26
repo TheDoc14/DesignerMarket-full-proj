@@ -23,6 +23,17 @@ const userSchema = new mongoose.Schema({
     enum: ['student', 'designer', 'customer', 'admin'],
     default: 'customer',
   },
+  isApproved: {
+    type: Boolean,
+    default: function () {
+      // לקוחות לא צריכים אישור, השאר כן
+      return this.role === 'customer';
+    }
+  },
+  approvalDocument: {
+    type: String,
+    default: '' // מיקום הקובץ של תעודת האימות (למשל תמונה)
+  },
   bio: {
     type: String,
     maxlength: 500,
@@ -32,7 +43,6 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
-  // שדות לאימות מייל
   isVerified: {
     type: Boolean,
     default: false
