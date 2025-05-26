@@ -8,29 +8,41 @@ const registerUser = async (req, res) => {
   try {
     const { username, email, password, role } = req.body;
 
-    // 1. בדיקה אם המשתמש קיים
+    // בדיקה אם המשתמש קיים
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
-    // 2. הצפנת סיסמה
+    // בדיקת תפקיד – אם סטודנט/מעצב חובה קובץ
+    let approvalPath = '';
+    if ((role === 'student' || role === 'designer')) {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Approval document is required for this role' });
+      }
+      approvalPath = req.file.path;
+    }
+
+    // הצפנת סיסמה
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 3. יצירת טוקן אימות ושמירת המשתמש
+    // טוקן אימות מייל
     const verificationToken = generateVerificationToken();
+
     const user = new User({
       username,
       email,
       password: hashedPassword,
       role,
       isVerified: false,
-      verificationToken
+      isApproved: role === 'customer', // אם זה לקוח – מאושר אוטומטית
+      verificationToken,
+      approvalDocument: approvalPath
     });
+
     await user.save();
 
-    // 4. שליחת מייל אימות
     await sendVerificationEmail(user.email, verificationToken);
 
     res.status(201).json({
@@ -42,6 +54,7 @@ const registerUser = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 const verifyEmail = async (req, res) => {
   try {
@@ -56,6 +69,35 @@ const verifyEmail = async (req, res) => {
     res.json({ message: 'Email verified successfully' });
   } catch (error) {
     console.error('verifyEmail error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const resendVerificationEmail = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ error: 'User is already verified' });
+    }
+
+    // צור טוקן חדש ושלח מחדש
+    const newToken = generateVerificationToken();
+    user.verificationToken = newToken;
+    await user.save();
+
+    await sendVerificationEmail(user.email, newToken);
+
+    res.status(200).json({ message: 'Verification email resent successfully' });
+
+  } catch (error) {
+    console.error('resendVerificationEmail error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -75,13 +117,18 @@ const loginUser = async (req, res) => {
       return res.status(403).json({ error: 'Please verify your email before logging in' });
     }
 
-    // 3. השוואת סיסמה
+    // 3. בדוק האם המשתמש מאושר אם התפקיד דורש זאת
+    if ((user.role === 'student' || user.role === 'designer') && !user.isApproved) {
+      return res.status(403).json({ error: 'Your account is pending admin approval' });
+    }
+
+    // 4. השוואת סיסמה
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // 4. יצירת JWT
+    // 5. יצירת JWT
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -91,11 +138,12 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       token,
       user: {
-        id:       user._id,
+        id: user._id,
         username: user.username,
-        email:    user.email,
-        role:     user.role,
-        isVerified:  user.isVerified,
+        email: user.email,
+        role: user.role,
+        isVerified: user.isVerified,
+        isApproved: user.isApproved
       }
     });
 
@@ -105,4 +153,4 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, verifyEmail, loginUser };
+module.exports = { registerUser, verifyEmail, resendVerificationEmail, loginUser };
