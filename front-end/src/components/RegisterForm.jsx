@@ -6,15 +6,13 @@ import StyledButton from "./styled/StyledButton";
 import StyledForm from "./styled/StyledForm";
 import StyledError from "./styled/StyledError";
 import StyledSuccess from "./styled/StyledSuccess";
-import { FaUser, FaEnvelope, FaLock, FaInfoCircle } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock,} from "react-icons/fa";
 
 function RegisterForm() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("customer");
-  const [bio, setBio] = useState("");
-  const [charCount, setCharCount] = useState(0);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
@@ -29,7 +27,7 @@ function RegisterForm() {
     }
 
     try {
-      const payload = { username, email, password, role, bio };
+      const payload = { username, email, password, role};
       const res = await axios.post("http://localhost:5000/api/auth/register", payload, {
         headers: { "Content-Type": "application/json" },
       });
@@ -103,25 +101,6 @@ function RegisterForm() {
         </StyledInput.Select>
       </StyledInput.InputWrapper>
 
-      <StyledInput.InputWrapper>
-        <StyledInput.IconWrapper>
-          <FaInfoCircle />
-        </StyledInput.IconWrapper>
-        <StyledInput.Textarea
-          placeholder="Short bio (optional)"
-          value={bio}
-          onChange={(e) => {
-            if (e.target.value.length <= 500) {
-              setBio(e.target.value);
-              setCharCount(e.target.value.length);
-            }
-          }}
-          rows={3}
-        />
-        <div style={{ textAlign: "right", fontSize: "0.8rem", color: "#666" }}>
-          {charCount}/500
-        </div>
-      </StyledInput.InputWrapper>
 
       <StyledButton type="submit">Register</StyledButton>
     </StyledForm>
