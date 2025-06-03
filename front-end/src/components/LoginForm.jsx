@@ -6,13 +6,14 @@ import StyledInput from "./styled/StyledInput";
 import StyledButton from "./styled/StyledButton";
 import StyledError from "./styled/StyledError";
 import StyledSuccess from "./styled/StyledSuccess";
-import { FaEnvelope, FaLock } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaKey } from "react-icons/fa";
 
 function LoginForm({ setUser }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [captchaChecked, setCaptchaChecked] = useState(false);
+  const [twoFACode, setTwoFACode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -35,6 +36,7 @@ function LoginForm({ setUser }) {
       const res = await axios.post("http://localhost:5000/api/auth/login", {
         email,
         password,
+        twoFACode,
       });
 
       const { token, user } = res.data;
@@ -101,6 +103,18 @@ function LoginForm({ setUser }) {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+        />
+      </StyledInput.InputWrapper>
+
+      <StyledInput.InputWrapper>
+        <StyledInput.IconWrapper>
+          <FaKey />
+        </StyledInput.IconWrapper>
+        <StyledInput.Input
+          type="text"
+          placeholder="2FA Code"
+          value={twoFACode}
+          onChange={(e) => setTwoFACode(e.target.value)}
         />
       </StyledInput.InputWrapper>
 
