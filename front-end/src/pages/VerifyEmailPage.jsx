@@ -81,7 +81,7 @@ function VerifyEmailPage() {
       {status === "success" && (
         <>
           <Title>המשתמש אומת בהצלחה ✅</Title>
-          <Message>כתובת המייל שלך כבר אומתה, תוכל להתחבר כעת למערכת.</Message>
+          <Message>כתובת המייל שלך אומתה, תוכל להתחבר כעת למערכת.</Message>
           <Button onClick={() => navigate("/login")}>מעבר להתחברות</Button>
         </>
       )}
