@@ -11,6 +11,7 @@ import EmailVerificationNotice from './pages/EmailVerificationNotice';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import GlobalStyles from './styles/GlobalStyles';
 import PublicRoute from './components/guards/PublicRoute';
+import ResendVerificationPage from './pages/ResendVerificationPage';
 
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
           <Route path="/email-verification-notice" element={<EmailVerificationNotice />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/profile" element={<ProfilePage user={user} />} />
+          <Route path="/resend-verification" element={<ResendVerificationPage />} />
         </Routes>
       </main>
       <Footer />
