@@ -6,13 +6,14 @@ import StyledButton from "./styled/StyledButton";
 import StyledForm from "./styled/StyledForm";
 import StyledError from "./styled/StyledError";
 import StyledSuccess from "./styled/StyledSuccess";
-import { FaUser, FaEnvelope, FaLock,} from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock } from "react-icons/fa";
 
 function RegisterForm() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("customer");
+  const [captchaChecked, setCaptchaChecked] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const navigate = useNavigate();
@@ -26,12 +27,18 @@ function RegisterForm() {
       return;
     }
 
+    if (!captchaChecked) {
+      setError("Please verify the CAPTCHA");
+      setSuccess("");
+      return;
+    }
+
     try {
-      const payload = { username, email, password, role};
+      const payload = { username, email, password, role };
       const res = await axios.post("http://localhost:5000/api/auth/register", payload, {
         headers: { "Content-Type": "application/json" },
       });
-      setSuccess(res.data.message || "נרשמת בהצלחה!");
+      setSuccess(res.data.message || "Registration successful!");
       setError("");
       navigate("/email-verification-notice");
     } catch (err) {
@@ -101,6 +108,16 @@ function RegisterForm() {
         </StyledInput.Select>
       </StyledInput.InputWrapper>
 
+      <div className="form-options">
+        <label>
+          <input
+            type="checkbox"
+            checked={captchaChecked}
+            onChange={(e) => setCaptchaChecked(e.target.checked)}
+          />
+          I'm not a robot
+        </label>
+      </div>
 
       <StyledButton type="submit">Register</StyledButton>
     </StyledForm>
