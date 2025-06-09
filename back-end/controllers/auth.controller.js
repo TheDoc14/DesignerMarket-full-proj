@@ -113,20 +113,20 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
-    // 2. ודא שאימת המייל בוצע
+    // 2. השוואת סיסמה — חובה לפני הכל
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: 'Invalid credentials' });
+    }
+
+    // 3. ודא שאימת המייל בוצע
     if (!user.isVerified) {
       return res.status(403).json({ error: 'Please verify your email before logging in' });
     }
 
-    // 3. בדוק האם המשתמש מאושר אם התפקיד דורש זאת
+    // 4. בדיקת אישור מנהל לפי תפקיד
     if ((user.role === 'student' || user.role === 'designer') && !user.isApproved) {
       return res.status(403).json({ error: 'Your account is pending admin approval' });
-    }
-
-    // 4. השוואת סיסמה
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
     }
 
     // 5. יצירת JWT
@@ -153,5 +153,6 @@ const loginUser = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 module.exports = { registerUser, verifyEmail, resendVerificationEmail, loginUser };
