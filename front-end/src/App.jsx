@@ -15,6 +15,8 @@ import AdminApprovalPage from './pages/AdminApprovalPage';
 import CreateProjectPage from './pages/CreateProjectPage';
 import EditProfilePage from './pages/EditProfilePage';
 import GlobalStyles from './styles/GlobalStyles';
+import PublicRoute from './components/guards/PublicRoute';
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -34,7 +36,7 @@ function App() {
       <GlobalStyles />
       <Navbar user={user} setUser={setUser} />
       <main>
-        <Routes>
+        <Routes> 
           <Route path="/" element={<HomePage />} />
 
           <Route
