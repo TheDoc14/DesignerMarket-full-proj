@@ -16,65 +16,82 @@ function LoginForm({ setUser }) {
   const [twoFACode, setTwoFACode] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
+  if (!email || !password) {
+    setError("Please fill in all fields");
+    return;
+  }
 
-    if (!captchaChecked) {
-      setError("Please verify the CAPTCHA");
-      return;
-    }
+  if (!captchaChecked) {
+    setError("Please verify the CAPTCHA");
+    return;
+  }
 
-    try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-        twoFACode,
-      });
+  try {
+    const res = await axios.post("http://localhost:5000/api/auth/login", {
+      email,
+      password,
+      twoFACode,
+    });
 
-      const { token, user } = res.data;
+    const { token, user } = res.data;
 
-      if (!user.isVerified) {
-        setError("Your account is not verified. Please check your email.");
-        return;
-      }
-
-      const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem("token", token);
-      storage.setItem("user", JSON.stringify(user));
-      setUser(user);
-
-      setError("");
-      setSuccess(`Welcome ${user.username}, you have successfully logged in.`);
-
+    if (!user.isVerified) {
+      setError("Your account is not verified. Redirecting to verification page...");
       setTimeout(() => {
-        navigate("/profile");
-      }, 2500);
-    } catch (err) {
-      setSuccess("");
-      const serverMessage =
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        err.response?.data?.errors?.[0]?.msg;
-
-      if (serverMessage) {
-        setError(serverMessage);
-      } else if (err.response?.status === 403) {
-        setError("Your email is not verified. Please check your inbox.");
-      } else if (err.response?.status === 400) {
-        setError("Incorrect email or password");
-      } else {
-        setError("Login error");
-      }
+        navigate("/resend-verification");
+      }, 3000);
+      return;
     }
-  };
+
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem("token", token);
+    storage.setItem("user", JSON.stringify(user));
+    setUser(user);
+
+    setError("");
+    setSuccess(`Welcome ${user.username}, you have successfully logged in.`);
+
+    setTimeout(() => {
+      navigate("/profile");
+    }, 2500);
+  } catch (err) {
+    setSuccess("");
+
+    const status = err.response?.status;
+    const serverMessage =
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      err.response?.data?.errors?.[0]?.msg ||
+      "";
+
+    // 🛑 סדר בדיקה מתוקן – קודם בדוק סיסמה
+    if (status === 400) {
+      setError("Incorrect email or password");
+      return;
+    }
+
+    // ✅ רק אם זה לא סיסמה שגויה – בדוק אם זה קשור לאימות
+    if (status === 403 && serverMessage.toLowerCase().includes("verify")) {
+      setError("Your email is not verified. Redirecting to verification page...");
+      setTimeout(() => {
+        navigate("/resend-verification");
+      }, 3000);
+      return;
+    }
+
+    if (serverMessage) {
+      setError(serverMessage);
+    } else {
+      setError("Login error");
+    }
+  }
+};
+
 
   return (
     <StyledForm onSubmit={handleLogin}>

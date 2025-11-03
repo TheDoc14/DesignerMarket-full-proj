@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useNavigate } from 'react-router-dom';
 import StyledButton from '../components/styled/StyledButton';
 
 const ProfileContainer = styled.div`
@@ -37,9 +38,11 @@ const Role = styled.p`
 `;
 
 function ProfilePage() {
+  const navigate = useNavigate();
+
   const user =
-  JSON.parse(localStorage.getItem('user')) ||
-  JSON.parse(sessionStorage.getItem('user'));
+    JSON.parse(localStorage.getItem('user')) ||
+    JSON.parse(sessionStorage.getItem('user'));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -47,6 +50,10 @@ function ProfilePage() {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
     window.location.href = '/login';
+  };
+
+  const goToEditProfile = () => {
+    navigate('/edit-profile');
   };
 
   if (!user) {
@@ -62,7 +69,8 @@ function ProfilePage() {
       <Email>{user.email}</Email>
       <Role>Role: {user.role}</Role>
       <br />
-      <StyledButton onClick={handleLogout}>Logout</StyledButton>
+      <StyledButton onClick={goToEditProfile}>עריכת פרופיל</StyledButton>
+      <StyledButton onClick={handleLogout}>התנתקות</StyledButton>
     </ProfileContainer>
   );
 }
