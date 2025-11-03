@@ -45,6 +45,23 @@ const GlobalStyles = createGlobalStyle`
     margin-bottom: 20px;
   }
 
+  .form-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.9rem;
+  }
+
+  .form-options label {
+    display: flex;
+    align-items: center;
+  }
+
+  .form-options input[type="checkbox"] {
+    margin-right: 5px;
+  }
+
   /* עיצוב הפוטר */
   footer {
     background-color: #4CAF50;
