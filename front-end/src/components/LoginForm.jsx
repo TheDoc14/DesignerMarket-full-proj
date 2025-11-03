@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import StyledForm from './styled/StyledForm';
-import StyledInput from './styled/StyledInput';
-import StyledButton from './styled/StyledButton';
-import StyledError from './styled/StyledError';
-import StyledSuccess from './styled/StyledSuccess';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import React, { useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import StyledForm from "./styled/StyledForm";
+import StyledInput from "./styled/StyledInput";
+import StyledButton from "./styled/StyledButton";
+import StyledError from "./styled/StyledError";
+import StyledSuccess from "./styled/StyledSuccess";
+import { FaEnvelope, FaLock, FaKey } from "react-icons/fa";
 
 function LoginForm({ setUser }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [captchaChecked, setCaptchaChecked] = useState(false);
+  const [twoFACode, setTwoFACode] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const navigate = useNavigate();
 
@@ -21,39 +23,42 @@ function LoginForm({ setUser }) {
     e.preventDefault();
 
     if (!email || !password) {
-      setError('נא למלא את כל השדות');
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (!captchaChecked) {
+      setError("Please verify the CAPTCHA");
       return;
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
         email,
-        password
+        password,
+        twoFACode,
       });
 
       const { token, user } = res.data;
 
       if (!user.isVerified) {
-        setError('החשבון שלך לא אומת. בדוק את האימייל שלך.');
+        setError("Your account is not verified. Please check your email.");
         return;
       }
 
-      // שמירת המידע בהתאם ל"זכור אותי"
       const storage = rememberMe ? localStorage : sessionStorage;
-      storage.setItem('token', token);
-      storage.setItem('user', JSON.stringify(user));
+      storage.setItem("token", token);
+      storage.setItem("user", JSON.stringify(user));
       setUser(user);
 
-      setError('');
-      setSuccess(`שלום ${user.username}, התחברת בהצלחה 😊`);
+      setError("");
+      setSuccess(`Welcome ${user.username}, you have successfully logged in.`);
 
       setTimeout(() => {
-        navigate('/profile');
+        navigate("/profile");
       }, 2500);
-
     } catch (err) {
-      setSuccess('');
-
+      setSuccess("");
       const serverMessage =
         err.response?.data?.message ||
         err.response?.data?.error ||
@@ -62,59 +67,78 @@ function LoginForm({ setUser }) {
       if (serverMessage) {
         setError(serverMessage);
       } else if (err.response?.status === 403) {
-        setError('האימייל שלך לא אומת. בדוק את תיבת הדואר שלך.');
+        setError("Your email is not verified. Please check your inbox.");
       } else if (err.response?.status === 400) {
-        setError('אימייל או סיסמה שגויים');
+        setError("Incorrect email or password");
       } else {
-        setError('שגיאה בהתחברות');
+        setError("Login error");
       }
     }
   };
 
   return (
     <StyledForm onSubmit={handleLogin}>
-      <h2>התחברות</h2>
+      <h2>Login</h2>
       {error && <StyledError>{error}</StyledError>}
       {success && <StyledSuccess>{success}</StyledSuccess>}
 
       <StyledInput.InputWrapper>
-        <StyledInput.IconWrapper><FaEnvelope /></StyledInput.IconWrapper>
+        <StyledInput.IconWrapper>
+          <FaEnvelope />
+        </StyledInput.IconWrapper>
         <StyledInput.Input
           type="email"
-          placeholder="אימייל"
+          placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
       </StyledInput.InputWrapper>
 
       <StyledInput.InputWrapper>
-        <StyledInput.IconWrapper><FaLock /></StyledInput.IconWrapper>
+        <StyledInput.IconWrapper>
+          <FaLock />
+        </StyledInput.IconWrapper>
         <StyledInput.Input
           type="password"
-          placeholder="סיסמה"
+          placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </StyledInput.InputWrapper>
 
-      <div style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        marginBottom: '10px'
-      }}>
-        <label style={{ fontSize: '0.9rem', cursor: 'pointer' }}>
+      <StyledInput.InputWrapper>
+        <StyledInput.IconWrapper>
+          <FaKey />
+        </StyledInput.IconWrapper>
+        <StyledInput.Input
+          type="text"
+          placeholder="2FA Code"
+          value={twoFACode}
+          onChange={(e) => setTwoFACode(e.target.value)}
+        />
+      </StyledInput.InputWrapper>
+
+      <div className="form-options">
+        <label>
+          <input
+            type="checkbox"
+            checked={captchaChecked}
+            onChange={(e) => setCaptchaChecked(e.target.checked)}
+          />
+          I'm not a robot
+        </label>
+
+        <label>
           <input
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            style={{ marginRight: '5px' }}
           />
-          זכור אותי
+          Remember Me
         </label>
       </div>
 
-      <StyledButton type="submit">התחבר</StyledButton>
+      <StyledButton type="submit">Login</StyledButton>
     </StyledForm>
   );
 }
