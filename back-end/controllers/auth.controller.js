@@ -4,22 +4,21 @@ const jwt = require('jsonwebtoken');
 const { generateVerificationToken } = require('../utils/emailToken');
 const { sendVerificationEmail } = require('../utils/email');
 
-const registerUser = async (req, res) => {
+// ==========================
+// 📩 רישום משתמש חדש
+// ==========================
+const registerUser = async (req, res, next) => {
   try {
     const { username, email, password, role } = req.body;
 
     // בדיקה אם המשתמש קיים
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User already exists' });
-    }
+    if (existingUser) throw new Error('User already exists');
 
     // בדיקת תפקיד – אם סטודנט/מעצב חובה קובץ
     let approvalPath = '';
-    if ((role === 'student' || role === 'designer')) {
-      if (!req.file) {
-        return res.status(400).json({ error: 'Approval document is required for this role' });
-      }
+    if (role === 'student' || role === 'designer') {
+      if (!req.file) throw new Error('Approval document is required for this role');
       approvalPath = req.file.path;
     }
 
@@ -27,68 +26,60 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // טוקן אימות מייל
+    // יצירת טוקן אימות מייל
     const verificationToken = generateVerificationToken();
-    
 
+    // יצירת משתמש חדש
     const user = new User({
       username,
       email,
       password: hashedPassword,
       role,
       isVerified: false,
-      isApproved: role === 'customer', // אם זה לקוח – מאושר אוטומטית
+      isApproved: role === 'customer', // לקוח מאושר אוטומטית
       verificationToken,
       approvalDocument: approvalPath
     });
 
     await user.save();
-
     await sendVerificationEmail(user.email, verificationToken);
 
-    res.status(201).json({
-      message: 'Registered successfully. Check your email for verification link.'
-    });
+    res.status(201).json({message: 'Registered successfully. Check your email for verification link.'});
 
-  } catch (error) {
-    console.error('registerUser error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) {next(err);}
 };
 
-
-const verifyEmail = async (req, res) => {
+// ==========================
+// ✅ אימות מייל מהקישור
+// ==========================
+const verifyEmail = async (req, res, next) => {
   try {
     const { token } = req.query;
+    if (!token) throw new Error('No token provided')
     const user = await User.findOne({ verificationToken: token });
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
-    }
+
+    if (!user) throw new Error('Invalid or expired token');
+
     user.isVerified = true;
-    user.verificationToken = '';
+    user.verificationToken = ''; // ננקה את הטוקן
     await user.save();
-    res.json({ message: 'Email verified successfully' });
-  } catch (error) {
-    console.error('verifyEmail error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+
+    res.status(200).json({ message: 'Email verified successfully' });
+
+  } catch (err) {next(err);}
 };
 
-const resendVerificationEmail = async (req, res) => {
+// ==========================
+// 🔁 שליחת מייל אימות מחדש
+// ==========================
+const resendVerificationEmail = async (req, res, next) => {
   try {
     const { email } = req.body;
-
     const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) throw new Error('User not found');
+    if (user.isVerified) throw new Error('User is already verified');
 
-    if (user.isVerified) {
-      return res.status(400).json({ error: 'User is already verified' });
-    }
-
-    // צור טוקן חדש ושלח מחדש
     const newToken = generateVerificationToken();
     user.verificationToken = newToken;
     await user.save();
@@ -97,39 +88,33 @@ const resendVerificationEmail = async (req, res) => {
 
     res.status(200).json({ message: 'Verification email resent successfully' });
 
-  } catch (error) {
-    console.error('resendVerificationEmail error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) {next(err);}
 };
 
-const loginUser = async (req, res) => {
+// ==========================
+// 🔑 התחברות משתמש
+// ==========================
+const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
     // 1. חיפוש המשתמש
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
+    if (!user) throw new Error('Invalid credentials');
 
-    // 2. השוואת סיסמה — חובה לפני הכל
+    // 2. השוואת סיסמה
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
-    }
+    if (!isMatch) throw new Error('Invalid credentials');
 
-    // 3. ודא שאימת המייל בוצע
-    if (!user.isVerified) {
-      return res.status(403).json({ error: 'Please verify your email before logging in' });
-    }
+    // 3. ודא שהמייל אומת
+    if (!user.isVerified) throw new Error('Please verify your email before logging in');
 
-    // 4. בדיקת אישור מנהל לפי תפקיד
+    // 4. בדוק אם המשתמש מאושר (אם סטודנט/מעצב)
     if ((user.role === 'student' || user.role === 'designer') && !user.isApproved) {
-      return res.status(403).json({ error: 'Your account is pending admin approval' });
+      throw new Error('Your account is pending admin approval');
     }
 
-    // 5. יצירת JWT
+    // 5. יצירת טוקן
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
@@ -148,11 +133,7 @@ const loginUser = async (req, res) => {
       }
     });
 
-  } catch (error) {
-    console.error('loginUser error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
+  } catch (err) {next(err);}
 };
-
 
 module.exports = { registerUser, verifyEmail, resendVerificationEmail, loginUser };
