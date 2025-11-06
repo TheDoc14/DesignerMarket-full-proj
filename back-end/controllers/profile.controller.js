@@ -1,27 +1,31 @@
+// back-end/controllers/profile.controller.js
 const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
 
-// שליפת פרופיל משתמש מחובר
-const getMyProfile = async (req, res) => {
+/**
+ * 📄 שליפת פרופיל המשתמש המחובר
+ * כולל כל הפרויקטים שהעלה
+ */
+const getMyProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
+    if (!user) throw new Error('User not found');
 
     const projects = await Project.find({ createdBy: req.user.id });
 
-    res.status(200).json({ 
+    res.status(200).json({
+      message: 'Profile fetched successfully',
       user,
-      projects
+      projects,
     });
 
-  } catch (error) {
-    console.error('Error fetching profile:', error);
-    res.status(500).json({ error: 'Server error fetching profile' });
-  }
+  } catch (err) {next(err);}
 };
 
-// עדכון פרטי פרופיל
-// עדכון פרטי פרופיל
-const updateMyProfile = async (req, res) => {
+/**
+ * 🧾 עדכון פרטי פרופיל (שם, ביוגרפיה, תמונת פרופיל)
+ */
+const updateMyProfile = async (req, res, next) => {
   try {
     const { username, bio } = req.body;
 
@@ -29,6 +33,7 @@ const updateMyProfile = async (req, res) => {
     if (username) updates.username = username;
     if (bio) updates.bio = bio;
 
+    // תמונה חדשה
     if (req.file) {
       const baseUrl = `${req.protocol}://${req.get('host')}`; // http://localhost:5000
       updates.profileImage = `${baseUrl}/uploads/profileImages/${req.file.filename}`;
@@ -40,6 +45,8 @@ const updateMyProfile = async (req, res) => {
       { new: true, runValidators: true }
     ).select('-password');
 
+    if (!updatedUser) throw new Error('User not found for update');
+
     res.status(200).json({
       message: 'Profile updated successfully',
       updatedUser: {
@@ -49,11 +56,7 @@ const updateMyProfile = async (req, res) => {
       },
     });
 
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    res.status(500).json({ error: 'Server error updating profile' });
-  }
+  } catch (err) {next(err);}
 };
-
 
 module.exports = { getMyProfile, updateMyProfile };

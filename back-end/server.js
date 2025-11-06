@@ -1,46 +1,47 @@
+// server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const authRoutes=require('./routes/auth.routes')
+
+// ✅ ייבוא ראוטים
+const authRoutes = require('./routes/auth.routes');
 const profileRoutes = require('./routes/profile.routes');
 const projectRoutes = require('./routes/project.routes');
+const errorHandler = require('./middleware/error.middleware');
+
 const app = express();
+
+// ✅ מידלוורים כלליים
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ✅ מאפשר גישה לתמונות ולשאר הקבצים מתוך תיקיית uploads
+// ✅ מאפשר גישה לקבצים סטטיים בתיקיית uploads
 app.use('/uploads', express.static('uploads'));
 
-// ⬇ מסלולים לאחראי על האותנטיקציה, פרופיל ופרויקטים
+// ✅ ראוטים עיקריים של המערכת
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/projects', projectRoutes);
 
+app.get('/api/test', (req, res) => {
+  res.json({ msg: 'API is working fine 🚀' });
+});
 
+app.use(errorHandler);
 
-
+// ✅ חיבור למסד הנתונים והרצת השרת
 async function startServer() {
   try {
     await mongoose.connect(process.env.DB_URI);
-    console.log('✅ MongoDB connected');
-    
-    app.get('/api/test', (req, res) => {
-      try {
-        res.json({ msg: 'API is working' });
-      } catch (err) {
-        console.error('❌ Error in test route:', err);
-        res.status(500).json({ error: 'Internal server error' });
-      }
-    });
+    console.log('✅ MongoDB connected successfully');
 
     const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   } catch (err) {
-    console.error('❌ Failed to connect to DB:', err);
+    console.error('❌ Failed to connect to MongoDB:', err.message);
+    process.exit(1);
   }
 }
 
