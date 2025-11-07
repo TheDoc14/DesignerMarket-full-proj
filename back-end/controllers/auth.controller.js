@@ -129,7 +129,8 @@ const loginUser = async (req, res, next) => {
         email: user.email,
         role: user.role,
         isVerified: user.isVerified,
-        isApproved: user.isApproved
+        isApproved: user.isApproved,
+        profileImage: user.profileImage
       }
     });
 
