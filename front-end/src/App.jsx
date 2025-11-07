@@ -15,7 +15,7 @@ import AdminApprovalPage from './pages/AdminApprovalPage';
 import CreateProjectPage from './pages/CreateProjectPage';
 import EditProfilePage from './pages/EditProfilePage';
 import GlobalStyles from './styles/GlobalStyles';
-import PublicRoute from './components/guards/PublicRoute';
+
 
 
 function App() {
