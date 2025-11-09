@@ -19,7 +19,8 @@ const registerUser = async (req, res, next) => {
     let approvalPath = '';
     if (role === 'student' || role === 'designer') {
       if (!req.file) throw new Error('Approval document is required for this role');
-      approvalPath = req.file.path;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      approvalPath = `${baseUrl}/api/files/approvalDocuments/${req.file.filename}`;
     }
 
     // הצפנת סיסמה
