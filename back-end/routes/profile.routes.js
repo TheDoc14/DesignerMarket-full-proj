@@ -10,6 +10,6 @@ const router = express.Router();
 router.get('/me', authMiddleware, permit('admin','student','designer','customer'), getMyProfile);
 
 // עדכון פרופיל + העלאת תמונת פרופיל
-router.put('/me', authMiddleware, uploadProfile.single('profileImage'), permit('admin','student','designer','customer'), updateMyProfile);
+router.put('/me', authMiddleware, permit('admin','student','designer','customer'), uploadProfile.single('profileImage'), updateMyProfile);
 
 module.exports = router;

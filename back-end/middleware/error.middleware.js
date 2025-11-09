@@ -138,7 +138,7 @@ Stack: ${err.stack}\n\n`;
   // ==============================
   // 🔁 תגובה אחידה
   // ==============================
-  res.status(statusCode).json({
+  return res.status(statusCode).json({
     success: false,
     code: statusCode,
     message,

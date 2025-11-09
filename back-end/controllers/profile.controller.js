@@ -36,7 +36,7 @@ const updateMyProfile = async (req, res, next) => {
     // תמונה חדשה
     if (req.file) {
       const baseUrl = `${req.protocol}://${req.get('host')}`; // http://localhost:5000
-      updates.profileImage = `${baseUrl}/uploads/profileImages/${req.file.filename}`;
+      updates.profileImage = `${baseUrl}/api/files/profileImages/${req.file.filename}`;
     }
 
     const updatedUser = await User.findByIdAndUpdate(
