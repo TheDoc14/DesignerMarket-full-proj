@@ -1,15 +1,17 @@
 // back-end/controllers/project.controller.js
-
 const mongoose = require('mongoose');
 const Project = require('../models/Project.model');
 
 /**
  * פונקציה לזיהוי סוג הקובץ לפי mime-type
  */
-const getFileType = (mimetype) => {
+const getFileType = (mimetype, filename) => {
+  const ext = filename.split('.').pop().toLowerCase(); 
   if (mimetype.startsWith('image/')) return 'image';
   if (mimetype.startsWith('video/')) return 'video';
-  if (mimetype === 'application/pdf' || mimetype.includes('powerpoint')) return 'presentation';
+  if (mimetype === 'application/pdf' || mimetype.includes('powerpoint') || ext === 'ppt' || ext === 'pptx') return 'presentation';
+  if (mimetype.startsWith('text/') || mimetype.includes('word') || mimetype.includes('officedocument') ||
+  ext === 'doc' || ext === 'docx' || ext === 'txt') return 'document';
   return 'other';
 };
 
@@ -31,11 +33,14 @@ const createProject = async (req, res, next) => {
     // מיפוי הקבצים למבנה שמור
     const files = req.files.map(file => {
       const id = new mongoose.Types.ObjectId();
+      const fileType = getFileType(file.mimetype, file.originalname);
+      const subfolder = fileType === 'image' ? 'projectImages' : 'projectFiles';
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
       return {
         _id: id,
         filename: file.filename,
-        fileType: getFileType(file.mimetype),
-        path: file.path,
+        fileType: fileType,
+        path: `${baseUrl}/api/files/projects/${subfolder}/${file.filename}`,
       };
     });
 
@@ -79,5 +84,4 @@ const getAllProjects = async (req, res, next) => {
   } catch (err) {next(err);}
 };
 
-// ✅ ייצוא מרוכז לפי הגישה שלך (const + error handling עקבי)
 module.exports = {createProject,getAllProjects,};
