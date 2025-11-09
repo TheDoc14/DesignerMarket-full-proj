@@ -9,7 +9,6 @@ import ProfilePage from './pages/ProfilePage';
 import EmailVerificationNotice from './pages/EmailVerificationNotice';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ResendVerificationPage from './pages/ResendVerificationPage';
-import PublicRoute from './components/guards/PublicRoute';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import AdminApprovalPage from './pages/AdminApprovalPage';
 import CreateProjectPage from './pages/CreateProjectPage';
