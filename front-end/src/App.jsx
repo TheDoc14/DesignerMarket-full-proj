@@ -11,10 +11,15 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import ResendVerificationPage from './pages/ResendVerificationPage';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import AdminApprovalPage from './pages/AdminApprovalPage';
-import CreateProjectPage from './pages/CreateProjectPage';
+import CreateProjectPage from './pages/CreateProjectPage.jsx';
 import EditProfilePage from './pages/EditProfilePage';
+<<<<<<< HEAD
 import GlobalStyles from './styles/GlobalStyles';
 import PublicRoute from './components/guards/PublicRoute';
+=======
+import './App.css';
+import ProjectsListPage from "./pages/ProjectsListPage.jsx";
+>>>>>>> 66c1c5c (Started  to work on design+added create project and view project page)
 
 
 
@@ -34,7 +39,6 @@ function App() {
 
   return (
     <Router>
-      <GlobalStyles />
       <Navbar user={user} setUser={setUser} />
       <main>
         <Routes> 
@@ -84,6 +88,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/projects" element={<ProjectsListPage />} />
+
           <Route
             path="/admin/approve-users"
             element={
