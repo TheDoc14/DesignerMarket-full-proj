@@ -12,9 +12,11 @@ import ResendVerificationPage from './pages/ResendVerificationPage';
 import PublicRoute from './components/guards/PublicRoute';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import AdminApprovalPage from './pages/AdminApprovalPage';
-import CreateProjectPage from './pages/CreateProjectPage';
+import CreateProjectPage from './pages/CreateProjectPage.jsx';
 import EditProfilePage from './pages/EditProfilePage';
-import GlobalStyles from './styles/GlobalStyles';
+import './App.css';
+import ProjectsListPage from "./pages/ProjectsListPage.jsx";
+
 
 
 
@@ -33,7 +35,6 @@ function App() {
 
   return (
     <Router>
-      <GlobalStyles />
       <Navbar user={user} setUser={setUser} />
       <main>
         <Routes> 
@@ -83,6 +84,8 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/projects" element={<ProjectsListPage />} />
+
           <Route
             path="/admin/approve-users"
             element={
