@@ -6,9 +6,8 @@ import StyledInput from "./styled/StyledInput";
 import StyledButton from "./styled/StyledButton";
 import StyledError from "./styled/StyledError";
 import StyledSuccess from "./styled/StyledSuccess";
-import { FaEnvelope, FaLock } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaKey } from "react-icons/fa";
 
-// , FaKey(last import removed inside the brackets)
 function LoginForm({ setUser }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,8 +49,6 @@ function LoginForm({ setUser }) {
     }
 
     const storage = rememberMe ? localStorage : sessionStorage;
-        localStorage.setItem("token", res.data.token);
-    localStorage.setItem("user", JSON.stringify(res.data.user));
     storage.setItem("token", token);
     storage.setItem("user", JSON.stringify(user));
     setUser(user);
@@ -102,7 +99,7 @@ function LoginForm({ setUser }) {
       {error && <StyledError>{error}</StyledError>}
       {success && <StyledSuccess>{success}</StyledSuccess>}
 
-      <StyledInput.InputWrapper className="primary">
+      <StyledInput.InputWrapper>
         <StyledInput.IconWrapper>
           <FaEnvelope />
         </StyledInput.IconWrapper>
@@ -127,15 +124,15 @@ function LoginForm({ setUser }) {
       </StyledInput.InputWrapper>
 
       <StyledInput.InputWrapper>
-        {/* <StyledInput.IconWrapper>
+        <StyledInput.IconWrapper>
           <FaKey />
-        </StyledInput.IconWrapper> */}
-        {/* <StyledInput.Input
+        </StyledInput.IconWrapper>
+        <StyledInput.Input
           type="text"
           placeholder="2FA Code"
           value={twoFACode}
           onChange={(e) => setTwoFACode(e.target.value)}
-        /> */}
+        />
       </StyledInput.InputWrapper>
 
       <div className="form-options">

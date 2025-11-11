@@ -33,7 +33,7 @@ function Navbar({ user, setUser }) {
     <NavbarContainer>
       <NavList>
         <NavItem>
-          <NavLink className="text-primary" as={Link} to="/" >Home</NavLink>
+          <NavLink as={Link} to="/">Home</NavLink>
         </NavItem>
 
         <NavItem ref={menuRef} style={{ position: 'relative' }}>
@@ -46,12 +46,6 @@ function Navbar({ user, setUser }) {
             />
           </ProfileWrapper>
           {menuOpen && <ProfileMenu user={user} setUser={setUser} />}
-        </NavItem>
-        <NavItem>
-          <NavLink as={Link} to="/create-project">Create Project</NavLink>
-        </NavItem>
-           <NavItem>
-          <NavLink as={Link} to="/projects">All Project</NavLink>
         </NavItem>
       </NavList>
     </NavbarContainer>
