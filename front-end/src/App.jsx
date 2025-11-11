@@ -13,13 +13,13 @@ import ProtectedRoute from './components/guards/ProtectedRoute';
 import AdminApprovalPage from './pages/AdminApprovalPage';
 import CreateProjectPage from './pages/CreateProjectPage.jsx';
 import EditProfilePage from './pages/EditProfilePage';
-<<<<<<< HEAD
-import GlobalStyles from './styles/GlobalStyles';
+
+
 import PublicRoute from './components/guards/PublicRoute';
-=======
+
 import './App.css';
 import ProjectsListPage from "./pages/ProjectsListPage.jsx";
->>>>>>> 66c1c5c (Started  to work on design+added create project and view project page)
+
 
 
 
