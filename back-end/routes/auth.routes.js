@@ -1,13 +1,7 @@
+//back-end/routes/auth.routes
 const express = require('express');
 const router = express.Router();
-
-const {
-  registerUser,
-  verifyEmail,
-  resendVerificationEmail,
-  loginUser
-} = require('../controllers/auth.controller');
-
+const { registerUser, verifyEmail, resendVerificationEmail, loginUser } = require('../controllers/auth.controller');
 const { uploadApproval } = require('../middleware/multer.middleware')
 
 // Registration – כולל קובץ תעודה אם צריך

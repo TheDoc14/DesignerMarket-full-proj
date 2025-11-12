@@ -1,4 +1,4 @@
-// middlewares/multer.middleware.js
+// back-end/middlewares/multer.middleware.js
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -77,8 +77,5 @@ const createMulter = (baseFolder) => {
 };
 
 // ✅ Middleware-ים לפי סוג העלאה
-module.exports = {
-  uploadApproval: createMulter("approvalDocuments"),
-  uploadProject: createMulter("projects"),
-  uploadProfile: createMulter("profileImages"),
-};
+module.exports = { uploadApproval: createMulter("approvalDocuments"), uploadProject: createMulter("projects"),
+   uploadProfile: createMulter("profileImages") };

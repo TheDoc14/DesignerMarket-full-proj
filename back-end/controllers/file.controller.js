@@ -1,53 +1,43 @@
 // back-end/controllers/file.controller.js
 const fs = require('fs');
 const path = require('path');
+const Project = require('../models/Project.model');
 
-/**
- * שליפת קובץ מהמערכת (עם בקרת הרשאות לפי סוג תיקייה)
- */
 const getFile = async (req, res, next) => {
   try {
-    // נזהה את סוג התיקייה מתוך הנתיב
-    const parts = req.path.split('/').filter(Boolean); // ['profileImages','filename.jpg'] או ['projects','projectFiles','filename.pdf']
+    const parts = req.path.split('/').filter(Boolean);
     const folder = parts[0];
     const subfolder = parts.length === 3 ? parts[1] : null;
-    const filename = decodeURIComponent(parts[parts.length - 1]); // ✅ מפענח רווחים כמו %20
+    const filename = decodeURIComponent(parts[parts.length - 1]);
     const userRole = req.user?.role;
+    const userId = req.user?.id;
 
-    console.log('🔍 Folder:', folder, '| Subfolder:', subfolder, '| File:', filename);
+    if (!folder || !filename) throw new Error('Invalid request – missing folder or filename');
 
-
-    if (!folder || !filename) {
-      throw new Error('Invalid request – missing folder or filename');
+    // 💡 החמרת גישה: projectFiles → רק בעלים/אדמין
+    if (folder === 'projects' && subfolder === 'projectFiles') {
+      if (!req.user) throw new Error('No token provided');
+      const project = await Project.findOne({ 'files.filename': filename }).select('createdBy');
+      if (!project) throw new Error('File not found');
+      const isOwner = String(project.createdBy) === String(userId);
+      const isAdmin = userRole === 'admin';
+      if (!isOwner && !isAdmin) throw new Error('Access denied');
     }
 
-    // נבנה את הנתיב לפי אם יש תת-תיקייה
+    const base = path.join(__dirname, '..', 'uploads');
     const filePath = subfolder
-      ? path.join(__dirname, '..', 'uploads', folder, subfolder, filename)
-      : path.join(__dirname, '..', 'uploads', folder, filename);
+      ? path.join(base, folder, subfolder, filename)
+      : path.join(base, folder, filename);
 
-    // בדיקה שהקובץ קיים
-    if (!fs.existsSync(filePath)) {
-      throw new Error('File not found');
-    }
+    if (!fs.existsSync(filePath)) throw new Error('File not found');
 
-    // בקרת הרשאות לפי סוג התיקייה
+    // מסמכי אימות — רק אדמין
     if (folder === 'approvalDocuments' && userRole !== 'admin') {
-      throw new Error('Forbidden – only admin can access approval documents');
+      throw new Error('Access denied');
     }
 
-    if (folder === 'projects') {
-      if (subfolder === 'projectFiles' && !['admin', 'designer', 'student'].includes(userRole)) {
-        throw new Error('Unauthorized – only creators or admin can access project files');
-      }
-      // תמונות פתוחות לציבור
-    }
-
-    // שליחה ללקוח
     return res.sendFile(filePath);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 };
 
 module.exports = { getFile };

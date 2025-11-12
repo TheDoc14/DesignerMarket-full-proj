@@ -18,9 +18,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ מאפשר גישה לקבצים סטטיים בתיקיית uploads
-app.use('/uploads', express.static('uploads'));
-
 // ✅ ראוטים עיקריים של המערכת
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
@@ -29,6 +26,13 @@ app.use('/api/files',fileRoutes)
 
 app.get('/api/test', (req, res) => {
   res.json({ msg: 'API is working fine 🚀' });
+});
+
+// תשובה אחידה לראוטים לא קיימים
+app.use((req, res, next) => {
+  const err = new Error('Route not found');
+  err.statusCode = 404;
+  next(err);
 });
 
 app.use(errorHandler);

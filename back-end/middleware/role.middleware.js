@@ -1,3 +1,4 @@
+// back-end/middlewares/role.middleware.js
 /**
  * Middleware לבדיקת הרשאות לפי תפקיד המשתמש
  * @param  {...string} allowedRoles – רשימת תפקידים מורשים

@@ -1,10 +1,9 @@
 // back-end/routes/file.routes.js
 const express = require('express');
+const router = express.Router();
 const { getFile } = require('../controllers/file.controller');
 const auth = require('../middleware/auth.middleware');
 const { permit } = require('../middleware/role.middleware');
-
-const router = express.Router();
 
 /**
  * 📂 גישה מבוקרת לקבצים
