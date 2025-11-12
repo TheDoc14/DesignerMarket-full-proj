@@ -1,3 +1,4 @@
+// back-end/utils/email.utils.js
 const nodemailer = require('nodemailer');
 
 async function sendVerificationEmail(to, token) {
