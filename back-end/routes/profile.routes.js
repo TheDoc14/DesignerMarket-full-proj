@@ -1,10 +1,10 @@
+// back-end/routes/profile.routes.js
 const express = require('express');
+const router = express.Router();
 const { getMyProfile, updateMyProfile } = require('../controllers/profile.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 const { uploadProfile } = require('../middleware/multer.middleware');
 const { permit } = require('../middleware/role.middleware');
-
-const router = express.Router();
 
 // שליפת פרופיל
 router.get('/me', authMiddleware, permit('admin','student','designer','customer'), getMyProfile);
