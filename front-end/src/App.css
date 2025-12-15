@@ -1,38 +1,315 @@
-.App {
-  text-align: center;
+/* =========================================
+   1. משתנים והגדרות בסיס (Variables & Reset)
+   ========================================= */
+:root {
+  /* פלטת צבעים מקצועית */
+  --primary-color: #2563eb;       /* כחול ראשי - לפעולות עיקריות */
+  --primary-hover: #1d4ed8;       /* כחול כהה - למעבר עכבר */
+  --secondary-color: #10b981;     /* ירוק - להצלחות ופעולות חיוביות */
+  --danger-color: #ef4444;        /* אדום - למחיקה ושגיאות */
+  --background-bg: #f3f4f6;       /* אפור בהיר מאוד - רקע כללי */
+  --card-bg: #ffffff;             /* לבן - כרטיסים ואזורי תוכן */
+  --text-main: #111827;           /* כמעט שחור - טקסט ראשי */
+  --text-secondary: #6b7280;      /* אפור - טקסט משני */
+  --border-color: #e5e7eb;        /* אפור בהיר - גבולות */
+
+  /* ריווח וצללים */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --radius: 8px;
+  --container-width: 1200px;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--background-bg);
+  color: var(--text-main);
+  direction: rtl; /* חובה לעברית */
+  line-height: 1.6;
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* =========================================
+   2. עיצוב גלובלי (Global Layout)
+   ========================================= */
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s;
+}
+
+ul {
+  list-style: none;
+}
+
+/* קונטיינר מרכזי - שומר על רוחב תוכן הגיוני */
+.container, .main-content {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 80vh; /* מבטיח שהפוטר לא יעלה למעלה */
+}
+
+h1, h2, h3 {
+  margin-bottom: 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+
+/* =========================================
+   3. ניווט (Navbar)
+   ========================================= */
+nav {
+  background-color: var(--card-bg);
+  padding: 1rem 2rem;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky; /* נדבק למעלה */
+  top: 0;
+  z-index: 1000;
+}
+
+nav .logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+nav .menu-items {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+nav a {
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+}
+
+nav a:hover, nav a.active {
+  background-color: #eff6ff;
+  color: var(--primary-color);
+}
+
+/* =========================================
+   4. טפסים וכפתורים (Forms & Buttons)
+   ========================================= */
+input, select, textarea {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  font-size: 1rem;
+  background-color: #fff;
+  transition: border-color 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+button:hover {
+  background-color: var(--primary-hover);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  background-color: var(--text-secondary);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* כפתור משני */
+button.secondary {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+button.secondary:hover {
+  background-color: #f9fafb;
+}
+
+/* כפתור מחיקה/סכנה */
+button.danger {
+  background-color: var(--danger-color);
+}
+
+/* =========================================
+   5. גריד מוצרים (Products Grid)
+   ========================================= */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* רספונסיבי אוטומטי */
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.product-card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+}
+
+.product-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.product-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.product-card .content {
+  padding: 15px;
+  flex-grow: 1; /* דוחף את הכפתור למטה */
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card h3 {
+  font-size: 1.2rem;
+  margin-bottom: 5px;
+}
+
+.product-card .price {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 10px;
+}
+
+/* =========================================
+   6. דשבורד ופרופיל (Dashboard Styles)
+   ========================================= */
+.dashboard-container {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 30px;
+  margin-top: 20px;
+}
+
+.profile-header {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 20px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 20px;
 }
 
-.App-link {
-  color: #61dafb;
+.profile-image-container {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid white;
+  box-shadow: var(--shadow-md);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+/* =========================================
+   7. הודעות מערכת (Alerts)
+   ========================================= */
+.alert {
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: var(--radius);
+  font-weight: 500;
+}
+
+.alert-success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* =========================================
+   8. התאמה למובייל (Responsiveness)
+   ========================================= */
+@media (max-width: 768px) {
+  /* ניווט הופך לאנכי במובייל */
+  nav {
+    flex-direction: column;
+    padding: 1rem;
   }
-  to {
-    transform: rotate(360deg);
+  
+  nav .menu-items {
+    margin-top: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* גריד מוצרים הופך לעמודה אחת או שתיים צרות */
+  .products-grid {
+    grid-template-columns: 1fr; 
+  }
+
+  .container {
+    padding: 15px;
+  }
+
+  /* דשבורד הופך לטור אחד */
+  form {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .sidebar, .main-form {
+    width: 100%;
   }
 }
