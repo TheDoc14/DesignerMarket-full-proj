@@ -15,7 +15,6 @@ const userSchema = new mongoose.Schema({
     maxlength: 20,
     trim: true,
   },
-
   // עוזר לאכיפת ייחודיות Case-insensitive (eyal == EYAL)
   usernameLower: {
     type: String,
@@ -23,7 +22,6 @@ const userSchema = new mongoose.Schema({
     unique: true,
     index: true,
   },
-
   // אימייל – נוסיף trim+lowercase לשמירה עקבית
   email: {
     type: String,
@@ -33,19 +31,16 @@ const userSchema = new mongoose.Schema({
     trim: true,
     lowercase: true,
   },
-
   password: {
     type: String,
     required: [true, 'Password is required'],
     minlength: 6,
   },
-
   role: {
     type: String,
     enum: ['student', 'designer', 'customer', 'admin'],
     default: 'customer',
   },
-
   // מאושר ע"י אדמין (לקוחות – אוטומטי)
   isApproved: {
     type: Boolean,
@@ -53,13 +48,11 @@ const userSchema = new mongoose.Schema({
       return this.role === 'customer';
     }
   },
-
   // תעודה לאימות סטודנט/מעצב (קישור לקובץ)
   approvalDocument: {
     type: String,
     default: ''
   },
-
   // אימות מייל
   isVerified: {
     type: Boolean,
@@ -68,20 +61,17 @@ const userSchema = new mongoose.Schema({
   verificationToken: {
     type: String
   },
-
   // ✨ שדות פרופיל רכים (לא חובה בהרשמה)
   firstName: { 
     type: String,
     trim: true,
     default: '' 
   },
-
   lastName: { 
     type: String, 
     trim: true, 
     default: '' 
   },
-
   birthDate: {
     type: Date,
     min: new Date('1900-01-01'),
@@ -89,31 +79,26 @@ const userSchema = new mongoose.Schema({
     // לא חובה; mongoose כבר יודע להמיר ISO string ל-Date אוטומטית
     default: null
   },
-
   city: { 
     type: String, 
     trim: true, 
     default: '' 
   },
-
   country: { 
     type: String, 
     trim: true, 
     default: '' 
   },
-  
   phone: {
     type: String,
     trim: true,
     default: ''
   },
-
   bio: {
     type: String,
     maxlength: 500,
     default: ''
   },
-  
   social: {
     website:   { type: String, trim: true, default: '', validate: urlValidator },
     instagram: { type: String, trim: true, default: '', validate: urlValidator },
@@ -122,12 +107,10 @@ const userSchema = new mongoose.Schema({
     linkedin:  { type: String, trim: true, default: '', validate: urlValidator },
     github:    { type: String, trim: true, default: '', validate: urlValidator },
   },
-
   profileImage: {
     type: String,
     default: ''
   }
-
 }, { timestamps: true });
 
 // --- Hooks ---

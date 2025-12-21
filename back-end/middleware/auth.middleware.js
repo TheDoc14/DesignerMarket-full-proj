@@ -13,4 +13,4 @@ const authMiddleware = (req, res, next) => {
     next();
   } catch (err) {next(err)}
 };
-module.exports = authMiddleware;
+module.exports = {authMiddleware};

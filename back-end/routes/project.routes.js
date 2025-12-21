@@ -2,13 +2,13 @@
 const express = require('express');
 const router = express.Router();
 const { createProject, getAllProjects, getProjectById, updateProject } = require('../controllers/project.controller');
-const auth = require('../middleware/auth.middleware');
+const {authMiddleware} = require('../middleware/auth.middleware');
 const { permit } = require('../middleware/role.middleware');
 const { uploadProject } = require('../middleware/multer.middleware');
 const {tryAuth} = require('../middleware/tryAuth.middleware');
 
 // יצירה – מעצבים/סטודנטים בלבד
-router.post('/', auth, permit('designer','student','admin'), uploadProject.array('files', 10), createProject);
+router.post('/', authMiddleware, permit('designer','student','admin'), uploadProject.array('files', 10), createProject);
 
 // רשימת פרויקטים – ציבורי
 router.get('/', getAllProjects);
@@ -17,7 +17,7 @@ router.get('/', getAllProjects);
 router.get('/:id',tryAuth, getProjectById);
 
 // עדכון – בעלים או אדמין
-router.put('/:id', auth, permit('designer','student','admin'), uploadProject.array('files', 10), updateProject);
+router.put('/:id', authMiddleware, permit('designer','student','admin'), uploadProject.array('files', 10), updateProject);
 // (אפשר גם PATCH לפי הטעם)
 
 module.exports = router;

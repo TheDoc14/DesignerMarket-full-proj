@@ -58,6 +58,14 @@ const projectSchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Creator is required']
   },
+  averageRating: { 
+    type: Number, 
+    default: 0 
+  },
+  reviewsCount:  {
+    type: Number, 
+    default: 0 
+  },
   isSold: {
     type: Boolean,
     default: false

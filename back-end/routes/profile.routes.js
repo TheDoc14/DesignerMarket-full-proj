@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { getMyProfile, updateMyProfile } = require('../controllers/profile.controller');
-const authMiddleware = require('../middleware/auth.middleware');
+const {authMiddleware} = require('../middleware/auth.middleware');
 const { uploadProfile } = require('../middleware/multer.middleware');
 const { permit } = require('../middleware/role.middleware');
 

@@ -14,4 +14,4 @@ const tryAuth = (req, res, next) => {
   }
   next();
 };
-module.exports={tryAuth}
+module.exports={tryAuth};
