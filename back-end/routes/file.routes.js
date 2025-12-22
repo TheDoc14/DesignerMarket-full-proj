@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { getFile } = require('../controllers/file.controller');
-const auth = require('../middleware/auth.middleware');
+const {authMiddleware} = require('../middleware/auth.middleware');
 const { permit } = require('../middleware/role.middleware');
 
 /**
@@ -18,9 +18,9 @@ router.get('/profileImages/:filename', getFile);
 router.get('/projects/projectImages/:filename', getFile);
 
 // קבצי פרויקטים אמיתיים – דורש התחברות והרשאה
-router.get('/projects/projectFiles/:filename', auth, permit('admin', 'designer', 'student'), getFile);
+router.get('/projects/projectFiles/:filename', authMiddleware, permit('admin', 'designer', 'student'), getFile);
 
 // מסמכי אימות – גישה רק לאדמין
-router.get('/approvalDocuments/:filename', auth, permit('admin'), getFile);
+router.get('/approvalDocuments/:filename', authMiddleware, permit('admin'), getFile);
 
 module.exports = router;

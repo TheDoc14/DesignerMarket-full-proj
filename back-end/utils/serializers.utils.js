@@ -99,10 +99,8 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     .filter(f => f.fileType === 'image' || f.fileType === 'video')
     .map(f => {
       const filename = safeStr(f.filename);
-      const legacyUrl = safeStr(f.path); // אם פעם נשמר URL מלא בשדה path
-      const url = filename
-        ? buildFileUrl(req, 'projectImages', filename)  // הדרך התקנית היום
-        : legacyUrl;                                    // נפילה לאחור אם ישן
+      const savedUrl = safeStr(f.path); // זה כבר URL תקין שנשמר בזמן יצירה
+      const url = savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectImages'], filename) : '');
       return {
         id:       String(f._id || ''),
         filename,
@@ -118,10 +116,8 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
   const files = (isOwner || isAdmin)
     ? documentsRaw.map(f => {
         const filename = safeStr(f.filename);
-        const legacyUrl = safeStr(f.path);
-        const url = filename
-          ? buildFileUrl(req, 'projectFiles', filename)
-          : legacyUrl;
+        const savedUrl = safeStr(f.path);
+        const url = savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectFiles'], filename) : '');
         return {
           id:       String(f._id || ''),
           filename,
@@ -142,13 +138,38 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     media,                          // תמיד חשוף
     hasFiles: documentsRaw.length > 0,
     files,                          // Owner/Admin בלבד
+    averageRating: safeNum(p.averageRating) ?? 0,
+    reviewsCount:  safeNum(p.reviewsCount)  ?? 0,
     createdAt:   p.createdAt || undefined,
     updatedAt:   p.updatedAt || undefined,
   };
 };
 
-module.exports = { pickProjectPublic };
+// ---- Review serializer ----
+const pickReviewPublic = (reviewDoc, { viewer } = {}) => {
+  const r = toPlain(reviewDoc) || {};
+  const authorId = String(r.userId?._id || r.userId || '');
+  const viewerId = viewer?.id ? String(viewer.id) : undefined;
+  const viewerRole = viewer?.role;
 
+  const canEdit   = viewerId && viewerId === authorId;           // רק יוצר יכול לערוך
+  const canDelete = canEdit || viewerRole === 'admin';           // יוצר או אדמין
 
+  return {
+    id:        String(r._id || ''),
+    projectId: String(r.projectId?._id || r.projectId || ''),
+    user: r.userId ? {
+      id:         String(r.userId._id || ''),
+      username:   safeStr(r.userId.username),
+      profileImg: safeStr(r.userId.profileImage), // כבר URL דרך /api/files/...
+    } : undefined,
+    rating:    safeNum(r.rating) ?? 0,
+    text:      safeStr(r.text),
+    canEdit,
+    canDelete,
+    createdAt: r.createdAt || undefined,
+    updatedAt: r.updatedAt || undefined,
+  };
+};
 
-module.exports = { pickUserPublic, pickProjectPublic };
+module.exports = { pickUserPublic, pickProjectPublic, pickReviewPublic };
