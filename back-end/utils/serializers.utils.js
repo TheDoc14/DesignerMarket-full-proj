@@ -99,10 +99,8 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     .filter(f => f.fileType === 'image' || f.fileType === 'video')
     .map(f => {
       const filename = safeStr(f.filename);
-      const legacyUrl = safeStr(f.path); // אם פעם נשמר URL מלא בשדה path
-      const url = filename
-        ? buildFileUrl(req, 'projectImages', filename)  // הדרך התקנית היום
-        : legacyUrl;                                    // נפילה לאחור אם ישן
+      const savedUrl = safeStr(f.path); // זה כבר URL תקין שנשמר בזמן יצירה
+      const url = savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectImages'], filename) : '');
       return {
         id:       String(f._id || ''),
         filename,
@@ -118,10 +116,8 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
   const files = (isOwner || isAdmin)
     ? documentsRaw.map(f => {
         const filename = safeStr(f.filename);
-        const legacyUrl = safeStr(f.path);
-        const url = filename
-          ? buildFileUrl(req, 'projectFiles', filename)
-          : legacyUrl;
+        const savedUrl = safeStr(f.path);
+        const url = savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectFiles'], filename) : '');
         return {
           id:       String(f._id || ''),
           filename,
