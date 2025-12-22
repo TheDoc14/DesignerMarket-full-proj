@@ -11,7 +11,7 @@ const {tryAuth} = require('../middleware/tryAuth.middleware');
 router.post('/', authMiddleware, permit('designer','student','admin'), uploadProject.array('files', 10), createProject);
 
 // רשימת פרויקטים – ציבורי
-router.get('/', getAllProjects);
+router.get('/',tryAuth, getAllProjects);
 
 // פרויקט יחיד – ציבורי (חשיפת קבצים רגישים מותנית בבעלות/אדמין)
 router.get('/:id',tryAuth, getProjectById);

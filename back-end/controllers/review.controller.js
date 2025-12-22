@@ -1,20 +1,10 @@
-//back-end/controllers/review.controller.js
+// back-end/controllers/review.controller.js
 const mongoose = require('mongoose');
 const Review = require('../models/Review.model');
 const Project = require('../models/Project.model');
 const { recalcProjectRatings } = require('../utils/reviews.utils');
 const { pickReviewPublic } = require('../utils/serializers.utils');
-
-// עוזר לפגינציה/מיון
-const toInt = (v, d) => {
-  const n = parseInt(v, 10);
-  return Number.isFinite(n) && n > 0 ? n : d;
-};
-const toSort = (sortBy, order) => {
-  const field = ['createdAt', 'rating'].includes(sortBy) ? sortBy : 'createdAt';
-  const dir = (order === 'asc' || order === 'ASC') ? 1 : -1;
-  return { [field]: dir };
-};
+const { toInt, toSort } = require('../utils/query.utils');
 
 // POST /api/reviews
 // כל משתמש מחובר יכול להגיב (unique per user+project לפי האינדקס)
@@ -55,9 +45,9 @@ const listReviews = async (req, res, next) => {
     const { projectId } = req.query;
     if (!projectId) throw new Error('Project ID is required');
 
-    const page  = toInt(req.query.page, 1);
+    const page = toInt(req.query.page, 1);
     const limit = toInt(req.query.limit, 10);
-    const sort  = toSort(req.query.sortBy, req.query.order);
+    const sort = toSort(req.query.sortBy, req.query.order, ['createdAt', 'rating'], 'createdAt');
 
     const filter = { projectId: new mongoose.Types.ObjectId(projectId) };
 
@@ -71,7 +61,7 @@ const listReviews = async (req, res, next) => {
     ]);
 
     const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
-    const reviews = items.map(r => pickReviewPublic(r, { viewer }));
+    const reviews = items.map((r) => pickReviewPublic(r, { viewer }));
 
     return res.status(200).json({
       message: 'Reviews fetched',
@@ -98,7 +88,7 @@ const updateReview = async (req, res, next) => {
 
     const updates = {};
     if (typeof req.body.rating !== 'undefined') updates.rating = req.body.rating;
-    if (typeof req.body.text   === 'string')     updates.text   = req.body.text.trim();
+    if (typeof req.body.text === 'string') updates.text = req.body.text.trim();
 
     const updated = await Review.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
       .populate('userId', 'username profileImage');

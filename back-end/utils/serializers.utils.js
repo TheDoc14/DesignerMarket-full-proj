@@ -1,5 +1,6 @@
 // back-end/utils/serializers.utils.js
 const { buildFileUrl } = require('../utils/url.utils');
+
 /**
  * Utilities
  */
@@ -34,9 +35,6 @@ const buildAbsoluteUrl = (maybeUrl, baseUrl) => {
 const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
   const u = toPlain(userDoc) || {};
 
-  // אל תחזיר שדות רגישים:
-  // password, verificationToken, usernameLower, resetPasswordToken, resetPasswordExpire, וכו'
-
   const userBase = {
     id:            String(u._id || ''),
     username:      safeStr(u.username),
@@ -47,12 +45,12 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
     bio:           safeStr(u.bio),
     profileImage:  buildAbsoluteUrl(u.profileImage, baseUrl),
 
-    // שדות פרופיל “רכים” שנוספו/יוספו (לא חובה בהרשמה):
+    // שדות פרופיל “רכים”
     firstName:     safeStr(u.firstName),
     lastName:      safeStr(u.lastName),
     city:          safeStr(u.city),
     country:       safeStr(u.country),
-    birthDate: u.birthDate ? new Date(u.birthDate) : null,
+    birthDate:     u.birthDate ? new Date(u.birthDate) : null,
     phone:         safeStr(u.phone),
     social: {
       website:     safeStr(u?.social?.website),
@@ -63,18 +61,17 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
       github:      safeStr(u?.social?.github),
     },
 
-    // חותמות זמן בסיסיות לשקיפות למשתמש
     createdAt:     u.createdAt || undefined,
     updatedAt:     u.updatedAt || undefined,
   };
 
-  // הרחבות לאדמין בלבד (זהירות לא לחשוף מידע רגיש)
+  // הרחבות לאדמין בלבד
   if (forRole === 'admin') {
     userBase.flags = {
-      // דוגמה לדגלים/סטטוסים שמותרים לאדמין
       pendingApproval: !(u.role === 'customer') && !safeBool(u.isApproved),
     };
-    // אם ממש צריך לתת לאדמין גישה ל-approvalDocument (URL בלבד, לא נתיב דיסק):
+
+    // URL למסמך אישור (לא נתיב דיסק)
     if (u.approvalDocument) {
       userBase.approvalDocument = buildAbsoluteUrl(u.approvalDocument, baseUrl);
     }
@@ -85,7 +82,6 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
 
 /**
  * pickProjectPublic
- * אופציונלי: סיריאלייזר לפרויקט (אם תרצה עקביות גם בהחזרת פרויקטים).
  * אינו חושף דבר רגיש (למשל שבילי קבצים פנימיים – החזרנו רק URLs ציבוריים/מבוקרים).
  */
 const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
@@ -99,7 +95,7 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     .filter(f => f.fileType === 'image' || f.fileType === 'video')
     .map(f => {
       const filename = safeStr(f.filename);
-      const savedUrl = safeStr(f.path); // זה כבר URL תקין שנשמר בזמן יצירה
+      const savedUrl = safeStr(f.path); // URL תקין שנשמר בזמן יצירה
       const url = savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectImages'], filename) : '');
       return {
         id:       String(f._id || ''),
@@ -108,6 +104,12 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
         url,
       };
     });
+
+  // mainImageUrl (נוח לפרונט)
+  const mainImage = safeArr(p.files).find(f => String(f._id) === String(p.mainImageId));
+  const mainImageUrl = mainImage
+    ? (safeStr(mainImage.path) || (safeStr(mainImage.filename) ? buildFileUrl(req, ['projects', 'projectImages'], safeStr(mainImage.filename)) : ''))
+    : '';
 
   // קבצים רגישים (Owner/Admin בלבד)
   const documentsRaw = safeArr(p.files)
@@ -134,12 +136,20 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     category:    safeStr(p.category),
     price:       safeNum(p.price),
     createdBy:   p.createdBy ? String(p.createdBy._id || p.createdBy) : undefined,
-    mainImageId: p.mainImageId ? String(p.mainImageId) : undefined,
-    media,                          // תמיד חשוף
+
+    // חדש: מצב פרסום — רק לאדמין/בעלים
+    isPublished: (isAdmin || isOwner) ? safeBool(p.isPublished) : undefined,
+
+    mainImageId:  p.mainImageId ? String(p.mainImageId) : undefined,
+    mainImageUrl, // חדש
+
+    media,                        // תמיד חשוף
     hasFiles: documentsRaw.length > 0,
-    files,                          // Owner/Admin בלבד
+    files,                        // Owner/Admin בלבד
+
     averageRating: safeNum(p.averageRating) ?? 0,
     reviewsCount:  safeNum(p.reviewsCount)  ?? 0,
+
     createdAt:   p.createdAt || undefined,
     updatedAt:   p.updatedAt || undefined,
   };
@@ -148,6 +158,7 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
 // ---- Review serializer ----
 const pickReviewPublic = (reviewDoc, { viewer } = {}) => {
   const r = toPlain(reviewDoc) || {};
+
   const authorId = String(r.userId?._id || r.userId || '');
   const viewerId = viewer?.id ? String(viewer.id) : undefined;
   const viewerRole = viewer?.role;
@@ -161,7 +172,7 @@ const pickReviewPublic = (reviewDoc, { viewer } = {}) => {
     user: r.userId ? {
       id:         String(r.userId._id || ''),
       username:   safeStr(r.userId.username),
-      profileImg: safeStr(r.userId.profileImage), // כבר URL דרך /api/files/...
+      profileImg: safeStr(r.userId.profileImage),
     } : undefined,
     rating:    safeNum(r.rating) ?? 0,
     text:      safeStr(r.text),
@@ -172,4 +183,16 @@ const pickReviewPublic = (reviewDoc, { viewer } = {}) => {
   };
 };
 
-module.exports = { pickUserPublic, pickProjectPublic, pickReviewPublic };
+// ---- Project stats ----
+const pickProjectStats = (projectDoc) => {
+  const p = toPlain(projectDoc) || {};
+  return {
+    id: String(p._id || ''),
+    title: safeStr(p.title),
+    averageRating: safeNum(p.averageRating) ?? 0,
+    reviewsCount: safeNum(p.reviewsCount) ?? 0,
+    isPublished: safeBool(p.isPublished),
+  };
+};
+
+module.exports = { pickUserPublic, pickProjectPublic, pickReviewPublic, pickProjectStats };

@@ -95,6 +95,9 @@ function classifyError(err) {
   else if (err.message?.toLowerCase().includes('not found')) {
     statusCode = 404; /* message נשאר מ־err או ברירת־מחדל */
   }
+  else if (err.message?.includes('Invalid request')) {
+    statusCode = 400; message = 'Invalid request.';
+  }
 
   // אם יש סטטוס מותאם על האובייקט—נכבד אותו
   if (typeof err.statusCode === 'number') statusCode = err.statusCode;

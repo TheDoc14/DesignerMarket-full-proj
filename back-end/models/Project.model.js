@@ -69,6 +69,11 @@ const projectSchema = new mongoose.Schema({
   isSold: {
     type: Boolean,
     default: false
+  },
+  isPublished: { 
+    type: Boolean, 
+    default: false,
+    index: true
   }
 }, { timestamps: true });
 
