@@ -55,17 +55,33 @@ const createProject = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// כל הפרויקטים (ציבורי)
+// כל הפרויקטים (ציבורי + אדמין/בעלים רואים יותר)
 const getAllProjects = async (req, res, next) => {
   try {
-    const projects = await Project.find()
-      .populate('createdBy', '_id role') // לא צריך יותר מזה כאן
+    const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
+    const isAdmin = viewer?.role === 'admin';
+
+    let filter = { isPublished: true };
+
+    // אם יש טוקן:
+    // אדמין רואה הכל, משתמש רגיל רואה published + שלו
+    if (viewer && !isAdmin) {
+      filter = { $or: [{ isPublished: true }, { createdBy: viewer.id }] };
+    }
+    if (isAdmin) {
+      filter = {};
+    }
+
+    const projects = await Project.find(filter)
+      .populate('createdBy', '_id role')
       .sort({ createdAt: -1 });
 
-    const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
     const data = projects.map(p => pickProjectPublic(p, { req, viewer }));
-
-    return res.status(200).json({ message: 'Projects fetched successfully', total: data.length, projects: data });
+    return res.status(200).json({
+      message: 'Projects fetched successfully',
+      total: data.length,
+      projects: data
+    });
   } catch (err) { next(err); }
 };
 
@@ -74,8 +90,14 @@ const getProjectById = async (req, res, next) => {
   try {
     const p = await Project.findById(req.params.id).populate('createdBy', '_id role');
     if (!p) throw new Error('Project not found');
-
     const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
+    
+    // אם הפרויקט לא מפורסם – רק אדמין או בעלים יכולים לראות
+    if (p.isPublished === false) {
+      const isAdmin = viewer?.role === 'admin';
+      const isOwner = viewer?.id && String(viewer.id) === String(p.createdBy?._id || p.createdBy);
+      if (!isAdmin && !isOwner) throw new Error('Access denied');
+    }
     const data = pickProjectPublic(p, { req, viewer }); // <<--- מעבירים req
 
     return res.status(200).json({ message: 'Project fetched successfully', project: data });

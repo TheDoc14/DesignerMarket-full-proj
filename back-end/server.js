@@ -11,6 +11,7 @@ const profileRoutes = require('./routes/profile.routes');
 const projectRoutes = require('./routes/project.routes');
 const fileRoutes = require('./routes/file.routes')
 const reviewRoutes =require('./routes/review.routes');
+const adminRoutes = require('./routes/admin.routes');
 const {errorHandler} = require('./middleware/error.middleware');
 
 // ✅ מידלוורים כלליים
@@ -24,6 +25,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/files',fileRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/test', (req, res) => {
   res.json({ msg: 'API is working fine 🚀' });
