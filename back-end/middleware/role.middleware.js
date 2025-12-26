@@ -1,7 +1,8 @@
 // back-end/middlewares/role.middleware.js
 /**
- * Middleware לבדיקת הרשאות לפי תפקיד המשתמש
- * @param  {...string} allowedRoles – רשימת תפקידים מורשים
+ * role.middleware.js
+ * permit(...roles) מחזיר middleware שמאפשר גישה רק לתפקידים מורשים.
+ * עובד תמיד אחרי authMiddleware כי הוא נשען על req.user.role.
  */
 const permit = (...allowedRoles) => {
   return (req, res, next) => {
@@ -11,7 +12,8 @@ const permit = (...allowedRoles) => {
     if (!user) return next(new Error('Unauthorized – User not authenticated'));
 
     // אם התפקיד לא נכלל ברשימת ההרשאות
-    if (!allowedRoles.includes(user.role)) return next(new Error(`Forbidden – Access denied for role: ${user.role}`));
+    if (!allowedRoles.includes(user.role))
+      return next(new Error(`Forbidden – Access denied for role: ${user.role}`));
 
     next(); // הכול תקין → המשך
   };

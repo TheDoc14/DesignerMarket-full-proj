@@ -3,6 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const Project = require('../models/Project.model');
 
+/**
+ * 📥 getFile
+ * מגיש קבצים מתוך uploads דרך /api/files/... בצורה מבוקרת.
+ * מבצע בדיקות הרשאה לפי סוג תיקייה: projectFiles דורש בעלות/אדמין, approvalDocuments אדמין בלבד.
+ * מחזיר sendFile אם הקובץ קיים, אחרת זורק שגיאה מסודרת ל־error middleware.
+ */
 const getFile = async (req, res, next) => {
   try {
     const parts = req.path.split('/').filter(Boolean);
@@ -37,7 +43,9 @@ const getFile = async (req, res, next) => {
     }
 
     return res.sendFile(filePath);
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = { getFile };
