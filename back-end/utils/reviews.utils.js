@@ -1,16 +1,25 @@
 //back-end/utils/reviews.utils.js
+/**
+ * פונקציות עזר לשמירה על עקביות דירוגים בפרויקט.
+ * במקום לחשב averageRating בכל GET, מחשבים פעם אחת אחרי שינוי ביקורות ושומרים בפרויקט.
+ */
 const mongoose = require('mongoose');
 const Review = require('../models/Review.model');
 const Project = require('../models/Project.model');
 
+/**
+ * recalcProjectRatings(projectId)
+ * מחשב מחדש averageRating ו-reviewsCount לכל ביקורות של פרויקט נתון.
+ * נקרא אחרי create/update/delete כדי לשמור נתונים מחושבים מדויקים.
+ */
 async function recalcProjectRatings(projectId) {
   const [res] = await Review.aggregate([
     { $match: { projectId: new mongoose.Types.ObjectId(projectId) } },
-    { $group: { _id: '$projectId', avg: { $avg: '$rating' }, cnt: { $sum: 1 } } }
+    { $group: { _id: '$projectId', avg: { $avg: '$rating' }, cnt: { $sum: 1 } } },
   ]);
 
   const averageRating = res?.avg || 0;
-  const reviewsCount  = res?.cnt || 0;
+  const reviewsCount = res?.cnt || 0;
 
   await Project.findByIdAndUpdate(projectId, { averageRating, reviewsCount });
 }

@@ -7,9 +7,12 @@ const { sendVerificationEmail } = require('../utils/email.utils');
 const { pickUserPublic } = require('../utils/serializers.utils'); // ✔ שם קובץ נכון
 const { getBaseUrl, buildFileUrl } = require('../utils/url.utils');
 
-// ==========================
-// 📩 רישום משתמש חדש (ללא שדות פרופיל חובה)
-// ==========================
+/**
+ * 📝 registerUser
+ * יוצר משתמש חדש במערכת, כולל העלאת approvalDocument לסטודנט/מעצב לפי הצורך.
+ * מבצע נרמול אימייל/username, הצפנת סיסמה, יצירת verificationToken ושליחת מייל אימות.
+ * מחזיר משתמש מסוריאלייז + הודעה, בלי לחשוף שדות רגישים.
+ */
 const registerUser = async (req, res, next) => {
   try {
     const { username, email, password, role } = req.body;
@@ -18,7 +21,9 @@ const registerUser = async (req, res, next) => {
     const trimmedUsername = (username || '').trim();
     const usernameLower = trimmedUsername.toLowerCase();
     const emailNorm = (email || '').trim().toLowerCase();
-    const safeRole = ['student', 'designer', 'customer', 'admin'].includes(role) ? role : 'customer';
+    const safeRole = ['student', 'designer', 'customer', 'admin'].includes(role)
+      ? role
+      : 'customer';
 
     // אימייל ושם משתמש ייחודיים
     const [existingByEmail, existingByUsername] = await Promise.all([
@@ -61,12 +66,17 @@ const registerUser = async (req, res, next) => {
     return res.status(201).json({
       message: 'Registered successfully. Check your email for verification link.',
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// ==========================
-// ✅ אימות מייל מהקישור
-// ==========================
+/**
+ * ✅ verifyEmail
+ * מאמת משתמש על בסיס token שמגיע מהקישור במייל.
+ * בודק שהטוקן תקין ושייך למשתמש, מסמן isVerified ומנקה verificationToken.
+ * לאחר אימות המשתמש יכול להתחבר (בכפוף לאישור אדמין לתפקידים רלוונטיים).
+ */
 const verifyEmail = async (req, res, next) => {
   try {
     const { token } = req.query;
@@ -80,12 +90,17 @@ const verifyEmail = async (req, res, next) => {
     await user.save();
 
     return res.status(200).json({ message: 'Email verified successfully' });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// ==========================
-// 🔁 שליחת מייל אימות מחדש
-// ==========================
+/**
+ * 🔁 resendVerificationEmail
+ * שולח מחדש מייל אימות למשתמש קיים שעוד לא אומת.
+ * מייצר token חדש, שומר אותו במסד ושולח אותו במייל.
+ * נכשל אם המשתמש לא קיים או כבר מאומת.
+ */
 const resendVerificationEmail = async (req, res, next) => {
   try {
     const emailNorm = (req.body.email || '').trim().toLowerCase();
@@ -100,12 +115,17 @@ const resendVerificationEmail = async (req, res, next) => {
     await sendVerificationEmail(user.email, newToken);
 
     return res.status(200).json({ message: 'Verification email resent successfully' });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// ==========================
-// 🔑 התחברות משתמש
-// ==========================
+/**
+ * 🔑 loginUser
+ * מבצע התחברות: אימייל+סיסמה → JWT.
+ * כולל בדיקות: סיסמה נכונה, המשתמש מאומת מייל, ואם student/designer אז גם isApproved.
+ * מחזיר token + user מסוריאלייז (ללא שדות רגישים).
+ */
 const loginUser = async (req, res, next) => {
   try {
     const emailNorm = (req.body.email || '').trim().toLowerCase();
@@ -128,18 +148,18 @@ const loginUser = async (req, res, next) => {
     }
 
     // 5) הנפקת JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
 
     // 6) סיריאליזציה בטוחה של המשתמש
     const baseUrl = getBaseUrl(req);
     const safeUser = pickUserPublic(user, { forRole: user.role, baseUrl });
 
     return res.status(200).json({ token, user: safeUser });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = { registerUser, verifyEmail, resendVerificationEmail, loginUser };
