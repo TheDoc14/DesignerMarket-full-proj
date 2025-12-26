@@ -1,19 +1,34 @@
 //back-end/routes/auth.routes
 const express = require('express');
 const router = express.Router();
-const { registerUser, verifyEmail, resendVerificationEmail, loginUser } = require('../controllers/auth.controller');
-const { uploadApproval } = require('../middleware/multer.middleware')
+const {
+  registerUser,
+  verifyEmail,
+  resendVerificationEmail,
+  loginUser,
+} = require('../controllers/auth.controller');
+const { uploadApproval } = require('../middleware/multer.middleware');
 
-// Registration – כולל קובץ תעודה אם צריך
+/**
+ * 🔐 Auth Routes
+ * אחריות: הרשמה, אימות מייל, שליחה חוזרת של אימות, התחברות.
+ * הערה: הרשמה תומכת בהעלאת approvalDocument לסטודנט/מעצב (multer).
+ */
+
+// POST /api/auth/register
+// הרשמה למערכת (כולל העלאת approvalDocument אם רלוונטי לתפקיד)
 router.post('/register', uploadApproval.single('approvalDocument'), registerUser);
 
-// Email Verification – מהקישור שנשלח למייל
+// GET /api/auth/verify-email?token=...
+// אימות מייל מתוך הקישור שנשלח למשתמש
 router.get('/verify-email', verifyEmail);
 
-// Resend Email Verification - שולח מייל אימות מחדש
+// POST /api/auth/resend-verification
+// שליחה מחדש של מייל אימות (למשתמש קיים שעוד לא אומת)
 router.post('/resend-verification', resendVerificationEmail);
 
-// Login – מתבצע רק לאחר אימות המייל
+// POST /api/auth/login
+// התחברות (נכשל אם המשתמש לא verified / או pending approval לתפקידים מסוימים)
 router.post('/login', loginUser);
 
 module.exports = router;

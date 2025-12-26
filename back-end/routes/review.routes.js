@@ -1,31 +1,55 @@
 //back-end/routes/review.routes.js
 const express = require('express');
 const router = express.Router();
-const {authMiddleware} = require('../middleware/auth.middleware');
+const { authMiddleware } = require('../middleware/auth.middleware');
 const { permit } = require('../middleware/role.middleware');
-const { createReview, listReviews, updateReview, deleteReview, getReviewById } = require('../controllers/review.controller');
+const {
+  createReview,
+  listReviews,
+  updateReview,
+  deleteReview,
+  getReviewById,
+} = require('../controllers/review.controller');
 
 /**
- * Reviews API
- * - צפייה בביקורות: פתוח (ציבורי)
- * - יצירה: כל משתמש מחובר (כל התפקידים)
- * - עריכה: רק יוצר
- * - מחיקה: יוצר או אדמין
+ * ⭐ Reviews Routes
+ * אחריות: ביקורות לפרויקטים (create/list/update/delete).
+ *
+ * כללים:
+ * - צפייה: ציבורי (בלי JWT).
+ * - יצירה: כל משתמש מחובר.
+ * - עריכה: רק יוצר התגובה.
+ * - מחיקה: יוצר או אדמין (הבדיקה עצמה בקונטרולר).
  */
 
-// ציבורי – רשימת ביקורות לפי פרויקט (עם פגינציה/מיון)
+/// GET /api/reviews?projectId=...&page=&limit=&sortBy=&order=
+// ציבורי: רשימת ביקורות לפרויקט (כולל פגינציה ומיון)
 router.get('/', listReviews);
 
-// ציבורי – קריאת ביקורת בודדת (לבחירה)
+// GET /api/reviews/:id
+// ציבורי: ביקורת בודדת (לשימוש עתידי/דיבאג)
 router.get('/:id', getReviewById);
 
-// יצירה – כל המשתמשים המחוברים (admin, student, designer, customer)
-router.post('/', authMiddleware, permit('admin','student','designer','customer'), createReview);
+// POST /api/reviews
+// יצירה: כל המשתמשים המחוברים
+router.post('/', authMiddleware, permit('admin', 'student', 'designer', 'customer'), createReview);
 
-// עריכה – רק יוצר
-router.put('/:id', authMiddleware, permit('admin','student','designer','customer'), updateReview);
+// PUT /api/reviews/:id
+// עריכה: רק יוצר (נבדק בקונטרולר)
+router.put(
+  '/:id',
+  authMiddleware,
+  permit('admin', 'student', 'designer', 'customer'),
+  updateReview
+);
 
-// מחיקה – יוצר או אדמין (הבדיקה בקונטרולר)
-router.delete('/:id', authMiddleware, permit('admin','student','designer','customer'), deleteReview);
+// DELETE /api/reviews/:id
+// מחיקה: יוצר או אדמין (נבדק בקונטרולר)
+router.delete(
+  '/:id',
+  authMiddleware,
+  permit('admin', 'student', 'designer', 'customer'),
+  deleteReview
+);
 
 module.exports = router;

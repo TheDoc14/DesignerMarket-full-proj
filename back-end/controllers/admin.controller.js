@@ -3,14 +3,22 @@ const mongoose = require('mongoose');
 const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
-const { pickUserPublic, pickProjectPublic, pickReviewPublic, pickProjectStats } = require('../utils/serializers.utils');
+const {
+  pickUserPublic,
+  pickProjectPublic,
+  pickReviewPublic,
+  pickProjectStats,
+} = require('../utils/serializers.utils');
 const { getBaseUrl } = require('../utils/url.utils');
 const { toInt, escapeRegex, toSort } = require('../utils/query.utils');
+const { buildMeta } = require('../utils/meta.utils');
 
-// =====================
-// USERS (Admin)
-// =====================
-// GET /api/admin/users?q=&role=&approved=&page=&limit=
+/**
+ * 👥 adminListUsers
+ * מחזיר רשימת משתמשים לאדמין עם פילטרים (q/role/approved) ופגינציה.
+ * משתמש ב־pickUserPublic(forRole='admin') כדי לא לחשוף שדות רגישים אבל כן לחשוף approvalDocument כשצריך.
+ * מיועד למסך ניהול משתמשים + אישורי סטודנטים/מעצבים.
+ */
 const adminListUsers = async (req, res, next) => {
   try {
     const { q, role, approved } = req.query;
@@ -43,16 +51,20 @@ const adminListUsers = async (req, res, next) => {
 
     return res.status(200).json({
       message: 'Users fetched',
-      total,
-      page,
-      limit,
+      meta: buildMeta(total, page, limit),
       users: data,
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// PUT /api/admin/users/:id/approval
-// body: { "isApproved": true/false }
+/**
+ * ✅ adminSetUserApproval
+ * מעדכן isApproved למשתמש (רק student/designer) על בסיס החלטת אדמין.
+ * מבצע ולידציה לקלט (true/false), מאמת משתמש קיים ותפקיד מתאים.
+ * מחזיר user מסוריאלייז לאדמין לאחר עדכון.
+ */
 const adminSetUserApproval = async (req, res, next) => {
   try {
     const { isApproved } = req.body;
@@ -79,13 +91,17 @@ const adminSetUserApproval = async (req, res, next) => {
     const safe = pickUserPublic(user, { forRole: 'admin', baseUrl });
 
     return res.status(200).json({ message: 'User approval updated', user: safe });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// =====================
-// PROJECTS (Admin)
-// =====================
-// GET /api/admin/projects?published=&q=&category=&page=&limit=
+/**
+ * 📦 adminListProjects
+ * מחזיר רשימת פרויקטים לאדמין עם פילטרים (published/category/q) ופגינציה.
+ * אדמין מקבל viewer=admin ולכן serializer יכול להחזיר גם קבצים רגישים אם צריך.
+ * מיועד למסך ניהול פרויקטים + pending publish.
+ */
 const adminListProjects = async (req, res, next) => {
   try {
     const { q, category, published } = req.query;
@@ -120,16 +136,20 @@ const adminListProjects = async (req, res, next) => {
 
     return res.status(200).json({
       message: 'Projects fetched',
-      total,
-      page,
-      limit,
+      meta: buildMeta(total, page, limit),
       projects: data,
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// PUT /api/admin/projects/:id/publish
-// body: { "isPublished": true/false }
+/**
+ * 🚀 adminSetProjectPublish
+ * מעדכן isPublished לפרויקט על בסיס החלטת אדמין.
+ * מבצע ולידציה לקלט, מאמת שהפרויקט קיים, ומחזיר פרויקט מסוריאלייז לאחר העדכון.
+ * מיועד לכפתור “Approve/Unpublish” בפאנל אדמין.
+ */
 const adminSetProjectPublish = async (req, res, next) => {
   try {
     let { isPublished } = req.body;
@@ -153,13 +173,17 @@ const adminSetProjectPublish = async (req, res, next) => {
     const data = pickProjectPublic(project, { req, viewer });
 
     return res.status(200).json({ message: 'Project publish updated', project: data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// =====================
-// REVIEWS (Admin list)
-// =====================
-// GET /api/admin/reviews?projectId=&page=&limit=&sortBy=&order=
+/**
+ * 🧾 adminListReviews
+ * מחזיר רשימת תגובות מערכתית לאדמין (כולל פילטר projectId) עם פגינציה ומיון.
+ * משתמש ב־serializer של review כדי לשמור על canDelete/canEdit עקביים ולהוסיף מידע פרויקט בסיסי.
+ * מיועד לניהול תגובות לא ראויות מתוך הפאנל.
+ */
 const adminListReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
@@ -191,65 +215,71 @@ const adminListReviews = async (req, res, next) => {
       const base = pickReviewPublic(r, { viewer });
       return {
         ...base,
-        project: r.projectId ? { id: String(r.projectId._id), title: r.projectId.title } : undefined,
+        project: r.projectId
+          ? { id: String(r.projectId._id), title: r.projectId.title }
+          : undefined,
       };
     });
 
     return res.status(200).json({
       message: 'Reviews fetched',
-      total,
-      page,
-      limit,
+      meta: buildMeta(total, page, limit),
       reviews: data,
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// =====================
-// STATS (MVP)
-// =====================
-// GET /api/admin/stats
+/**
+ * 📊 adminGetStats
+ * מחזיר סטטיסטיקות MVP של המערכת (סה״כ משתמשים/פרויקטים/תגובות + Top Rated/Most Reviewed).
+ * מבוסס שאילתות DB מהירות יחסית (count + find+sort+limit), כדי לתמוך במסך Dashboard.
+ * מחזיר מבנה עקבי כדי שהפרונט יוכל להציג בקלות כרטיסים/טבלאות.
+ */
 const adminGetStats = async (req, res, next) => {
   try {
-    const [
-      usersTotal,
-      usersPendingApproval,
-      projectsTotal,
-      projectsPendingPublish,
-      reviewsTotal,
-    ] = await Promise.all([
-      User.countDocuments({}),
-      User.countDocuments({ role: { $in: ['student', 'designer'] }, isApproved: false }),
-      Project.countDocuments({}),
-      Project.countDocuments({ isPublished: false }),
-      Review.countDocuments({}),
-    ]);
+    const [usersTotal, usersPendingApproval, projectsTotal, projectsPendingPublish, reviewsTotal] =
+      await Promise.all([
+        User.countDocuments({}),
+        User.countDocuments({ role: { $in: ['student', 'designer'] }, isApproved: false }),
+        Project.countDocuments({}),
+        Project.countDocuments({ isPublished: false }),
+        Review.countDocuments({}),
+      ]);
 
     const topRated = await Project.find({})
-       .sort({ averageRating: -1, reviewsCount: -1 })
-       .limit(5)
-       .select('title averageRating reviewsCount isPublished');
+      .sort({ averageRating: -1, reviewsCount: -1 })
+      .limit(5)
+      .select('title averageRating reviewsCount isPublished');
 
     const mostReviewed = await Project.find({})
-       .sort({ reviewsCount: -1, averageRating: -1 })
-       .limit(5)
-       .select('title averageRating reviewsCount isPublished');
+      .sort({ reviewsCount: -1, averageRating: -1 })
+      .limit(5)
+      .select('title averageRating reviewsCount isPublished');
 
     return res.status(200).json({
-        message: 'Stats fetched',
-        stats: {
-            usersTotal,
-            usersPendingApproval,
-            projectsTotal,
-            projectsPendingPublish,
-            reviewsTotal,
-            topRated: topRated.map(pickProjectStats),
-            mostReviewed: mostReviewed.map(pickProjectStats),
-        },
+      message: 'Stats fetched',
+      stats: {
+        usersTotal,
+        usersPendingApproval,
+        projectsTotal,
+        projectsPendingPublish,
+        reviewsTotal,
+        topRated: topRated.map(pickProjectStats),
+        mostReviewed: mostReviewed.map(pickProjectStats),
+      },
     });
-
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-module.exports = { adminListUsers, adminSetUserApproval, adminListProjects,
- adminSetProjectPublish, adminListReviews, adminGetStats };
+module.exports = {
+  adminListUsers,
+  adminSetUserApproval,
+  adminListProjects,
+  adminSetProjectPublish,
+  adminListReviews,
+  adminGetStats,
+};

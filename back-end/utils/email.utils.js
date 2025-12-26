@@ -1,4 +1,8 @@
 // back-end/utils/email.utils.js
+/**
+ * עטיפה לשליחת מיילים (לרוב: אימות משתמש, ובהמשך: איפוס סיסמה).
+ * מרכז את הלוגיקה כדי לשמור סגנון אחיד ולמנוע כפילות בקונטרולרים.
+ */
 const nodemailer = require('nodemailer');
 
 async function sendVerificationEmail(to, token) {
@@ -8,8 +12,8 @@ async function sendVerificationEmail(to, token) {
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
       user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+      pass: process.env.SMTP_PASS,
+    },
   });
 
   const link = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
@@ -18,7 +22,7 @@ async function sendVerificationEmail(to, token) {
     to,
     subject: 'אימות כתובת אימייל',
     html: `<p>לחצו על הקישור כדי לאמת את כתובת המייל שלכם:</p>
-           <a href="${link}">${link}</a>`
+           <a href="${link}">${link}</a>`,
   });
 }
 

@@ -1,25 +1,28 @@
 // back-end/middlewares/multer.middleware.js
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // סוגי קבצים מותרים – כולל תמונות, סרטונים, מסמכים ומצגות
 const allowed = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|ppt|pptx|txt|zip/;
 
 /**
- * בוחר את תיקיית היעד בתוך uploads/projects לפי סוג הקובץ
+ * getProjectSubfolder
+ * מנתב קבצים של פרויקט לתת-תיקייה לפי mimetype:
+ * תמונות/וידאו -> projectImages, כל השאר -> projectFiles.
  */
 const getProjectSubfolder = (mimetype) => {
-  if (mimetype.startsWith("image/") || mimetype.startsWith("video/")) return "projectImages";
-  return "projectFiles";
+  if (mimetype.startsWith('image/') || mimetype.startsWith('video/')) return 'projectImages';
+  return 'projectFiles';
 };
 
 /**
- * יוצר אינסטנציה של multer לפי תיקיית יעד ומגבלת גודל
- * @param {string} baseFolder - תיקיית היעד הראשית בתוך uploads (למשל 'projects', 'profileImages' וכו')
+ * getProjectSubfolder
+ * מנתב קבצים של פרויקט לתת-תיקייה לפי mimetype:
+ * תמונות/וידאו -> projectImages, כל השאר -> projectFiles.
  */
 const createMulter = (baseFolder) => {
-  const basePath = path.join("uploads", baseFolder);
+  const basePath = path.join('uploads', baseFolder);
 
   // יצירת תיקייה ראשית אם אינה קיימת
   if (!fs.existsSync(basePath)) {
@@ -31,7 +34,7 @@ const createMulter = (baseFolder) => {
       let targetPath = basePath;
 
       // אם מדובר בפרויקטים, ניצור תת-תיקייה בהתאם לסוג הקובץ
-      if (baseFolder === "projects") {
+      if (baseFolder === 'projects') {
         const subfolder = getProjectSubfolder(file.mimetype);
         targetPath = path.join(basePath, subfolder);
       }
@@ -47,35 +50,39 @@ const createMulter = (baseFolder) => {
   });
 
   const fileFilter = (req, file, cb) => {
-   const ext = path.extname(file.originalname).toLowerCase();
-   const mimetype = file.mimetype;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const mimetype = file.mimetype;
 
-   const extOk = allowed.test(ext);
-   const mimeOk =
-     mimetype.startsWith('image/') ||
-     mimetype.startsWith('video/') ||
-     mimetype.startsWith('text/') ||
-     mimetype.includes('pdf') ||
-     mimetype.includes('word') ||
-     mimetype.includes('officedocument') ||
-     mimetype.includes('powerpoint') ||
-     mimetype.includes('zip');
+    const extOk = allowed.test(ext);
+    const mimeOk =
+      mimetype.startsWith('image/') ||
+      mimetype.startsWith('video/') ||
+      mimetype.startsWith('text/') ||
+      mimetype.includes('pdf') ||
+      mimetype.includes('word') ||
+      mimetype.includes('officedocument') ||
+      mimetype.includes('powerpoint') ||
+      mimetype.includes('zip');
 
-   if (extOk || mimeOk) cb(null, true);
-   else cb(new Error('Unsupported file type'));
-  }
+    if (extOk || mimeOk) cb(null, true);
+    else cb(new Error('Unsupported file type'));
+  };
 
   return multer({
     storage,
     fileFilter,
     limits: {
-      fileSize: baseFolder === "projects"
-        ? 300 * 1024 * 1024 // ✅ עד 300MB לקובצי פרויקט
-        : 30 * 1024 * 1024  // עד 30MB לשאר
+      fileSize:
+        baseFolder === 'projects'
+          ? 300 * 1024 * 1024 // ✅ עד 300MB לקובצי פרויקט
+          : 30 * 1024 * 1024, // עד 30MB לשאר
     },
   });
 };
 
 // ✅ Middleware-ים לפי סוג העלאה
-module.exports = { uploadApproval: createMulter("approvalDocuments"), uploadProject: createMulter("projects"),
-   uploadProfile: createMulter("profileImages") };
+module.exports = {
+  uploadApproval: createMulter('approvalDocuments'),
+  uploadProject: createMulter('projects'),
+  uploadProfile: createMulter('profileImages'),
+};

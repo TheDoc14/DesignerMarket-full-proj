@@ -5,9 +5,14 @@ const Project = require('../models/Project.model');
 const { recalcProjectRatings } = require('../utils/reviews.utils');
 const { pickReviewPublic } = require('../utils/serializers.utils');
 const { toInt, toSort } = require('../utils/query.utils');
+const { buildMeta } = require('../utils/meta.utils');
 
-// POST /api/reviews
-// כל משתמש מחובר יכול להגיב (unique per user+project לפי האינדקס)
+/**
+ * ➕ createReview
+ * יוצר תגובה חדשה לפרויקט עבור המשתמש המחובר (תגובה ייחודית per user+project).
+ * מבצע בדיקות קיום פרויקט, שומר review, מפעיל recalcProjectRatings ומחזיר תגובה מסוריאלייז.
+ * מיועד לשימוש אחרי רכישה/אינטראקציה (לוגיקת הרשאות נשארת ב־middleware/קונטרולר).
+ */
 const createReview = async (req, res, next) => {
   try {
     const { projectId, rating, text } = req.body;
@@ -28,18 +33,23 @@ const createReview = async (req, res, next) => {
     await recalcProjectRatings(projectId);
 
     // populate ל־user להצגה יפה
-    const populated = await Review.findById(review._id)
-      .populate('userId', 'username profileImage');
+    const populated = await Review.findById(review._id).populate('userId', 'username profileImage');
 
     const viewer = { id: req.user.id, role: req.user.role };
     const data = pickReviewPublic(populated, { viewer });
 
     return res.status(201).json({ message: 'Review created', review: data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// GET /api/reviews?projectId=...&page=&limit=&sortBy=&order=
-// ציבורי לצפייה; אין צורך בטוקן
+/**
+ * 📃 listReviews
+ * מחזיר רשימת תגובות לפרויקט ספציפי בצורה ציבורית, עם פגינציה ומיון.
+ * תומך ב־viewer אופציונלי (אם יש token) כדי להחזיר canEdit/canDelete לפי המשתמש.
+ * לא דורש JWT כדי לאפשר צפייה לכל המשתמשים.
+ */
 const listReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
@@ -65,16 +75,20 @@ const listReviews = async (req, res, next) => {
 
     return res.status(200).json({
       message: 'Reviews fetched',
-      total,
-      page,
-      limit,
+      meta: buildMeta(total, page, limit),
       reviews,
     });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// PUT /api/reviews/:id
-// רק יוצר התגובה יכול לערוך
+/**
+ * ✏️ updateReview
+ * מאפשר עריכת תגובה רק ליוצר התגובה.
+ * לאחר עדכון מפעיל recalcProjectRatings כדי לשמור averageRating ו־reviewsCount תקינים.
+ * מחזיר review מסוריאלייז כולל הרשאות פעולה (canEdit/canDelete).
+ */
 const updateReview = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -90,8 +104,10 @@ const updateReview = async (req, res, next) => {
     if (typeof req.body.rating !== 'undefined') updates.rating = req.body.rating;
     if (typeof req.body.text === 'string') updates.text = req.body.text.trim();
 
-    const updated = await Review.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-      .populate('userId', 'username profileImage');
+    const updated = await Review.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+    }).populate('userId', 'username profileImage');
 
     await recalcProjectRatings(review.projectId);
 
@@ -99,11 +115,17 @@ const updateReview = async (req, res, next) => {
     const data = pickReviewPublic(updated, { viewer });
 
     return res.status(200).json({ message: 'Review updated', review: data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// DELETE /api/reviews/:id
-// יוצר התגובה או אדמין יכולים למחוק
+/**
+ * 🗑️ deleteReview
+ * מאפשר מחיקת תגובה ליוצר או לאדמין (בדיקה חד משמעית בקונטרולר).
+ * לאחר מחיקה מפעיל recalcProjectRatings לפרויקט הרלוונטי כדי לעדכן סטטיסטיקות.
+ * מחזיר הודעת הצלחה ללא מידע רגיש.
+ */
 const deleteReview = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -119,21 +141,29 @@ const deleteReview = async (req, res, next) => {
     await recalcProjectRatings(review.projectId);
 
     return res.status(200).json({ message: 'Review deleted' });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
-// (בחירה) GET /api/reviews/:id — לצורך דיבאג/שימוש עתידי
+/**
+ * 🔎 getReviewById
+ * מחזיר תגובה בודדת (שימוש אופציונלי/דיבאג/פיצ’רים עתידיים).
+ * תומך ב־viewer אופציונלי כדי להחזיר canEdit/canDelete בצורה עקבית.
+ * לא דורש JWT, אבל אם קיים token אפשר להחזיר הרשאות פעולה מדויקות.
+ */
 const getReviewById = async (req, res, next) => {
   try {
-    const r = await Review.findById(req.params.id)
-      .populate('userId', 'username profileImage');
+    const r = await Review.findById(req.params.id).populate('userId', 'username profileImage');
     if (!r) throw new Error('Review not found');
 
     const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
     const data = pickReviewPublic(r, { viewer });
 
     return res.status(200).json({ message: 'Review fetched', review: data });
-  } catch (err) { next(err); }
+  } catch (err) {
+    next(err);
+  }
 };
 
 module.exports = { createReview, listReviews, updateReview, deleteReview, getReviewById };
