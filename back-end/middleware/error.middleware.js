@@ -12,127 +12,216 @@ if (!fs.existsSync(LOG_DIR)) {
 
 /**
  * classifyError
- * מנתח הודעות שגיאה נפוצות (mongo validation, auth, not found וכו’) ומחליט על קוד החזרה.
- * שומר אחידות בין כל ה-endpoints ומונע “המצאת” פורמטים שונים לשגיאות.
+ * ממפה שגיאות נפוצות ל־HTTP status + message אחיד.
+ * המטרה: שגיאות "עסקיות" / ולידציה יחזרו 4xx ולא 500, ושגיאות מערכת יישארו 5xx.
+ *
+ * כללים:
+ * - אל "תמציא" 500 לשגיאות בקשה – עדיף 400/401/403/404/409/413 לפי המקרה.
+ * - בפרודקשן לא חושפים הודעות פנימיות ב-5xx (אבטחה).
  */
-function classifyError(err) {
+function classifyError(err, req) {
   // ברירת מחדל
   let statusCode = 500;
   let message = 'Internal Server Error';
 
-  // 🛡️ JWT / הרשאות
-  if (err.name === 'JsonWebTokenError') {
+  const msg = typeof err?.message === 'string' ? err.message : '';
+  const msgLower = msg.toLowerCase();
+
+  // =====================
+  // 🛡️ JWT / Auth / Permissions
+  // =====================
+  if (err?.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid or malformed token.';
-  } else if (err.name === 'TokenExpiredError') {
+  } else if (err?.name === 'TokenExpiredError') {
     statusCode = 401;
     message = 'Session expired. Please log in again.';
-  } else if (err.message?.includes('No token provided')) {
+  } else if (msg.includes('No token provided')) {
     statusCode = 401;
     message = 'Authentication token missing.';
-  } else if (err.message?.includes('Access denied')) {
-    statusCode = 403;
-    message = 'Access denied: insufficient permissions.';
-  } else if (err.message?.includes('User not authenticated')) {
+  } else if (msg.includes('User not authenticated')) {
     statusCode = 401;
     message = 'User not authenticated.';
+  } else if (msg.includes('Access denied') || msg.includes('Forbidden')) {
+    statusCode = 403;
+    message = 'Access denied: insufficient permissions.';
   }
 
-  // 👥 Users / Authn / Signup / Verify
-  else if (err.message?.includes('Invalid credentials')) {
+  // =====================
+  // 👥 Users / Authn / Signup / Verify / Profile
+  // =====================
+  else if (msg.includes('Invalid credentials')) {
     statusCode = 400;
     message = 'Invalid credentials.';
-  } else if (err.message?.includes('User already exists')) {
+  } else if (msg.includes('User already exists')) {
     statusCode = 400;
     message = 'User already exists with this email.';
-  } else if (err.message?.includes('Username already taken')) {
+  } else if (msg.includes('Username already taken')) {
     statusCode = 400;
     message = 'Username already taken.';
-  } else if (err.message?.includes('User not found')) {
-    statusCode = 404;
-    message = 'User not found.';
-  } else if (err.message?.includes('Please verify your email')) {
+  } else if (msg.includes('Please verify your email')) {
     statusCode = 403;
     message = 'Email verification required.';
-  } else if (err.message?.includes('Invalid or expired token')) {
+  } else if (msg.includes('Invalid or expired token')) {
     statusCode = 400;
     message = 'Verification token invalid or expired.';
-  } else if (err.message?.includes('Your account is pending admin approval')) {
+  } else if (msg.includes('Your account is pending admin approval')) {
     statusCode = 403;
     message = 'Your account is awaiting admin approval.';
-  } else if (err.message?.includes('Approval document is required')) {
+  } else if (msg.includes('Approval document is required')) {
     statusCode = 400;
     message = 'Approval document is required for student/designer.';
+  } else if (msg.includes('Approval document is not allowed for customers')) {
+    // ✅ זה היה אצלך 500 בלוג — צריך להיות 400
+    statusCode = 400;
+    message = 'Approval document is not allowed for customers.';
+  } else if (msg.includes('Invalid birthDate format')) {
+    // ✅ זה היה אצלך 500 בלוג — צריך להיות 400
+    statusCode = 400;
+    message = 'Invalid birthDate format (expected ISO date).';
+  } else if (msg.includes('User not found')) {
+    statusCode = 404;
+    message = 'User not found.';
   }
 
+  // =====================
+  // 📦 Projects / Reviews / Business rules
+  // =====================
+  else if (msg.includes('Invalid mainImageIndex')) {
+    // ✅ זה היה אצלך 500 בלוג — צריך להיות 400
+    statusCode = 400;
+    message = 'Invalid mainImageIndex.';
+  } else if (msg.includes('No files uploaded')) {
+    statusCode = 400;
+    message = 'No files uploaded.';
+  } else if (msg.includes('Main file must be an image')) {
+    statusCode = 400;
+    message = 'Main file must be an image.';
+  } else if (msg.includes('Price must be a valid number')) {
+    statusCode = 400;
+    message = 'Price must be a valid number.';
+  } else if (msg.includes('Project not found')) {
+    statusCode = 404;
+    message = 'Project not found.';
+  } else if (msg.includes('Review not found')) {
+    statusCode = 404;
+    message = 'Review not found.';
+  } else if (msg.includes('Project ID is required')) {
+    statusCode = 400;
+    message = 'Project ID is required.';
+  } else if (msg.includes('Rating is required')) {
+    statusCode = 400;
+    message = 'Rating is required.';
+  }
+
+  // =====================
   // 💾 Mongo / Mongoose
+  // =====================
   else if (err instanceof mongoose.Error.ValidationError) {
     statusCode = 400;
     const msgs = Object.values(err.errors).map((e) => e.message);
     message = `Validation Error: ${msgs.join(', ')}`;
   } else if (err instanceof mongoose.Error.CastError) {
+    // לדוגמה: ObjectId לא תקין
     statusCode = 400;
     message = `Invalid value for field '${err.path}'.`;
-  } else if (err.code === 11000) {
+  } else if (err?.code === 11000) {
     statusCode = 409;
     message = 'Duplicate key: record already exists.';
   }
 
-  // 📤 Multer / העלאות קבצים
-  else if (err.name === 'MulterError') {
-    // דוגמאות: LIMIT_FILE_SIZE, LIMIT_FILE_COUNT, LIMIT_UNEXPECTED_FILE...
+  // =====================
+  // 📤 Multer / Uploads
+  // =====================
+  else if (err?.name === 'MulterError') {
     if (err.code === 'LIMIT_FILE_SIZE') {
       statusCode = 413;
       message = 'File too large.';
+    } else if (err.code === 'LIMIT_FILE_COUNT') {
+      statusCode = 400;
+      message = 'Too many files uploaded.';
+    } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      statusCode = 400;
+      message = 'Unexpected file field.';
     } else {
       statusCode = 400;
       message = `Upload error: ${err.code || 'invalid file'}.`;
     }
-  } else if (err.code === 'LIMIT_FILE_SIZE') {
+  } else if (err?.code === 'LIMIT_FILE_SIZE') {
     statusCode = 413;
     message = 'File too large.';
-  } else if (err.message?.includes('Unsupported file type')) {
+  } else if (msg.includes('Unsupported file type')) {
     statusCode = 400;
     message = 'Unsupported file type.';
   }
 
-  // 📂 קבצים / FS
-  else if (err.code === 'ENOENT' || err.message?.includes('File not found')) {
+  // =====================
+  // 📂 FS / Files
+  // =====================
+  else if (err?.code === 'ENOENT' || msg.includes('File not found')) {
     statusCode = 404;
     message = 'File not found.';
-  } else if (err.code === 'EACCES') {
+  } else if (err?.code === 'EACCES') {
     statusCode = 403;
     message = 'File access denied.';
   }
 
-  // 🌐 תקשורת / DB infra
-  else if (err.message?.includes('Failed to connect to DB')) {
+  // =====================
+  // 🌐 Infra / Network / DB
+  // =====================
+  else if (msg.includes('Failed to connect to DB')) {
     statusCode = 503;
     message = 'Database connection failed.';
-  } else if (err.message?.includes('ECONNREFUSED')) {
+  } else if (msg.includes('ECONNREFUSED')) {
     statusCode = 503;
     message = 'Database refused connection.';
-  } else if (err.message?.includes('Network error')) {
+  } else if (msg.includes('Network error')) {
     statusCode = 502;
     message = 'Network communication error.';
   }
 
-  // 🎯 404 רך ל־not found כללי
-  else if (err.message?.toLowerCase().includes('not found')) {
-    statusCode = 404; /* message נשאר מ־err או ברירת־מחדל */
-  } else if (err.message?.includes('Invalid request')) {
+  // =====================
+  // 🎯 Generic fallbacks
+  // =====================
+  else if (msg.includes('Invalid request')) {
     statusCode = 400;
     message = 'Invalid request.';
+  } else if (msgLower.includes('not found')) {
+    statusCode = 404;
+    // message יוחלט למטה לפי כללי חשיפה
   }
 
-  // אם יש סטטוס מותאם על האובייקט—נכבד אותו
-  if (typeof err.statusCode === 'number') statusCode = err.statusCode;
-  if (typeof err.status === 'number') statusCode = err.status;
-  if (err.expose && err.message) message = err.message;
+  // =====================
+  // Respect explicit status flags (אם תחליטו להוסיף בעתיד err.statusCode)
+  // =====================
+  if (typeof err?.statusCode === 'number') statusCode = err.statusCode;
+  if (typeof err?.status === 'number') statusCode = err.status;
 
-  // אם המסר המקורי יותר אינפורמטיבי (ואין חשש רגישות), נשאיר אותו
-  if (err.message && message === 'Internal Server Error') {
-    message = err.message;
+  // =====================
+  // Message exposure policy
+  // =====================
+  const isDev = process.env.NODE_ENV === 'development';
+
+  // אם מותר לחשוף (למשל expose=true), נכבד
+  if (err?.expose && msg) {
+    message = msg;
+  }
+
+  // ברירת מחדל: אם זה עדיין Internal Server Error
+  // - DEV: אפשר להחזיר את msg המקורי (נוח לדיבאג)
+  // - PROD: לא לחשוף msg פנימי ב-5xx
+  if (msg && message === 'Internal Server Error') {
+    if (isDev) {
+      message = msg;
+    } else {
+      // בפרודקשן: נחזיר msg רק אם זה 4xx (שגיאת בקשה)
+      if (statusCode < 500) message = msg;
+    }
+  }
+
+  // 404 בלי טקסט מפורש -> מסר כללי
+  if (statusCode === 404 && (!message || message === 'Internal Server Error')) {
+    message = 'Resource not found.';
   }
 
   return { statusCode, message };
@@ -140,41 +229,43 @@ function classifyError(err) {
 
 /**
  * logError
- * כותב לוג קצר למסך + לוג מפורט לקובץ.
- * לא מפיל את האפליקציה אם הלוג נכשל (best-effort).
+ * כותב שורה קצרה למסך + קובץ לוג עם stack.
+ * best-effort: לא מפיל את האפליקציה אם כתיבת הלוג נכשלת.
  */
 function logError({ statusCode, message }, err, req) {
   const line = `[${new Date().toISOString()}] [${statusCode}] ${message} | ${req.method} ${req.originalUrl}`;
-  // למסך – קצר
+
+  // למסך
   if (process.env.NODE_ENV === 'development') {
     console.error('❌', line);
-    if (err && err.stack) console.error(err.stack);
+    if (err?.stack) console.error(err.stack);
   } else {
     console.error('❌', line);
   }
-  // לקובץ – קצר + stack
+
+  // לקובץ
   try {
-    const full = `${line}\n${err && err.stack ? err.stack : ''}\n\n`;
+    const full = `${line}\n${err?.stack ? err.stack : ''}\n\n`;
     fs.appendFileSync(LOG_PATH, full);
   } catch (_err) {
-    /* אל תעצור אפליקציה בגלל לוג */
+    // לא מפילים את האפליקציה בגלל לוג
   }
 }
 
 /**
  * errorHandler
- * middleware אחרון בשרשרת: מחזיר תשובת JSON אחידה עם code/message.
- * בפרודקשן לא מחזיר stack, וב-development מחזיר stack לצורך דיבאג.
+ * middleware אחרון בשרשרת: מחזיר JSON אחיד.
+ * בפרודקשן לא מחזיר stack. ב-dev מחזיר stack לדיבאג.
  */
 const errorHandler = (err, req, res, _next) => {
-  const { statusCode, message } = classifyError(err);
+  const { statusCode, message } = classifyError(err, req);
   logError({ statusCode, message }, err, req);
 
   return res.status(statusCode).json({
     success: false,
     code: statusCode,
     message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }), // ← שים לב: שלוש נקודות!
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
 

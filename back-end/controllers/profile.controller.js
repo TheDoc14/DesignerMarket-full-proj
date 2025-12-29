@@ -11,7 +11,7 @@ const {
   normalizeHttpUrl,
   isValidHttpUrl,
 } = require('../utils/url.utils');
-const { deleteUploadByFileUrl } = require('../utils/filesCleanup.utils');
+const { deleteUploadByFileUrl, deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
 
 /**
  * 👤 getMyProfile
@@ -157,6 +157,12 @@ const updateMyProfile = async (req, res, next) => {
       user: safeUser,
     });
   } catch (err) {
+    if (req.file && req.file.path) {
+      try {
+        deleteUploadByFsPath(String(req.file.path));
+      } catch (_err) {}
+    }
+
     next(err);
   }
 };

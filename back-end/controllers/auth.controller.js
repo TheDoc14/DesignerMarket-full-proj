@@ -4,8 +4,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { generateVerificationToken } = require('../utils/emailToken.utils');
 const { sendVerificationEmail } = require('../utils/email.utils');
-const { pickUserPublic } = require('../utils/serializers.utils'); // ✔ שם קובץ נכון
+const { pickUserPublic } = require('../utils/serializers.utils');
 const { getBaseUrl, buildFileUrl } = require('../utils/url.utils');
+const { deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
 
 /**
  * 📝 registerUser
@@ -15,9 +16,10 @@ const { getBaseUrl, buildFileUrl } = require('../utils/url.utils');
  */
 const registerUser = async (req, res, next) => {
   try {
+    // ---- בסיס: גוף הבקשה ----
     const { username, email, password, role } = req.body;
 
-    // נרמול בסיסי (הסכמה כבר עושה trim; כאן רק lower-case וקושרים usernameLower)
+    // ---- נרמול בסיסי ----
     const trimmedUsername = (username || '').trim();
     const usernameLower = trimmedUsername.toLowerCase();
     const emailNorm = (email || '').trim().toLowerCase();
@@ -25,7 +27,16 @@ const registerUser = async (req, res, next) => {
       ? role
       : 'customer';
 
-    // אימייל ושם משתמש ייחודיים
+    // ---- הגנה: לקוח לא אמור להעלות מסמך אישור ----
+    // multer יכול לשמור את הקובץ לפני הקונטרולר, לכן מנקים כאן ומחזירים שגיאה.
+    if (safeRole === 'customer' && req.file && req.file.path) {
+      try {
+        deleteUploadByFsPath(String(req.file.path));
+      } catch (_err) {}
+      throw new Error('Approval document is not allowed for customers');
+    }
+
+    // ---- אימייל ושם משתמש ייחודיים ----
     const [existingByEmail, existingByUsername] = await Promise.all([
       User.findOne({ email: emailNorm }),
       User.findOne({ usernameLower }),
@@ -33,21 +44,22 @@ const registerUser = async (req, res, next) => {
     if (existingByEmail) throw new Error('User already exists');
     if (existingByUsername) throw new Error('Username already taken');
 
-    // לסטודנט/מעצב – נדרש מסמך אישור; נשמור URL דרך קובץ ה־files API
+    // ---- לסטודנט/מעצב – נדרש מסמך אישור ----
+    // כאן אנחנו שומרים URL (ולא fsPath) כי זה מה שנכנס למסד.
     let approvalPath = '';
     if (safeRole === 'student' || safeRole === 'designer') {
       if (!req.file) throw new Error('Approval document is required for this role');
       approvalPath = buildFileUrl(req, 'approvalDocuments', req.file.filename);
     }
 
-    // הצפנת סיסמה
+    // ---- הצפנת סיסמה ----
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // טוקן אימות מייל
+    // ---- טוקן אימות מייל ----
     const verificationToken = generateVerificationToken();
 
-    // יצירת משתמש
+    // ---- יצירת משתמש ----
     const user = new User({
       username: trimmedUsername,
       usernameLower,
@@ -67,6 +79,14 @@ const registerUser = async (req, res, next) => {
       message: 'Registered successfully. Check your email for verification link.',
     });
   } catch (err) {
+    // ---- Cleanup: אם יש קובץ שהועלה ואז קרתה שגיאה בתהליך ההרשמה ----
+    // חשוב: לא נוגעים בקבצים קיימים של משתמשים אחרים, רק במה שהועלה בבקשה הזו.
+    if (req.file && req.file.path) {
+      try {
+        deleteUploadByFsPath(String(req.file.path));
+      } catch (_err) {}
+    }
+
     next(err);
   }
 };
