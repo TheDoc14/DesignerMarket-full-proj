@@ -1,43 +1,60 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-import { AuthProvider } from './Context/AuthContext';
+import { AuthProvider, useAuth } from './Context/AuthContext';
+import Navbar from './Components/Navbar';
 
-// ייבוא העמודים הקודמים
-import Home from './Pages/Home';
+// ייבוא עמודי המערכת
 import Login from './Pages/Login';
 import Register from './Pages/Register';
 import Dashboard from './Pages/Dashboard';
+import ProjectLibrary from './Pages/ProjectLibrary';
+import ProjectDetails from './Pages/ProjectDetails';
+import AddProject from './Pages/AddProject';
+import VerifyEmail from './Pages/VerifyEmail';
 import NotFound from './Pages/NotFound';
-import VerifyEmail from './Pages/VerifyEmail'
-// --- ייבוא העמודים החדשים ---
-import ProductLibrary from './Pages/ProductLibrary';
-import ProductDetails from './Pages/ProductDetails';
-import AddProduct from './Pages/AddProduct';
-import Navbar from './Components/Navbar';
+
+// עמודי אדמין
+import AdminDashboard from './Pages/Admin/AdminDashboard';
+import ManageUsers from './Pages/Admin/ManageUsers';
+import ManageProjects from './Pages/Admin/ManageProjects';
+import UserApproval from './Pages/Admin/UserApproval';
+import CreateAdmin from './Pages/Admin/CreateAdmin';
+import ManageReviews from './Pages/Admin/ManageReviews';
+
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <Navbar />
+        <Routes>
+          {/* --- נתיבים ציבוריים --- */}
+          <Route path="/" element={<ProjectLibrary />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/projects" element={<ProjectLibrary />} />
+          <Route path="/project/:id" element={<ProjectDetails />} />
+          <Route path="/add-project" element={<AddProject />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-       <Route path="/verify-email" element={<VerifyEmail />} />
-        
-        {/* --- נתיבים חדשים --- */}
-        <Route path="/products" element={<ProductLibrary />} />
-        <Route path="/product/:id" element={<ProductDetails />} /> {/* נתיב דינמי עם ID */}
-        <Route path="/add-product" element={<AddProduct />} />
-        
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-            </AuthProvider>
 
+
+          {/* --- נתיבי ניהול (אדמין בלבד) --- */}
+          <Route path="/admin">
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="manage-users" element={<ManageUsers />} />
+            <Route path="manage-projects" element={<ManageProjects />} />
+            <Route path="user-approval" element={<UserApproval />} />
+            <Route path="create-admin" element={<CreateAdmin />} />
+            <Route path="manage-reviews" element={<ManageReviews />} />
+          </Route>
+
+          {/* דף 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AuthProvider>
     </Router>
   );
 }

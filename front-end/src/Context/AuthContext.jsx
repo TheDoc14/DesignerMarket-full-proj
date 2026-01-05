@@ -6,45 +6,62 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // בטעינת הדף, נבדוק אם יש משתמש שמור ב-localStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const initializeAuth = () => {
+      try {
+        const storedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        
+        if (storedUser && token && storedUser !== "undefined") {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error("Failed to parse user from localStorage", error);
+        localStorage.removeItem('user'); // ניקוי נתונים משובשים
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
   }, []);
 
-  // פונקציה שתופעל אחרי התחברות מוצלחת (נקרא לה מתוך Login.jsx)
   const login = (userData, token) => {
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', token);
   };
 
-  // פונקציה להתנתקות
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    window.location.href = '/login'; // הפניה לדף התחברות
+    // עדיף להשתמש ב-Navigate של React Router, אבל אם אין ברירה:
+    window.location.href = '/login';
   };
 
-  // פונקציה לעדכון פרטי משתמש (למשל כשמשנים שם בפרופיל)
   const updateUser = (updatedData) => {
-    const newUser = { ...user, ...updatedData };
-    setUser(newUser);
-    localStorage.setItem('user', JSON.stringify(newUser));
+    setUser(prevUser => {
+      const newUser = { ...prevUser, ...updatedData };
+      localStorage.setItem('user', JSON.stringify(newUser));
+      return newUser;
+    });
   };
 
   return (
     <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
-      {!loading && children}
+      {/* חשוב: אנחנו לא מרנדרים את הילדים עד שהבדיקה הסתיימה.
+         זה מונע מה-PrivateRoute לזרוק אותך ללוגין בזמן שהדף נטען.
+      */}
+      {!loading ? children : <div style={{textAlign: 'center', marginTop: '50px'}}>מאתחל מערכת...</div>}
     </AuthContext.Provider>
   );
 };
 
-// Hook מותאם אישית לשימוש קל בקומפוננטות
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

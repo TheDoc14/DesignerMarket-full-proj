@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // מוודא שיש לך react-router-dom
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -11,12 +11,10 @@ const Login = () => {
   
   const navigate = useNavigate();
 
-  // עדכון השדות בטופס
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // שליחת הטופס
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -24,7 +22,6 @@ const Login = () => {
 
     try {
       // 1. שליחת הבקשה לשרת
-      // וודאי שהכתובת תואמת את ה-Route שהגדרת ב-server.js
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -38,20 +35,21 @@ const Login = () => {
 
       const data = await response.json();
 
-      // 2. בדיקה אם השרת החזיר שגיאה
+      // 2. בדיקת שגיאות מהשרת
       if (!response.ok) {
-        // השרת שלך מחזיר הודעות שגיאה ספציפיות (כמו "Your account is pending...")
-        // אנחנו מציגים אותן ישירות למשתמש
         throw new Error(data.message || 'שגיאה בהתחברות');
       }
 
-      // 3. הצלחה! שמירת הטוקן
+      // 3. הצלחה - שמירת הנתונים ב-LocalStorage
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user)); // שמירת פרטי המשתמש (לא חובה, אבל נוח)
+      localStorage.setItem('user', JSON.stringify(data.user));
 
-      // 4. הפניה לעמוד הראשי (או לפי תפקיד)
-      console.log('התחברת בהצלחה:', data.user);
-      navigate('/dashboard'); // שני את זה לנתיב הרצוי במערכת שלך
+      // 4. הדרך הריאקטית: ניווט ואז רענון מלא
+      // קודם ננווט ליעד הרצוי
+      navigate('/'); 
+      
+      // מיד לאחר מכן נבצע רענון כדי שכל הקומפוננטות יזהו את המשתמש המחובר
+      window.location.reload();
 
     } catch (err) {
       setError(err.message);

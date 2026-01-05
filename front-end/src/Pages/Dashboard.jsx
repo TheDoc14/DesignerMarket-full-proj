@@ -1,352 +1,277 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../Context/AuthContext';
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { useAuth } from '../Context/AuthContext'; // וודא שהנתיב נכון
+import defaultUserPic from '../DefaultPics/userDefault.jpg'; // תמונת ברירת מחדל
 
 const Dashboard = () => {
-  const { updateUser } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+    const { user, updateUser } = useAuth();
+    const fileInputRef = useRef(null); // Ref ל-input של קובץ התמונה
 
-  // נתונים מהשרת
-  const [projects, setProjects] = useState([]);
-  const [profileImagePreview, setProfileImagePreview] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState({ type: '', text: '' });
+    const [projects, setProjects] = useState([]);
+    const [profileImagePreview, setProfileImagePreview] = useState(null); // תצוגה מקדימה של התמונה
 
-  // State לטופס
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    role: '',
-    firstName: '',
-    lastName: '',
-    phone: '',
-    city: '',
-    country: '',
-    bio: '',
-    birthDate: '',
-    profileImage: null,
-    social: {
-      website: '',
-      instagram: '',
-      linkedin: '',
-      github: '',
-      behance: '',
-      dribbble: ''
-    }
-  });
-
-  // טעינת נתונים
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:5000/api/profile/me', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'שגיאה בטעינת פרופיל');
-
-        const { user, projects } = data;
-        setProjects(projects || []);
-
-        let formattedDate = '';
-        if (user.birthDate) {
-          formattedDate = new Date(user.birthDate).toISOString().split('T')[0];
-        }
-
-        setFormData({
-          username: user.username || '',
-          email: user.email || '',
-          role: user.role || '',
-          firstName: user.firstName || '',
-          lastName: user.lastName || '',
-          phone: user.phone || '',
-          city: user.city || '',
-          country: user.country || '',
-          bio: user.bio || '',
-          birthDate: formattedDate,
-          profileImage: null,
-          social: {
-            website: user.social?.website || '',
-            instagram: user.social?.instagram || '',
-            linkedin: user.social?.linkedin || '',
-            github: user.social?.github || '',
-            behance: user.social?.behance || '',
-            dribbble: user.social?.dribbble || ''
-          }
-        });
-
-        if (user.profileImage) {
-          setProfileImagePreview(user.profileImage);
-        }
-      } catch (err) {
-        setMessage({ type: 'error', text: err.message });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-  
-  const handleSocialChange = (e) => {
-    setFormData({
-      ...formData,
-      social: { ...formData.social, [e.target.name]: e.target.value }
+    const [formData, setFormData] = useState({
+        username: '', // משם המשתמש המקורי, לא ניתן לערוך כאן
+        email: '',    // מאימייל המשתמש המקורי, לא ניתן לערוך כאן
+        firstName: '',
+        lastName: '',
+        birthDate: '',
+        city: '',
+        country: '',
+        phone: '',
+        bio: '',
+        social: { website: '', instagram: '', behance: '', dribbble: '', linkedin: '', github: '' },
+        profileImage: null // ייצוג File object להעלאה
     });
-  };
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData({ ...formData, profileImage: file });
-      setProfileImagePreview(URL.createObjectURL(file));
-    }
-  };
+    // טעינת נתוני המשתמש והפרויקטים בעת טעינת הרכיב
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setLoading(false);
+                return;
+            }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage({ type: '', text: '' });
+            try {
+                const response = await axios.get('http://localhost:5000/api/profile/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-    try {
-      const token = localStorage.getItem('token');
-      const dataToSend = new FormData();
+                const { user: fetchedUser, projects: userProjects } = response.data;
 
-      dataToSend.append('username', formData.username);
-      dataToSend.append('firstName', formData.firstName);
-      dataToSend.append('lastName', formData.lastName);
-      dataToSend.append('bio', formData.bio);
-      dataToSend.append('city', formData.city);
-      dataToSend.append('country', formData.country);
-      dataToSend.append('phone', formData.phone);
-      if (formData.birthDate) dataToSend.append('birthDate', formData.birthDate);
+               if (fetchedUser) {
+                    setFormData({
+                        username: fetchedUser.username || '',
+                        email: fetchedUser.email || '',
+                        firstName: fetchedUser.firstName || '',
+                        lastName: fetchedUser.lastName || '',
+                        phone: fetchedUser.phone || '',
+                        city: fetchedUser.city || '',
+                        country: fetchedUser.country || '',
+                        bio: fetchedUser.bio || '',
+                        birthDate: fetchedUser.birthDate ? fetchedUser.birthDate.split('T')[0] : '',
+                        social: fetchedUser.social || { website: '', instagram: '', behance: '', dribbble: '', linkedin: '', github: '' },
+                        profileImage: null 
+                    });
 
-      if (formData.profileImage) {
-        dataToSend.append('profileImage', formData.profileImage);
-      }
+                    // תיקון הלוגיקה של התמונה:
+                    if (fetchedUser.profileImage) {
+                        // אם יש תמונה בשרת - נציג אותה מהנתיב ב-uploads
+                        setProfileImagePreview(`http://localhost:5000/uploads/profileImages/${fetchedUser.profileImage}`);
+                    } else {
+                        // אם אין תמונה בשרת - נציג את תמונת ברירת המחדל שייבאת
+                        setProfileImagePreview(defaultUserPic);
+                    }
+                }
+                setProjects(userProjects || []);
+            } catch (err) {
+                setMessage({ type: 'error', text: err.response?.data?.message || 'שגיאה בטעינת הנתונים.' });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
-      Object.keys(formData.social).forEach(key => {
-        dataToSend.append(`social[${key}]`, formData.social[key]);
-      });
+    // פונקציות לשינוי שדות הטופס
+    const handleChange = (e) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
 
-      const response = await fetch('http://localhost:5000/api/profile/me', {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: dataToSend
-      });
+    const handleSocialChange = (e) => {
+        setFormData({
+            ...formData,
+            social: { ...formData.social, [e.target.name]: e.target.value }
+        });
+    };
 
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'שגיאה בעדכון');
+    // פונקציה לטיפול בהעלאת קובץ תמונה
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setFormData({ ...formData, profileImage: file });
+            setProfileImagePreview(URL.createObjectURL(file)); // תצוגה מקדימה מיידית
+        }
+    };
 
-      updateUser(result.user);
-      setMessage({ type: 'success', text: 'הפרופיל עודכן בהצלחה!' });
-    } catch (err) {
-      setMessage({ type: 'error', text: err.message });
-    } finally {
-      setSaving(false);
-    }
-  };
+    // שליחת הטופס ל-Backend
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setMessage({ type: '', text: '' }); // איפוס הודעות
 
-  if (loading) return <div>טוען נתונים...</div>;
+        try {
+            const token = localStorage.getItem('token');
+            const data = new FormData(); // FormData עבור העלאת קבצים
 
-  return (
-    <div style={{padding: '40px 20px'}}>
-      
-      <div style={{  backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-        
-        {/* --- Header --- */}
-        <div style={{ padding: '30px 40px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fff' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '28px', color: '#1f2937' }}>הגדרות פרופיל</h1>
-            <p style={{ margin: '8px 0 0', color: '#6b7280' }}>ניהול פרטים אישיים והגדרות חשבון</p>
-          </div>
-          <span style={{ padding: '8px 20px', borderRadius: '30px', backgroundColor: '#e0f2fe', color: '#0369a1', fontWeight: '600', fontSize: '14px' }}>
-            {formData.role.toUpperCase()}
-          </span>
+            // הוספת שדות טקסט
+            Object.keys(formData).forEach(key => {
+                if (key !== 'social' && key !== 'profileImage' && formData[key] !== null) {
+                    data.append(key, formData[key]);
+                }
+            });
+
+            // הוספת אובייקט סושיאל כ-JSON string
+            data.append('social', JSON.stringify(formData.social));
+
+            // הוספת קובץ התמונה אם קיים
+            if (formData.profileImage instanceof File) {
+                data.append('profileImage', formData.profileImage);
+            }
+
+            const res = await axios.put('http://localhost:5000/api/profile/me', data, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data' // חשוב עבור העלאת קבצים
+                }
+            });
+
+            updateUser(res.data.user); // עדכון פרטי המשתמש ב-AuthContext
+            setMessage({ type: 'success', text: 'הפרופיל עודכן בהצלחה!' });
+            // עדכון תצוגת התמונה אחרי העלאה מוצלחת (השרת מחזיר את הנתיב החדש)
+            if (res.data.user.profileImage) {
+                 setProfileImagePreview(`http://localhost:5000/uploads/profileImages/${res.data.user.profileImage}`);
+            }
+
+        } catch (err) {
+            setMessage({ type: 'error', text: err.response?.data?.message || 'שגיאה בעדכון הפרופיל.' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // יצירת תמונת Placeholder
+    const getPlaceholderImage = () => {
+        const initial = user?.username ? user.username.charAt(0).toUpperCase() : '?';
+        return (
+            <div style={placeholderStyle}>
+                <span style={{ fontSize: '40px', color: '#666' }}>{initial}</span>
+            </div>
+        );
+    };
+
+    if (loading) return <div style={{textAlign: 'center', padding: '50px', fontSize: '18px'}}>טוען את הפרופיל שלך...</div>;
+
+    if (!user) return <div style={{textAlign: 'center', padding: '50px', fontSize: '18px'}}>אינך מחובר/ת. אנא התחבר/י.</div>;
+
+    return (
+        <div style={{ direction: 'rtl', padding: '30px', maxWidth: '900px', margin: '0 auto', fontFamily: 'Arial, sans-serif', color: '#333' }}>
+            <h1 style={{ marginBottom: '30px', color: '#2c3e50', textAlign: 'center' }}>
+                הפרופיל האישי של {user.username}
+            </h1>
+
+            {/* אזור תמונת פרופיל */}
+            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                <div 
+                    onClick={() => fileInputRef.current.click()}
+                    style={profileImageContainerStyle}
+                >
+                    {profileImagePreview ? (
+                        <img src={profileImagePreview} alt="Profile" style={profileImageStyle} />
+                    ) : getPlaceholderImage()}
+                </div>
+                <input type="file" ref={fileInputRef} hidden onChange={handleFileChange} accept="image/*" />
+                <p style={{marginTop: '10px', fontSize: '14px', color: '#555'}}>לחץ/י על התמונה לעדכון</p>
+            </div>
+
+            <form onSubmit={handleSubmit} style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                {message.text && (
+                    <div style={{ ...alertStyle, backgroundColor: message.type === 'error' ? '#f8d7da' : '#d4edda', color: message.type === 'error' ? '#721c24' : '#155724' }}>
+                        {message.text}
+                    </div>
+                )}
+
+                <div style={gridStyle}>
+                    {/* פרטים אישיים */}
+                    <div style={fieldStyle}>
+                        <label style={labelStyle}>שם פרטי</label>
+                        <input style={inputStyle} name="firstName" value={formData.firstName} onChange={handleChange} />
+                    </div>
+                    <div style={fieldStyle}>
+                        <label style={labelStyle}>שם משפחה</label>
+                        <input style={inputStyle} name="lastName" value={formData.lastName} onChange={handleChange} />
+                    </div>
+                    
+                    <div style={fieldStyle}>
+                        <label style={labelStyle}>תאריך לידה</label>
+                        <input style={inputStyle} type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} />
+                    </div>
+                    <div style={fieldStyle}>
+                        <label style={labelStyle}>טלפון</label>
+                        <input style={inputStyle} name="phone" value={formData.phone} onChange={handleChange} />
+                    </div>
+                    
+                    <div style={fieldStyle}>
+                        <label style={labelStyle}>עיר</label>
+                        <input style={inputStyle} name="city" value={formData.city} onChange={handleChange} />
+                    </div>
+                    <div style={fieldStyle}>
+                        <label style={labelStyle}>מדינה</label>
+                        <input style={inputStyle} name="country" value={formData.country} onChange={handleChange} />
+                    </div>
+                </div>
+
+                <div style={{ ...fieldStyle, marginTop: '25px' }}>
+                    <label style={labelStyle}>ביוגרפיה (עד 500 תווים)</label>
+                    <textarea style={{ ...inputStyle, minHeight: '100px', resize: 'vertical' }} name="bio" value={formData.bio} onChange={handleChange} maxLength="500" />
+                </div>
+
+                <h3 style={{ marginTop: '35px', marginBottom: '20px', color: '#2c3e50' }}>קישורים חברתיים</h3>
+                <div style={gridStyle}>
+                    {Object.keys(formData.social).map((key) => (
+                        <div key={key} style={fieldStyle}>
+                            <label style={{ ...labelStyle, textTransform: 'capitalize' }}>{key}</label>
+                            <input 
+                                style={inputStyle} 
+                                name={key} 
+                                placeholder={`https://${key}.com/...`}
+                                value={formData.social[key]} 
+                                onChange={handleSocialChange} 
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                <div style={{ marginTop: '40px', display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <button type="submit" disabled={saving} style={btnStyle}>
+                        {saving ? 'שומר שינויים...' : 'שמור שינויים'}
+                    </button>
+                </div>
+            </form>
+
+            <div style={{ marginTop: '50px', padding: '25px', backgroundColor: '#f0f4f8', borderRadius: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+                <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>הפרויקטים שלי ({projects.length})</h3>
+                {projects.length > 0 ? (
+                    projects.map(p => <div key={p._id} style={{ padding: '12px', borderBottom: '1px solid #e0e7ee', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>{p.title}</span>
+                        <span style={{ fontSize: '14px', color: '#666' }}>סטטוס: {p.isPublished ? 'פורסם' : 'ממתין לאישור'}</span>
+                    </div>)
+                ) : <p style={{ color: '#666' }}>עדיין אין לך פרויקטים. <a href="/add-project" style={{ color: '#007bff', textDecoration: 'none' }}>הוסף פרויקט חדש!</a></p>}
+            </div>
         </div>
-
-        {/* --- Messages --- */}
-        {message.text && (
-          <div style={{ padding: '15px 40px', backgroundColor: message.type === 'error' ? '#fee2e2' : '#dcfce7', color: message.type === 'error' ? '#991b1b' : '#166534', fontWeight: '500' }}>
-            {message.text}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '0' }}>
-          
-          {/* --- Sidebar (Left Side) --- */}
-          <div style={{ padding: '40px', backgroundColor: '#fafafa', borderLeft: '1px solid #eee' }}>
-            {/* Profile Image */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '30px' }}>
-              <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', marginBottom: '15px', border: '5px solid #fff', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                <img 
-                  src={profileImagePreview || 'https://via.placeholder.com/160?text=User'} 
-                  alt="Profile" 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                />
-              </div>
-              <label htmlFor="upload-photo" style={{ cursor: 'pointer', color: '#2563eb', fontWeight: '600', fontSize: '15px' }}>
-                שינוי תמונה ✏️
-              </label>
-              <input id="upload-photo" type="file" onChange={handleImageChange} style={{ display: 'none' }} accept="image/*" />
-            </div>
-
-            {/* Account Info Fields */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <label style={styles.label}>שם משתמש</label>
-                <input type="text" name="username" value={formData.username} onChange={handleChange} style={styles.input} />
-              </div>
-              <div>
-                <label style={styles.label}>אימייל (לקריאה בלבד)</label>
-                <input type="email" value={formData.email} disabled style={{ ...styles.input, backgroundColor: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' }} />
-              </div>
-              <div>
-                <label style={styles.label}>קצת עליי (Bio)</label>
-                <textarea name="bio" value={formData.bio} onChange={handleChange} rows="6" style={{ ...styles.input, resize: 'vertical', lineHeight: '1.5' }} />
-              </div>
-            </div>
-          </div>
-
-          {/* --- Main Content (Right Side) --- */}
-          <div style={{ padding: '40px' }}>
-            
-            {/* Personal Details Section */}
-            <div style={{ marginBottom: '40px' }}>
-              <h3 style={styles.sectionTitle}>פרטים אישיים</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <div>
-                  <label style={styles.label}>שם פרטי</label>
-                  <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>שם משפחה</label>
-                  <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>טלפון</label>
-                  <input type="text" name="phone" value={formData.phone} onChange={handleChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>תאריך לידה</label>
-                  <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>עיר מגורים</label>
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>מדינה</label>
-                  <input type="text" name="country" value={formData.country} onChange={handleChange} style={styles.input} />
-                </div>
-              </div>
-            </div>
-
-            {/* Social Media Section */}
-            <div style={{ marginBottom: '40px' }}>
-              <h3 style={styles.sectionTitle}>רשתות חברתיות</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <div>
-                  <label style={styles.label}>🌐 אתר אישי</label>
-                  <input type="url" name="website" placeholder="https://" value={formData.social.website} onChange={handleSocialChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>🔗 LinkedIn</label>
-                  <input type="url" name="linkedin" placeholder="https://linkedin.com/in/..." value={formData.social.linkedin} onChange={handleSocialChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>🐙 GitHub</label>
-                  <input type="url" name="github" placeholder="https://github.com/..." value={formData.social.github} onChange={handleSocialChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>📷 Instagram</label>
-                  <input type="url" name="instagram" placeholder="https://instagram.com/..." value={formData.social.instagram} onChange={handleSocialChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>🎨 Behance</label>
-                  <input type="url" name="behance" placeholder="https://behance.net/..." value={formData.social.behance} onChange={handleSocialChange} style={styles.input} />
-                </div>
-                <div>
-                  <label style={styles.label}>🏀 Dribbble</label>
-                  <input type="url" name="dribbble" placeholder="https://dribbble.com/..." value={formData.social.dribbble} onChange={handleSocialChange} style={styles.input} />
-                </div>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button type="submit" disabled={saving} style={styles.button}>
-              {saving ? '⏳ שומר שינויים...' : 'שמור שינויים'}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* --- Projects Section (Outside the white card) --- */}
-      <div style={{ maxWidth: '1000px', margin: '40px auto' }}>
-        <h2 style={{ fontSize: '24px', color: '#1f2937', marginBottom: '20px' }}>הפרויקטים שלי ({projects.length})</h2>
-        {projects.length === 0 ? (
-          <p style={{ color: '#6b7280' }}>עדיין לא העלית פרויקטים.</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-            {projects.map(proj => (
-              <div key={proj._id} style={{ backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #f3f4f6' }}>
-                <h4 style={{ margin: '0 0 10px', fontSize: '18px', color: '#111827' }}>{proj.title}</h4>
-                <p style={{ margin: 0, fontSize: '14px', color: '#6b7280', lineHeight: '1.5' }}>
-                  {proj.description ? proj.description.substring(0, 80) + '...' : 'אין תיאור'}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-    </div>
-  );
+    );
 };
 
-// --- Styles Object ---
-const styles = {
-  sectionTitle: {
-    fontSize: '20px',
-    fontWeight: '600',
-    color: '#374151',
-    borderBottom: '2px solid #e5e7eb',
-    paddingBottom: '12px',
-    marginBottom: '24px'
-  },
-  label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#4b5563'
-  },
-  input: {
-    width: '100%',
-    padding: '14px', // שדות גבוהים יותר
-    fontSize: '15px',
-    borderRadius: '8px',
-    border: '1px solid #d1d5db',
-    outline: 'none',
-    boxSizing: 'border-box',
-    transition: 'border-color 0.2s',
-    backgroundColor: '#fff'
-  },
-  button: {
-    width: '100%',
-    padding: '16px',
-    backgroundColor: '#2563eb',
-    color: '#fff',
-    fontSize: '16px',
-    fontWeight: '600',
-    border: 'none',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    boxShadow: '0 4px 6px rgba(37, 99, 235, 0.2)',
-    transition: 'background-color 0.2s'
-  }
+// סטיילס
+const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' };
+const fieldStyle = { display: 'flex', flexDirection: 'column', gap: '8px' };
+const labelStyle = { fontSize: '14px', fontWeight: 'bold', color: '#555' };
+const inputStyle = { padding: '12px', borderRadius: '8px', border: '1px solid #ced4da', fontSize: '16px', transition: 'border-color 0.2s ease-in-out' };
+const btnStyle = { padding: '12px 30px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '17px', fontWeight: 'bold', transition: 'background-color 0.2s ease-in-out' };
+const alertStyle = { padding: '15px', borderRadius: '8px', marginBottom: '20px', border: '1px solid transparent' };
+const profileImageContainerStyle = {
+    width: '150px', height: '150px', borderRadius: '50%', backgroundColor: '#e9ecef', margin: '0 auto', cursor: 'pointer',
+    overflow: 'hidden', border: '3px solid #007bff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+};
+const profileImageStyle = { width: '100%', height: '100%', objectFit: 'cover' };
+const placeholderStyle = { 
+    width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#e9ecef',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888', fontWeight: 'bold'
 };
 
 export default Dashboard;
