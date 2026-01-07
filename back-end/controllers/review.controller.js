@@ -16,8 +16,6 @@ const { buildMeta } = require('../utils/meta.utils');
 const createReview = async (req, res, next) => {
   try {
     const { projectId, rating, text } = req.body;
-    if (!projectId) throw new Error('Project ID is required');
-    if (!rating) throw new Error('Rating is required');
 
     // וידוא פרויקט קיים
     const proj = await Project.findById(projectId).select('_id');
@@ -53,7 +51,6 @@ const createReview = async (req, res, next) => {
 const listReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
-    if (!projectId) throw new Error('Project ID is required');
 
     const page = toInt(req.query.page, 1);
     const limit = toInt(req.query.limit, 10);

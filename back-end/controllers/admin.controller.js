@@ -1,5 +1,4 @@
 // back-end/controllers/admin.controller.js
-const mongoose = require('mongoose');
 const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
@@ -67,15 +66,8 @@ const adminListUsers = async (req, res, next) => {
  */
 const adminSetUserApproval = async (req, res, next) => {
   try {
-    const { isApproved } = req.body;
-
-    let val = isApproved;
-    if (typeof val === 'string') {
-      if (val === 'true') val = true;
-      else if (val === 'false') val = false;
-    }
-
-    if (typeof val !== 'boolean') throw new Error('Invalid request');
+    let val = req.body.isApproved;
+    if (typeof val === 'string') val = val === 'true';
 
     const user = await User.findById(req.params.id);
     if (!user) throw new Error('User not found');
@@ -152,14 +144,8 @@ const adminListProjects = async (req, res, next) => {
  */
 const adminSetProjectPublish = async (req, res, next) => {
   try {
-    let { isPublished } = req.body;
-
-    if (typeof isPublished === 'string') {
-      if (isPublished === 'true') isPublished = true;
-      else if (isPublished === 'false') isPublished = false;
-    }
-
-    if (typeof isPublished !== 'boolean') throw new Error('Invalid request');
+    let isPublished = req.body.isPublished;
+    if (typeof isPublished === 'string') isPublished = isPublished === 'true';
 
     const project = await Project.findByIdAndUpdate(
       req.params.id,
@@ -193,10 +179,7 @@ const adminListReviews = async (req, res, next) => {
     const skip = (page - 1) * limit;
 
     const filter = {};
-    if (projectId) {
-      if (!mongoose.Types.ObjectId.isValid(projectId)) throw new Error('Invalid request');
-      filter.projectId = projectId;
-    }
+    if (projectId) filter.projectId = projectId;
 
     const sort = toSort(req.query.sortBy, req.query.order, ['createdAt', 'rating'], 'createdAt');
 

@@ -12,6 +12,13 @@ const { authMiddleware } = require('../middleware/auth.middleware');
 const { permit } = require('../middleware/role.middleware');
 const { uploadProject } = require('../middleware/multer.middleware');
 const { tryAuth } = require('../middleware/tryAuth.middleware');
+const { validate } = require('../middleware/validate.middleware');
+const {
+  projectIdParam,
+  listProjectsQuery,
+  createProjectValidators,
+  updateProjectValidators,
+} = require('../validators/projects.validators');
 
 /**
  * 🧩 Projects Routes
@@ -29,16 +36,18 @@ router.post(
   authMiddleware,
   permit('designer', 'student', 'admin'),
   uploadProject.array('files', 10),
+  createProjectValidators,
+  validate,
   createProject
 );
 
 // GET /api/projects
 // רשימת פרויקטים: ציבורי (published בלבד), עם הרחבות לבעלים/אדמין כשיש JWT
-router.get('/', tryAuth, getAllProjects);
+router.get('/', tryAuth, listProjectsQuery, validate, getAllProjects);
 
 // GET /api/projects/:id
 // פרויקט יחיד: ציבורי, אבל קבצים רגישים (projectFiles) רק לבעלים/אדמין
-router.get('/:id', tryAuth, getProjectById);
+router.get('/:id', tryAuth, projectIdParam, validate, getProjectById);
 
 // PUT /api/projects/:id
 // עדכון פרויקט: בעלים או אדמין (ההרשאה הסופית בקונטרולר/לוגיקה) + העלאת קבצים
@@ -46,12 +55,23 @@ router.put(
   '/:id',
   authMiddleware,
   permit('designer', 'student', 'admin'),
+  projectIdParam, // ✅ לפני multer כדי לא להעלות קבצים על id לא תקין
+  validate, // ✅ גם לפני multer כדי לעצור מוקדם
   uploadProject.array('files', 10),
+  updateProjectValidators, // מכיל גם id אבל זה בסדר
+  validate,
   updateProject
 );
 
 // DELETE /api/projects/:id
 // מחיקה: בעלים או אדמין + ניקוי קבצים פיזיים + מחיקת תגובות/חישוב דירוגים
-router.delete('/:id', authMiddleware, permit('student', 'designer', 'admin'), deleteProject);
+router.delete(
+  '/:id',
+  authMiddleware,
+  permit('student', 'designer', 'admin'),
+  projectIdParam,
+  validate,
+  deleteProject
+);
 
 module.exports = router;
