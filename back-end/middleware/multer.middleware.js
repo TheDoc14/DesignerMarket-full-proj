@@ -81,7 +81,7 @@ const createMulter = (baseFolder) => {
 
       if (extOk || mimeOk) cb(null, true);
       else cb(new Error('Unsupported file type'));
-    } catch (err) {
+    } catch (_err) {
       cb(new Error('Unsupported file type'));
     }
   };

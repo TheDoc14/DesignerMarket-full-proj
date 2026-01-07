@@ -3,7 +3,6 @@
  * יוטילים ליצירת URLs עקביים במערכת:
  * baseUrl יציב (PUBLIC_BASE_URL או לפי req), בניית לינקים לקבצים, והמרות בין FS path ל-URL.
  */
-const path = require('path');
 
 /**
  * getBaseUrl

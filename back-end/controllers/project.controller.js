@@ -66,7 +66,6 @@ const createProject = async (req, res, next) => {
 
     // 3) מחיר חייב להיות מספר
     const priceNum = Number(price);
-    if (Number.isNaN(priceNum)) throw new Error('Price must be a valid number');
 
     // 4) הפיכת קבצים לאובייקטים שנשמרים במסד (כולל URL ציבורי)
     const files = req.files.map((file) => {
@@ -249,9 +248,7 @@ const updateProject = async (req, res, next) => {
     if (typeof description === 'string') p.description = description;
 
     if (price !== undefined) {
-      const n = Number(price);
-      if (Number.isNaN(n)) throw new Error('Price must be a valid number');
-      p.price = n;
+      p.price = Number(price); // validator מבטיח שזה מספר
     }
 
     if (typeof category === 'string') p.category = category;

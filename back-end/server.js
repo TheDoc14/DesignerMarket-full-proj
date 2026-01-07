@@ -8,6 +8,11 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const app = express();
+const helmet = require('helmet');
+const isProd = process.env.NODE_ENV === 'production';
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
 
 // ✅ ייבוא ראוטים
 const authRoutes = require('./routes/auth.routes');
@@ -19,6 +24,28 @@ const adminRoutes = require('./routes/admin.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 
 // ✅ מידלוורים כלליים
+
+/**
+ * 🛡️ Security headers (Helmet)
+ * מוסיף HTTP Security Headers בסיסיים (Best Practice ל-Express).
+ *
+ * התאמות אצלנו:
+ * - API מחזיר JSON (לא מגישים HTML) → לא מסתבכים עם CSP בשלב הזה.
+ * - יש לנו /api/files לתמונות/קבצים שעשויים להיטען מהפרונט (Cross-Origin) → מאפשרים cross-origin resources.
+ * - מבטלים COEP כדי למנוע חסימות בפיתוח/טעינת משאבים.
+ * - HSTS רק בפרודקשן ורק אם עובדים עם HTTPS (אחרת זה עלול “להכריח” https).
+ */
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    strictTransportSecurity: isProd ? undefined : false,
+  })
+);
+
+// 🔒 לא לחשוף טכנולוגיה (בנוסף למה ש-helmet עושה)
+app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

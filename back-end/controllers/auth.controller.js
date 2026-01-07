@@ -2,8 +2,12 @@
 const User = require('../models/Users.models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { generateVerificationToken } = require('../utils/emailToken.utils');
-const { sendVerificationEmail } = require('../utils/email.utils');
+const {
+  generateVerificationToken,
+  generateResetToken,
+  hashToken,
+} = require('../utils/emailToken.utils');
+const { sendVerificationEmail, sendResetPasswordEmail } = require('../utils/email.utils');
 const { pickUserPublic } = require('../utils/serializers.utils');
 const { getBaseUrl, buildFileUrl } = require('../utils/url.utils');
 const { deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
@@ -100,8 +104,6 @@ const registerUser = async (req, res, next) => {
 const verifyEmail = async (req, res, next) => {
   try {
     const { token } = req.query;
-    if (!token) throw new Error('No token provided');
-
     const user = await User.findOne({ verificationToken: token });
     if (!user) throw new Error('Invalid or expired token');
 
@@ -182,4 +184,96 @@ const loginUser = async (req, res, next) => {
   }
 };
 
-module.exports = { registerUser, verifyEmail, resendVerificationEmail, loginUser };
+/**
+ * 🔁 forgotPassword
+ * מקבל אימייל ושולח לינק לאיפוס סיסמה (אם המשתמש קיים במערכת).
+ * מחזיר תמיד הודעה גנרית (גם אם האימייל לא קיים) כדי לא לחשוף האם משתמש קיים (anti user-enumeration).
+ * יוצר reset token חד־פעמי, שומר במסד hash + תוקף (expiresAt), ושולח מייל עם קישור לאיפוס.
+ * מיועד למסך "Forgot Password" בפרונט.
+ */
+const forgotPassword = async (req, res, next) => {
+  try {
+    const emailNorm = (req.body.email || '').trim().toLowerCase();
+
+    // תמיד נחזיר אותה תשובה בסוף
+    const genericMsg = 'If the email exists in our system, we will send a password reset link.';
+
+    if (!emailNorm) {
+      return res.status(200).json({ message: genericMsg });
+    }
+
+    const user = await User.findOne({ email: emailNorm });
+
+    // אם אין משתמש — לא חושפים. פשוט מחזירים הודעה גנרית.
+    if (!user) {
+      return res.status(200).json({ message: genericMsg });
+    }
+
+    // (אופציונלי) אם תרצו: רק משתמשים מאומתים יכולים לאפס
+    // אם אתם רוצים להשאיר פשוט: תאפשרו גם ללא verified
+    // if (!user.isVerified) return res.status(200).json({ message: genericMsg });
+
+    const rawToken = generateResetToken();
+    const tokenHash = hashToken(rawToken);
+
+    const ttlMinutes = Number(process.env.RESET_TOKEN_TTL_MIN || 30);
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+
+    user.resetPasswordTokenHash = tokenHash;
+    user.resetPasswordExpiresAt = expiresAt;
+    await user.save();
+
+    await sendResetPasswordEmail(user.email, rawToken);
+
+    return res.status(200).json({ message: genericMsg });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * 🔑 resetPassword
+ * מאפס סיסמה בפועל לפי token + סיסמה חדשה.
+ * מאמת שהטוקן קיים, תקין, ושלא פג תוקף (expiresAt), ואז מחליף סיסמה (bcrypt) בדיוק כמו בהרשמה.
+ * מנקה את הטוקן וה־expires כדי להפוך אותו לחד־פעמי (שלא יהיה ניתן להשתמש שוב).
+ * מחזיר הודעת הצלחה בלבד.
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    const tokenHash = hashToken(token);
+
+    const user = await User.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpiresAt: { $gt: new Date() },
+    });
+
+    if (!user) throw new Error('Invalid or expired token');
+
+    // להצפין סיסמה בדיוק כמו register
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(String(newPassword), salt);
+
+    user.password = hashedPassword;
+
+    // חד-פעמי: לנקות כדי שהטוקן לא יהיה שמיש שוב
+    user.resetPasswordTokenHash = '';
+    user.resetPasswordExpiresAt = null;
+
+    await user.save();
+
+    return res.status(200).json({ message: 'Password reset successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  registerUser,
+  verifyEmail,
+  resendVerificationEmail,
+  loginUser,
+  resetPassword,
+  forgotPassword,
+};

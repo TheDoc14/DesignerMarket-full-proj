@@ -10,6 +10,14 @@ const {
   deleteReview,
   getReviewById,
 } = require('../controllers/review.controller');
+const { validate } = require('../middleware/validate.middleware');
+const {
+  reviewIdParam,
+  listReviewsQuery,
+  createReviewValidators,
+  updateReviewValidators,
+} = require('../validators/reviews.validators');
+const { tryAuth } = require('../middleware/tryAuth.middleware'); // חשוב ל-viewer אופציונלי
 
 /**
  * ⭐ Reviews Routes
@@ -24,15 +32,22 @@ const {
 
 /// GET /api/reviews?projectId=...&page=&limit=&sortBy=&order=
 // ציבורי: רשימת ביקורות לפרויקט (כולל פגינציה ומיון)
-router.get('/', listReviews);
+router.get('/', tryAuth, listReviewsQuery, validate, listReviews);
 
 // GET /api/reviews/:id
 // ציבורי: ביקורת בודדת (לשימוש עתידי/דיבאג)
-router.get('/:id', getReviewById);
+router.get('/:id', tryAuth, reviewIdParam, validate, getReviewById);
 
 // POST /api/reviews
 // יצירה: כל המשתמשים המחוברים
-router.post('/', authMiddleware, permit('admin', 'student', 'designer', 'customer'), createReview);
+router.post(
+  '/',
+  authMiddleware,
+  permit('admin', 'student', 'designer', 'customer'),
+  createReviewValidators,
+  validate,
+  createReview
+);
 
 // PUT /api/reviews/:id
 // עריכה: רק יוצר (נבדק בקונטרולר)
@@ -40,6 +55,8 @@ router.put(
   '/:id',
   authMiddleware,
   permit('admin', 'student', 'designer', 'customer'),
+  updateReviewValidators,
+  validate,
   updateReview
 );
 
@@ -49,6 +66,8 @@ router.delete(
   '/:id',
   authMiddleware,
   permit('admin', 'student', 'designer', 'customer'),
+  reviewIdParam,
+  validate,
   deleteReview
 );
 

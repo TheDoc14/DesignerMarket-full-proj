@@ -19,7 +19,7 @@ if (!fs.existsSync(LOG_DIR)) {
  * - אל "תמציא" 500 לשגיאות בקשה – עדיף 400/401/403/404/409/413 לפי המקרה.
  * - בפרודקשן לא חושפים הודעות פנימיות ב-5xx (אבטחה).
  */
-function classifyError(err, req) {
+function classifyError(err, _req, _res, _next) {
   // ברירת מחדל
   let statusCode = 500;
   let message = 'Internal Server Error';
@@ -82,6 +82,23 @@ function classifyError(err, req) {
   } else if (msg.includes('User not found')) {
     statusCode = 404;
     message = 'User not found.';
+  }
+
+  // =====================
+  // 🔁 Reset Password
+  // =====================
+  else if (msg.includes('Reset token is required')) {
+    statusCode = 400;
+    message = 'Reset token is required.';
+  } else if (msg.includes('New password is required')) {
+    statusCode = 400;
+    message = 'New password is required.';
+  } else if (msg.includes('Password is too short')) {
+    statusCode = 400;
+    message = 'Password is too short.';
+  } else if (msg.includes('Reset token invalid or expired')) {
+    statusCode = 400;
+    message = 'Reset token invalid or expired.';
   }
 
   // =====================
