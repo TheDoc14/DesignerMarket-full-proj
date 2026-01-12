@@ -78,6 +78,11 @@ const projectSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    tags: {
+      type: [String],
+      default: [],
+      index: true,
+    },
     isPublished: {
       type: Boolean,
       default: false,

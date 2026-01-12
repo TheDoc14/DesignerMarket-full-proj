@@ -146,6 +146,7 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     category: safeStr(p.category),
     price: safeNum(p.price),
     createdBy: p.createdBy ? String(p.createdBy._id || p.createdBy) : undefined,
+    tags: safeArr(p.tags).map(safeStr).filter(Boolean),
 
     // חדש: מצב פרסום — רק לאדמין/בעלים
     isPublished: isAdmin || isOwner ? safeBool(p.isPublished) : undefined,

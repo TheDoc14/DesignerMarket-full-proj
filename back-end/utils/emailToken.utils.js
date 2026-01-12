@@ -1,12 +1,27 @@
-// back-end/utils/emailToken.utils.js
-/**
- * יוטילים ליצירת/אימות tokens שמבוססים על מייל (verify/reset).
- * מפריד concerns: קונטרולר מנהל זרימה, והיוטיל מנהל יצירת token בצורה עקבית.
- */
 const crypto = require('crypto');
 
-function generateVerificationToken() {
+const generateVerificationToken = () => {
   return crypto.randomBytes(32).toString('hex');
-}
+};
 
-module.exports = { generateVerificationToken };
+/**
+ * 🔐 Reset password token
+ * מחזיר טוקן "גולמי" שישלח במייל
+ */
+const generateResetToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+/**
+ * 🧾 Hash token
+ * שומרים במסד רק hash (ולא את הטוקן עצמו)
+ */
+const hashToken = (token) => {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+};
+
+module.exports = {
+  generateVerificationToken,
+  generateResetToken,
+  hashToken,
+};

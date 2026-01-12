@@ -1,12 +1,7 @@
-// back-end/utils/email.utils.js
-/**
- * עטיפה לשליחת מיילים (לרוב: אימות משתמש, ובהמשך: איפוס סיסמה).
- * מרכז את הלוגיקה כדי לשמור סגנון אחיד ולמנוע כפילות בקונטרולרים.
- */
 const nodemailer = require('nodemailer');
 
-async function sendVerificationEmail(to, token) {
-  const transporter = nodemailer.createTransport({
+const createTransporter = () => {
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: +process.env.SMTP_PORT,
     secure: process.env.SMTP_SECURE === 'true',
@@ -15,8 +10,15 @@ async function sendVerificationEmail(to, token) {
       pass: process.env.SMTP_PASS,
     },
   });
+};
 
+/**
+ *  send confirmation email
+ */
+const sendVerificationEmail = async (to, token) => {
+  const transporter = createTransporter();
   const link = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
+
   await transporter.sendMail({
     from: `"DesignerMarket" <${process.env.SMTP_FROM}>`,
     to,
@@ -24,6 +26,24 @@ async function sendVerificationEmail(to, token) {
     html: `<p>לחצו על הקישור כדי לאמת את כתובת המייל שלכם:</p>
            <a href="${link}">${link}</a>`,
   });
-}
+};
 
-module.exports = { sendVerificationEmail };
+/**
+ * 🔁 Reset password email
+ */
+const sendResetPasswordEmail = async (to, token) => {
+  const transporter = createTransporter();
+  const link = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
+  await transporter.sendMail({
+    from: `"DesignerMarket" <${process.env.SMTP_FROM}>`,
+    to,
+    subject: 'איפוס סיסמה',
+    html: `<p>קיבלנו בקשה לאיפוס סיסמה.</p>
+           <p>אם זה היית אתה, לחץ כאן כדי לבחור סיסמה חדשה (הלינק תקף לזמן מוגבל):</p>
+           <a href="${link}">${link}</a>
+           <p>אם לא ביקשת איפוס – אפשר להתעלם מהמייל.</p>`,
+  });
+};
+
+module.exports = { sendVerificationEmail, sendResetPasswordEmail };

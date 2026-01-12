@@ -6,6 +6,9 @@ const fs = require('fs');
 // סוגי קבצים מותרים – כולל תמונות, סרטונים, מסמכים ומצגות
 const allowed = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|ppt|pptx|txt|zip/;
 
+// ✅ תמונות בלבד לפרופיל
+const allowedProfileImages = /jpeg|jpg|png|gif|webp/;
+
 /**
  * getProjectSubfolder
  * מנתב קבצים של פרויקט לתת-תיקייה לפי mimetype:
@@ -17,9 +20,9 @@ const getProjectSubfolder = (mimetype) => {
 };
 
 /**
- * getProjectSubfolder
- * מנתב קבצים של פרויקט לתת-תיקייה לפי mimetype:
- * תמונות/וידאו -> projectImages, כל השאר -> projectFiles.
+ * createMulter
+ * שומר קבצים תחת uploads/<baseFolder>
+ * בפרויקטים – מנתב לתת-תיקיות לפי סוג הקובץ.
  */
 const createMulter = (baseFolder) => {
   const basePath = path.join('uploads', baseFolder);
@@ -50,22 +53,37 @@ const createMulter = (baseFolder) => {
   });
 
   const fileFilter = (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const mimetype = file.mimetype;
+    try {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const mimetype = file.mimetype || '';
 
-    const extOk = allowed.test(ext);
-    const mimeOk =
-      mimetype.startsWith('image/') ||
-      mimetype.startsWith('video/') ||
-      mimetype.startsWith('text/') ||
-      mimetype.includes('pdf') ||
-      mimetype.includes('word') ||
-      mimetype.includes('officedocument') ||
-      mimetype.includes('powerpoint') ||
-      mimetype.includes('zip');
+      // ✅ פרופיל: תמונות בלבד
+      if (baseFolder === 'profileImages') {
+        const extClean = ext.replace('.', '');
+        const extOk = allowedProfileImages.test(extClean);
+        const mimeOk = mimetype.startsWith('image/');
 
-    if (extOk || mimeOk) cb(null, true);
-    else cb(new Error('Unsupported file type'));
+        if (extOk && mimeOk) return cb(null, true);
+        return cb(new Error('Unsupported file type'));
+      }
+
+      // ✅ ברירת מחדל (כמו אצלך היום): מאשר גם תמונות למסמכי אישור
+      const extOk = allowed.test(ext);
+      const mimeOk =
+        mimetype.startsWith('image/') ||
+        mimetype.startsWith('video/') ||
+        mimetype.startsWith('text/') ||
+        mimetype.includes('pdf') ||
+        mimetype.includes('word') ||
+        mimetype.includes('officedocument') ||
+        mimetype.includes('powerpoint') ||
+        mimetype.includes('zip');
+
+      if (extOk || mimeOk) cb(null, true);
+      else cb(new Error('Unsupported file type'));
+    } catch (_err) {
+      cb(new Error('Unsupported file type'));
+    }
   };
 
   return multer({
@@ -74,15 +92,15 @@ const createMulter = (baseFolder) => {
     limits: {
       fileSize:
         baseFolder === 'projects'
-          ? 300 * 1024 * 1024 // ✅ עד 300MB לקובצי פרויקט
-          : 30 * 1024 * 1024, // עד 30MB לשאר
+          ? 300 * 1024 * 1024 // ✅ עד 500MB לקובצי פרויקט
+          : 50 * 1024 * 1024, // עד 50MB לשאר
     },
   });
 };
 
 // ✅ Middleware-ים לפי סוג העלאה
 module.exports = {
-  uploadApproval: createMulter('approvalDocuments'),
+  uploadApproval: createMulter('approvalDocuments'), // נשאר פתוח גם לתמונות
   uploadProject: createMulter('projects'),
-  uploadProfile: createMulter('profileImages'),
+  uploadProfile: createMulter('profileImages'), // תמונות בלבד
 };

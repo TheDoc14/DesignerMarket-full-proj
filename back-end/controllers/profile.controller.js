@@ -1,5 +1,4 @@
 // back-end/controllers/profile.controller.js
-const mongoose = require('mongoose');
 const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
@@ -11,7 +10,7 @@ const {
   normalizeHttpUrl,
   isValidHttpUrl,
 } = require('../utils/url.utils');
-const { deleteUploadByFileUrl } = require('../utils/filesCleanup.utils');
+const { deleteUploadByFileUrl, deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
 
 /**
  * 👤 getMyProfile
@@ -90,11 +89,7 @@ const updateMyProfile = async (req, res, next) => {
     if (typeof phone === 'string') updates.phone = phone;
 
     // birthDate אופציונלי; אם סופק – אימות תאריך
-    if (birthDate) {
-      const d = new Date(birthDate);
-      if (isNaN(d.getTime())) throw new Error('Invalid birthDate format (expected ISO date)');
-      updates.birthDate = d;
-    }
+    if (birthDate) updates.birthDate = new Date(birthDate);
 
     // תמונת פרופיל חדשה (multer) — בניית URL דרך ה-URL utils
     if (req.file) {
@@ -157,6 +152,12 @@ const updateMyProfile = async (req, res, next) => {
       user: safeUser,
     });
   } catch (err) {
+    if (req.file && req.file.path) {
+      try {
+        deleteUploadByFsPath(String(req.file.path));
+      } catch (_err) {}
+    }
+
     next(err);
   }
 };
@@ -170,8 +171,6 @@ const updateMyProfile = async (req, res, next) => {
 const deleteAccount = async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) throw new Error('Invalid request');
 
     const isSelf = String(req.user.id) === String(id);
     const isAdmin = req.user.role === 'admin';

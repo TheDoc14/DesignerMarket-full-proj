@@ -9,6 +9,8 @@ const {
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { uploadProfile } = require('../middleware/multer.middleware');
 const { permit } = require('../middleware/role.middleware');
+const { validate } = require('../middleware/validate.middleware');
+const { userIdParam, updateMyProfileValidators } = require('../validators/profile.validators');
 
 /**
  * 👤 Profile Routes
@@ -28,11 +30,13 @@ router.put(
   authMiddleware,
   permit('admin', 'student', 'designer', 'customer'),
   uploadProfile.single('profileImage'),
+  updateMyProfileValidators,
+  validate,
   updateMyProfile
 );
 
 // DELETE /api/profile/:id
 // מחיקת משתמש – self או admin (כולל ניקוי קבצים + מחיקת פרויקטים/תגובות רלוונטיות)
-router.delete('/:id', authMiddleware, deleteAccount);
+router.delete('/:id', authMiddleware, userIdParam, validate, deleteAccount);
 
 module.exports = router;
