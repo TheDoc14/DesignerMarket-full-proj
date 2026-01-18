@@ -1,3 +1,4 @@
+// back-end/utils/emailToken.utils.js
 const crypto = require('crypto');
 
 const generateVerificationToken = () => {

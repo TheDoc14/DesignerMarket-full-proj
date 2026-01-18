@@ -56,6 +56,7 @@ const updateMyProfile = async (req, res, next) => {
       country,
       phone,
       birthDate, // צפוי ISO string (YYYY-MM-DD) מהפרונט
+      paypalEmail,
     } = body;
 
     // מביאים את המשתמש פעם אחת:
@@ -90,6 +91,13 @@ const updateMyProfile = async (req, res, next) => {
 
     // birthDate אופציונלי; אם סופק – אימות תאריך
     if (birthDate) updates.birthDate = new Date(birthDate);
+
+    if (typeof body.paypalEmail === 'string') {
+      const v = body.paypalEmail.trim().toLowerCase();
+
+      // מאפשר לנקות
+      updates.paypalEmail = v;
+    }
 
     // תמונת פרופיל חדשה (multer) — בניית URL דרך ה-URL utils
     if (req.file) {

@@ -100,6 +100,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    paypalEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
+      match: [/\S+@\S+\.\S+/, 'PayPal email is invalid'],
+    },
     bio: {
       type: String,
       maxlength: 500,
