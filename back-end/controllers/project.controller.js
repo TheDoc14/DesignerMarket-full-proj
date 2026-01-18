@@ -2,7 +2,9 @@
 const mongoose = require('mongoose');
 
 const Project = require('../models/Project.model');
+const User = require('../models/Users.models');
 const Review = require('../models/Review.model');
+const Order = require('../models/Order.model');
 
 const {
   deleteUploadByFileUrl,
@@ -54,6 +56,11 @@ const getFileType = (mimetype, filename) => {
  */
 const createProject = async (req, res, next) => {
   try {
+    const me = await User.findById(req.user.id).select('paypalEmail role');
+    if ((me.role === 'student' || me.role === 'designer') && !me.paypalEmail) {
+      throw new Error('PayPal email is required before creating a project');
+    }
+
     // 1) קריאת נתונים מה-body
     const { title, description, price, category, tags } = req.body;
     const mainImageIndex = Number(req.body.mainImageIndex);
@@ -197,7 +204,8 @@ const getAllProjects = async (req, res, next) => {
 
 /**
  * 🔎 getProjectById
- * מחזיר פרויקט יחיד בצורה בטוחה; serializer קובע מה לחשוף לפי viewer (media תמיד, files רק owner/admin).
+ * מחזיר פרויקט יחיד בצורה בטוחה; serializer קובע מה לחשוף לפי viewer
+ * (media תמיד, files רק owner/admin/paid buyer).
  * אם הפרויקט לא published — רק הבעלים או אדמין יכולים לצפות בו.
  */
 const getProjectById = async (req, res, next) => {
@@ -209,15 +217,32 @@ const getProjectById = async (req, res, next) => {
     // 2) זיהוי viewer (tryAuth) כדי לאפשר owner/admin
     const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
 
+    const isAdmin = viewer?.role === 'admin';
+    const isOwner = viewer?.id && String(viewer.id) === String(p.createdBy?._id || p.createdBy);
+
     // 3) אם לא מפורסם - רק owner/admin
     if (p.isPublished === false) {
-      const isAdmin = viewer?.role === 'admin';
-      const isOwner = viewer?.id && String(viewer.id) === String(p.createdBy?._id || p.createdBy);
       if (!isAdmin && !isOwner) throw new Error('Access denied');
     }
 
-    // 4) החזרה מסוריאלייז (קבצים רגישים רק למורשים)
-    const data = pickProjectPublic(p, { req, viewer });
+    // 4) האם הצופה רכש את הפרויקט? (רק אם יש viewer והוא לא owner/admin)
+    let hasPurchased = false;
+    if (viewer && !isAdmin && !isOwner) {
+      const exists = await Order.exists({
+        projectId: p._id,
+        buyerId: viewer.id,
+        status: { $in: ['PAID', 'PAYOUT_SENT'] },
+      });
+      hasPurchased = Boolean(exists);
+    }
+
+    // 5) מעבירים ל-serializer "הרשאה לקבצים" (משתמשים במבנה viewer קיים)
+    const viewerForSerializer = viewer
+      ? { ...viewer, canAccessFiles: isAdmin || isOwner || hasPurchased }
+      : undefined;
+
+    // 6) החזרה מסוריאלייז (קבצים רגישים רק למורשים)
+    const data = pickProjectPublic(p, { req, viewer: viewerForSerializer });
 
     return res.status(200).json({ message: 'Project fetched successfully', project: data });
   } catch (err) {

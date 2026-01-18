@@ -36,6 +36,11 @@ const updateMyProfileValidators = [
   body('country').optional().isString().withMessage('country must be a string'),
   body('phone').optional().isString().withMessage('phone must be a string'),
 
+  body('paypalEmail')
+    .optional()
+    .custom((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)))
+    .withMessage('PayPal email must be a valid email'),
+
   // birthDate מגיע כ-YYYY-MM-DD. נוודא שזה תאריך תקין.
   body('birthDate')
     .optional()
