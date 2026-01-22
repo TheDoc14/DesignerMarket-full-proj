@@ -32,4 +32,12 @@ const toSort = (sortBy, order, allowedFields, defaultField = 'createdAt') => {
   return { [field]: dir };
 };
 
-module.exports = { toInt, escapeRegex, toSort };
+// ✅ NEW: standard paging helper
+const getPaging = (query = {}, defaultLimit = 20) => {
+  const page = Math.max(1, toInt(query.page, 1));
+  const limit = Math.min(100, Math.max(1, toInt(query.limit, defaultLimit))); // guard
+  const skip = (page - 1) * limit;
+  return { page, limit, skip };
+};
+
+module.exports = { toInt, escapeRegex, toSort, getPaging };

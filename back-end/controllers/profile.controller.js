@@ -3,7 +3,11 @@ const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
 const { recalcProjectRatings } = require('../utils/reviews.utils');
-const { pickUserPublic } = require('../utils/serializers.utils');
+const {
+  pickUserPublic,
+  pickProjectPublic,
+  pickUserProfilePublic,
+} = require('../utils/serializers.utils');
 const {
   getBaseUrl,
   buildFileUrl,
@@ -11,27 +15,53 @@ const {
   isValidHttpUrl,
 } = require('../utils/url.utils');
 const { deleteUploadByFileUrl, deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
+const { getPaging, toSort } = require('../utils/query.utils');
+const { buildMeta } = require('../utils/meta.utils');
 
 /**
  * 👤 getMyProfile
- * מחזיר פרופיל של המשתמש המחובר, כולל רשימת הפרויקטים שהוא העלה.
- * מבצע שליפה מה־DB, ומחזיר משתמש מסוריאלייז (pickUserPublic) כדי לא לחשוף מידע רגיש.
- * מיועד למסך “My Profile / Wall” של המשתמש עצמו.
+ * מחזיר פרופיל של המשתמש המחובר + רשימת הפרויקטים שלו עם פגינציה ומיון (כמו כל list אצלך).
+ * מיועד למסך “My Profile / Wall”.
  */
 const getMyProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) throw new Error('User not found');
 
-    const projects = await Project.find({ createdBy: req.user.id }).sort({ createdAt: -1 });
+    // Pagination + sorting (סטנדרט כמו admin/reviews/projects list)
+    const { page, limit, skip } = getPaging(req.query, 20);
+
+    const sort = toSort(
+      req.query.sortBy,
+      req.query.order,
+      ['createdAt', 'price', 'averageRating', 'reviewsCount', 'title', 'isPublished', 'isSold'],
+      'createdAt'
+    );
+
+    // אפשר להוסיף בהמשך פילטרים ל-wall (למשל published/sold),
+    // אבל כרגע: כל הפרויקטים שלי (כולל unpublished) — כי זה /me
+    const filter = { createdBy: req.user.id };
+
+    const [total, projects] = await Promise.all([
+      Project.countDocuments(filter),
+      Project.find(filter).sort(sort).skip(skip).limit(limit),
+    ]);
 
     const baseUrl = getBaseUrl(req);
     const safeUser = pickUserPublic(user, { forRole: user.role, baseUrl });
 
+    // ב-/me אני הבעלים, אז אני יכול לראות files רגישים.
+    // pickProjectPublic כבר מאפשר owner/admin, אז זה מספיק;
+    // אם תרצה להיות מפורש, אפשר להעביר viewer.
+    const viewer = { id: req.user.id, role: req.user.role };
+
+    const data = projects.map((p) => pickProjectPublic(p, { req, viewer }));
+
     return res.status(200).json({
       message: 'Profile fetched successfully',
       user: safeUser,
-      projects, // אפשר להוסיף סיריאלייזר לפרויקטים בהמשך אם נרצה תצוגה "רזה"
+      meta: buildMeta(total, page, limit),
+      projects: data,
     });
   } catch (err) {
     next(err);
@@ -92,8 +122,8 @@ const updateMyProfile = async (req, res, next) => {
     // birthDate אופציונלי; אם סופק – אימות תאריך
     if (birthDate) updates.birthDate = new Date(birthDate);
 
-    if (typeof body.paypalEmail === 'string') {
-      const v = body.paypalEmail.trim().toLowerCase();
+    if (typeof paypalEmail === 'string') {
+      const v = paypalEmail.trim().toLowerCase();
 
       // מאפשר לנקות
       updates.paypalEmail = v;
@@ -252,4 +282,58 @@ const deleteAccount = async (req, res, next) => {
   }
 };
 
-module.exports = { getMyProfile, updateMyProfile, deleteAccount };
+const getPublicProfileWithProjects = async (req, res, next) => {
+  try {
+    const baseUrl = req.publicBaseUrl; // או איך שאתה בונה baseUrl אצלך
+    const targetUserId = req.params.id;
+
+    const viewer = req.user || null;
+    const isAdmin = viewer?.role === 'admin';
+    const isSelf = viewer?.id === targetUserId || String(viewer?._id) === String(targetUserId);
+    const canSeeUnpublished = isAdmin || isSelf;
+
+    // 1) load user
+    const user = await User.findById(targetUserId);
+    if (!user) {
+      const err = new Error('User not found');
+      err.status = 404;
+      throw err;
+    }
+
+    // 2) user payload
+    const userPayload = canSeeUnpublished
+      ? pickUserPublic(user, { forRole: isAdmin ? 'admin' : user.role, baseUrl })
+      : pickUserProfilePublic(user, { baseUrl });
+
+    // 3) pagination / sorting
+    const { page, limit, skip } = getPaging(req.query, 12);
+
+    const sortBy = req.query.sortBy || 'createdAt';
+    const order = req.query.order || 'desc';
+    const sort = toSort(sortBy, order);
+
+    // 4) projects filter
+    const filter = { createdBy: user._id };
+    if (!canSeeUnpublished) filter.isPublished = true;
+
+    // 5) query
+    const [total, projects] = await Promise.all([
+      Project.countDocuments(filter),
+      Project.find(filter).sort(sort).skip(skip).limit(limit),
+    ]);
+
+    // viewer-aware serializer (keeps your “files unlock after purchase” logic)
+    const projectsPayload = projects.map((p) => pickProjectPublic(p, { req, viewer }));
+
+    return res.json({
+      message: 'Public profile fetched',
+      user: userPayload,
+      meta: buildMeta(total, page, limit),
+      projects: projectsPayload,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getMyProfile, updateMyProfile, deleteAccount, getPublicProfileWithProjects };

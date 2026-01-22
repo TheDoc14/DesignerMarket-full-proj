@@ -12,7 +12,7 @@ const {
 } = require('../utils/filesCleanup.utils');
 const { buildFileUrl } = require('../utils/url.utils');
 const { pickProjectPublic } = require('../utils/serializers.utils');
-const { toInt, escapeRegex, toSort } = require('../utils/query.utils');
+const { escapeRegex, toSort, getPaging } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
 const { normalizeTags } = require('../utils/tags.utils');
 
@@ -172,9 +172,7 @@ const getAllProjects = async (req, res, next) => {
       Object.keys(extraFilter).length > 0 ? { $and: [accessFilter, extraFilter] } : accessFilter;
 
     // 5) פגינציה + מיון
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const sort = toSort(
       req.query.sortBy,

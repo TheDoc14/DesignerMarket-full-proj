@@ -151,6 +151,7 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     price: safeNum(p.price),
     createdBy: p.createdBy ? String(p.createdBy._id || p.createdBy) : undefined,
     tags: safeArr(p.tags).map(safeStr).filter(Boolean),
+    isSold: safeBool(p.isSold),
 
     // מצב פרסום — רק לאדמין/בעלים
     isPublished: isAdmin || isOwner ? safeBool(p.isPublished) : undefined,
@@ -216,4 +217,39 @@ const pickProjectStats = (projectDoc) => {
   };
 };
 
-module.exports = { pickUserPublic, pickProjectPublic, pickReviewPublic, pickProjectStats };
+const pickUserProfilePublic = (user, { baseUrl } = {}) => {
+  if (!user) return null;
+
+  const u = user.toObject ? user.toObject() : user;
+
+  return {
+    id: String(u._id || ''),
+    username: safeStr(u.username),
+    bio: safeStr(u.bio),
+    profileImage: buildAbsoluteUrl(u.profileImage, baseUrl),
+
+    firstName: safeStr(u.firstName),
+    lastName: safeStr(u.lastName),
+    city: safeStr(u.city),
+    country: safeStr(u.country),
+    birthDate: u.birthDate ? new Date(u.birthDate) : null,
+    social: {
+      website: safeStr(u?.social?.website),
+      instagram: safeStr(u?.social?.instagram),
+      dribbble: safeStr(u?.social?.dribbble),
+      behance: safeStr(u?.social?.behance),
+      linkedin: safeStr(u?.social?.linkedin),
+      github: safeStr(u?.social?.github),
+    },
+
+    createdAt: u.createdAt || undefined,
+  };
+};
+
+module.exports = {
+  pickUserPublic,
+  pickProjectPublic,
+  pickReviewPublic,
+  pickProjectStats,
+  pickUserProfilePublic,
+};
