@@ -1,3 +1,4 @@
+//back-end/server.js
 /**
  * server.js
  * נקודת הכניסה של השרת: middlewares כלליים, חיבור למסד, רישום ראוטים, וטיפול שגיאות אחיד.
@@ -65,7 +66,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
 
 app.get('/api/test', (req, res) => {
-  res.json({ msg: 'API is working fine 🚀' });
+  res.status(200).json({ message: 'API is working fine 🚀' });
 });
 
 /**

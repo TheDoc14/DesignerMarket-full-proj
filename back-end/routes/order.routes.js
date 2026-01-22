@@ -32,7 +32,7 @@ router.post(
   paypalCaptureOrder
 );
 
-router.get('/paypal/return', (req, res) => res.status(200).send('PAYPAL RETURN OK'));
-router.get('/paypal/cancel', (req, res) => res.status(200).send('PAYPAL CANCEL OK'));
+router.get('/paypal/return', (req, res) => res.status(200).json({ message: 'PayPal return OK' }));
+router.get('/paypal/cancel', (req, res) => res.status(200).json({ message: 'PayPal cancel OK' }));
 
 module.exports = router;
