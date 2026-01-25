@@ -1,5 +1,5 @@
 // back-end/validators/profile.validators.js
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 
 /**
  * ✅ Profile Validators
@@ -36,6 +36,11 @@ const updateMyProfileValidators = [
   body('country').optional().isString().withMessage('country must be a string'),
   body('phone').optional().isString().withMessage('phone must be a string'),
 
+  body('paypalEmail')
+    .optional()
+    .custom((v) => v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v)))
+    .withMessage('PayPal email must be a valid email'),
+
   // birthDate מגיע כ-YYYY-MM-DD. נוודא שזה תאריך תקין.
   body('birthDate')
     .optional()
@@ -50,7 +55,34 @@ const updateMyProfileValidators = [
   // אם נקשיח מדי, נשבור בקלות form-data / JSON string.
 ];
 
+// GET /api/profile/me? page=&limit=&sortBy=&order=
+const myProfileProjectsQuery = [
+  query('page').optional().isInt({ min: 1 }).withMessage('page must be a positive integer'),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('limit must be between 1 and 100'),
+
+  // אותם עקרונות כמו projects list / reviews list: sortBy מוגבל לשדות מותרים
+  query('sortBy')
+    .optional()
+    .isIn(['createdAt', 'price', 'averageRating', 'reviewsCount', 'title', 'isPublished', 'isSold'])
+    .withMessage('sortBy is invalid'),
+
+  query('order').optional().isIn(['asc', 'desc']).withMessage('order must be asc or desc'),
+];
+
+const profileProjectsQuery = [
+  query('page').optional().isInt({ min: 1 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
+  query('sortBy').optional().isIn(['createdAt', 'updatedAt', 'price', 'title']),
+  query('order').optional().isIn(['asc', 'desc']),
+];
+
 module.exports = {
   userIdParam,
   updateMyProfileValidators,
+  myProfileProjectsQuery,
+  profileProjectsQuery,
 };

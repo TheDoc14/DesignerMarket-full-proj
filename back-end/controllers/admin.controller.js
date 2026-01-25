@@ -9,7 +9,7 @@ const {
   pickProjectStats,
 } = require('../utils/serializers.utils');
 const { getBaseUrl } = require('../utils/url.utils');
-const { toInt, escapeRegex, toSort } = require('../utils/query.utils');
+const { getPaging, escapeRegex, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
 
 /**
@@ -22,9 +22,7 @@ const adminListUsers = async (req, res, next) => {
   try {
     const { q, role, approved } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const filter = {};
 
@@ -98,9 +96,7 @@ const adminListProjects = async (req, res, next) => {
   try {
     const { q, category, published } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const filter = {};
 
@@ -174,9 +170,7 @@ const adminListReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const filter = {};
     if (projectId) filter.projectId = projectId;

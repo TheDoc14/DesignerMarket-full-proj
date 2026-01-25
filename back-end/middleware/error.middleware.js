@@ -132,6 +132,38 @@ function classifyError(err, _req, _res, _next) {
   }
 
   // =====================
+  // 💳 Orders / PayPal
+  // =====================
+  else if (msg.includes('Order not found')) {
+    statusCode = 404;
+    message = 'Order not found.';
+  } else if (msg.includes('Order already processed')) {
+    statusCode = 409;
+    message = 'Order already processed.';
+  } else if (msg.includes('Order already pending for this project')) {
+    statusCode = 409;
+    message = 'You already have a pending order for this project.';
+  } else if (msg.includes('Order is canceled')) {
+    statusCode = 409;
+    message = 'Order was canceled.';
+  } else if (msg.includes('Invalid order state')) {
+    statusCode = 409;
+    message = 'Invalid order state.';
+  } else if (msg.includes('PayPal capture failed')) {
+    statusCode = 400;
+    message = 'PayPal capture failed.';
+  } else if (msg.includes('Seller PayPal email missing')) {
+    statusCode = 400;
+    message = 'Seller PayPal email is missing.';
+  } else if (msg.includes('Cannot purchase your own project')) {
+    statusCode = 403;
+    message = 'You cannot purchase your own project.';
+  } else if (msg.includes('PayPal email is required before creating a project')) {
+    statusCode = 400;
+    message = 'PayPal email is required before creating a project.';
+  }
+
+  // =====================
   // 💾 Mongo / Mongoose
   // =====================
   else if (err instanceof mongoose.Error.ValidationError) {

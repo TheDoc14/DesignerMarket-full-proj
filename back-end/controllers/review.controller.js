@@ -4,7 +4,7 @@ const Review = require('../models/Review.model');
 const Project = require('../models/Project.model');
 const { recalcProjectRatings } = require('../utils/reviews.utils');
 const { pickReviewPublic } = require('../utils/serializers.utils');
-const { toInt, toSort } = require('../utils/query.utils');
+const { getPaging, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
 
 /**
@@ -52,8 +52,8 @@ const listReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 10);
+    const { page, limit, skip } = getPaging(req.query, 20);
+
     const sort = toSort(req.query.sortBy, req.query.order, ['createdAt', 'rating'], 'createdAt');
 
     const filter = { projectId: new mongoose.Types.ObjectId(projectId) };
@@ -62,7 +62,7 @@ const listReviews = async (req, res, next) => {
       Review.find(filter)
         .populate('userId', 'username profileImage')
         .sort(sort)
-        .skip((page - 1) * limit)
+        .skip(skip)
         .limit(limit),
       Review.countDocuments(filter),
     ]);

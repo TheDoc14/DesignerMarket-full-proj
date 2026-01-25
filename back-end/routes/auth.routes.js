@@ -73,4 +73,5 @@ router.post(
 // POST /api/auth/reset-password
 // איפוס סיסמה בפועל לפי token + newPassword (חד-פעמי + תוקף)(Limiter קשוח)
 router.post('/reset-password', authLimiterStrict, resetPasswordValidators, validate, resetPassword);
+
 module.exports = router;

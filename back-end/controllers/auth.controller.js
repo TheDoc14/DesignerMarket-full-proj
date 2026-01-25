@@ -178,7 +178,11 @@ const loginUser = async (req, res, next) => {
     const baseUrl = getBaseUrl(req);
     const safeUser = pickUserPublic(user, { forRole: user.role, baseUrl });
 
-    return res.status(200).json({ token, user: safeUser });
+    return res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: safeUser,
+    });
   } catch (err) {
     next(err);
   }
