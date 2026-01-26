@@ -363,10 +363,10 @@ RECAPTCHA_HOSTNAME=localhost
 ### Phase 2: Public Profile + Wall -- DONE!!
 - Public user profile endpoint
 - Public projects wall (published only) with pagination/filtering/meta
-- Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
 
-### Phase 3: CAPTCHA
+### Phase 3: CAPTCHA -- DONE!!
 - CAPTCHA on register/login/forgot/reset flows (MVP)
+- Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
 
 ### Phase 4: AI Endpoint
 - MVP mock endpoint first
