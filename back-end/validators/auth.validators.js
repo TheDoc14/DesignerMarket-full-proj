@@ -5,6 +5,10 @@ const { body, query } = require('express-validator');
  * ✅ Auth Validators
  * אחריות: ולידציה לקלט של Auth לפני שהקונטרולר רץ.
  */
+const captchaTokenValidator = body('captchaToken')
+  .trim()
+  .notEmpty()
+  .withMessage('Captcha token is required');
 
 const registerValidators = [
   body('username')
@@ -28,6 +32,8 @@ const registerValidators = [
     .withMessage('Password is too short'),
 
   body('role').optional().isIn(['student', 'designer', 'customer']).withMessage('Invalid role'),
+
+  captchaTokenValidator,
 ];
 
 const loginValidators = [
@@ -39,6 +45,8 @@ const loginValidators = [
     .withMessage('Email is invalid'),
 
   body('password').notEmpty().withMessage('Password is required'),
+
+  captchaTokenValidator,
 ];
 
 const verifyEmailValidators = [
@@ -52,6 +60,8 @@ const resendVerificationValidators = [
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Email is invalid'),
+
+  captchaTokenValidator,
 ];
 
 /**
@@ -63,6 +73,8 @@ const resendVerificationValidators = [
  */
 const forgotPasswordValidators = [
   body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email is invalid'),
+
+  captchaTokenValidator,
 ];
 
 /**
@@ -76,6 +88,8 @@ const resetPasswordValidators = [
     .withMessage('New password is required')
     .isLength({ min: 6 })
     .withMessage('Password is too short'),
+
+  captchaTokenValidator,
 ];
 
 module.exports = {

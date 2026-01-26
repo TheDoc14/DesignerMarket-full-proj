@@ -83,6 +83,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - JWT-based auth + RBAC permissions
 - Rate limiting on auth flows
 - Helmet security headers + CORS handling
+- Google reCAPTCHA V3 protection on auth endpoints (`register`, `login`, `forgot-password`, `reset-password`, `resend-verification`)
 
 #### Users / Profile
 - Get/update my profile
@@ -246,6 +247,13 @@ FRONTEND_BASE_URL=http://localhost:3000
 # (אופציונלי אבל מומלץ בהמשך)
 PAYPAL_WEBHOOK_ID=
 
+# Google reCAPTCHA v3
+RECAPTCHA_SITE_KEY=replace_me
+RECAPTCHA_SECRET_KEY=replace_me
+RECAPTCHA_MIN_SCORE=0.5
+RECAPTCHA_ENABLED=true
+RECAPTCHA_HOSTNAME=localhost
+
 ```
 ---
 
@@ -318,6 +326,7 @@ PAYPAL_WEBHOOK_ID=
 - Login
 - Forgot password / reset password
 - Rate-limiting behavior for auth endpoints
+- reCAPTCHA v3 verification tested (valid token via local HTML helper + invalid/missing token cases)
 
 ### RBAC / Permissions
 - Public vs owner vs admin visibility behavior
@@ -351,9 +360,10 @@ PAYPAL_WEBHOOK_ID=
 
 ## Roadmap (Planned)
 
-### Phase 2: Public Profile + Wall
+### Phase 2: Public Profile + Wall -- DONE!!
 - Public user profile endpoint
 - Public projects wall (published only) with pagination/filtering/meta
+- Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
 
 ### Phase 3: CAPTCHA
 - CAPTCHA on register/login/forgot/reset flows (MVP)

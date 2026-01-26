@@ -12,6 +12,7 @@ const {
 const { uploadApproval } = require('../middleware/multer.middleware');
 const { authLimiterStrict, authLimiterSoft } = require('../middleware/rateLimit.middleware');
 const { validate } = require('../middleware/validate.middleware');
+const { verifyRecaptchaV3 } = require('../middleware/captcha.middleware');
 
 const {
   registerValidators,
@@ -37,6 +38,7 @@ router.post(
   uploadApproval.single('approvalDocument'),
   registerValidators,
   validate,
+  verifyRecaptchaV3('register'),
   registerUser
 );
 
@@ -51,13 +53,21 @@ router.post(
   authLimiterSoft,
   resendVerificationValidators,
   validate,
+  verifyRecaptchaV3('resend-verification'),
   resendVerificationEmail
 );
 
 // POST /api/auth/login
 // התחברות (נכשל אם המשתמש לא verified / או pending approval לתפקידים מסוימים)
 //(Limiter קשוח נגד brute-force)
-router.post('/login', authLimiterStrict, loginValidators, validate, loginUser);
+router.post(
+  '/login',
+  authLimiterStrict,
+  loginValidators,
+  validate,
+  verifyRecaptchaV3('login'),
+  loginUser
+);
 
 // POST /api/auth/forgot-password
 // בקשת לינק לאיפוס סיסמה למייל (תשובה גנרית תמיד כדי לא לחשוף אם האימייל קיים)
@@ -67,11 +77,19 @@ router.post(
   authLimiterStrict,
   forgotPasswordValidators,
   validate,
+  verifyRecaptchaV3('forgot-password'),
   forgotPassword
 );
 
 // POST /api/auth/reset-password
 // איפוס סיסמה בפועל לפי token + newPassword (חד-פעמי + תוקף)(Limiter קשוח)
-router.post('/reset-password', authLimiterStrict, resetPasswordValidators, validate, resetPassword);
+router.post(
+  '/reset-password',
+  authLimiterStrict,
+  resetPasswordValidators,
+  validate,
+  verifyRecaptchaV3('reset-password'),
+  resetPassword
+);
 
 module.exports = router;
