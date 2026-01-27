@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom'; // הוספנו את Link
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -21,7 +21,6 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // 1. שליחת הבקשה לשרת
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
@@ -35,20 +34,14 @@ const Login = () => {
 
       const data = await response.json();
 
-      // 2. בדיקת שגיאות מהשרת
       if (!response.ok) {
         throw new Error(data.message || 'שגיאה בהתחברות');
       }
 
-      // 3. הצלחה - שמירת הנתונים ב-LocalStorage
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      // 4. הדרך הריאקטית: ניווט ואז רענון מלא
-      // קודם ננווט ליעד הרצוי
       navigate('/'); 
-      
-      // מיד לאחר מכן נבצע רענון כדי שכל הקומפוננטות יזהו את המשתמש המחובר
       window.location.reload();
 
     } catch (err) {
@@ -75,7 +68,7 @@ const Login = () => {
           />
         </div>
 
-        <div style={{ marginBottom: '15px' }}>
+        <div style={{ marginBottom: '5px' }}> {/* הקטנו מעט את המרווח בשביל הקישור */}
           <label>סיסמה:</label>
           <input
             type="password"
@@ -85,6 +78,16 @@ const Login = () => {
             required
             style={{ width: '100%', padding: '8px' }}
           />
+        </div>
+
+        {/* קישור "שכחת סיסמה" */}
+        <div style={{ textAlign: 'left', marginBottom: '15px' }}>
+          <Link 
+            to="/forgot-password" 
+            style={{ fontSize: '0.85rem', color: '#007bff', textDecoration: 'none' }}
+          >
+            שכחת סיסמה?
+          </Link>
         </div>
 
         {error && (

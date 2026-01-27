@@ -17,15 +17,21 @@ const VerifyEmail = () => {
         setMsg('קישור לא תקין (חסר טוקן).');
         return;
       }
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
       try {
-        // קריאה לשרת לפי הראוט ששלחת לי: router.get('/verify-email', verifyEmail);
-        await axios.get(`http://localhost:5000/api/auth/verify-email?token=${token}`);
+        // אנחנו מריצים את הקריאה לשרת ואת ההמתנה במקביל.
+        // ה-await יסתיים רק כששניהם יושלמו (לפחות 3 שניות בסך הכל).
+        await Promise.all([
+          axios.get(`http://localhost:5000/api/auth/verify-email?token=${token}`),
+          delay(3000) // המתנה של 3 שניות
+        ]);
         
         setStatus('success');
         setMsg('המייל אומת בהצלחה! מעביר להתחברות...');
         
-        setTimeout(() => navigate('/login'), 3000); // מעבר אוטומטי
+        // מעבר לדף התחברות לאחר הצגת הודעת ההצלחה
+        setTimeout(() => navigate('/login'), 2000); 
       } catch (err) {
         setStatus('error');
         setMsg(err.response?.data?.message || 'האימות נכשל. ייתכן שהקישור פג תוקף.');
@@ -39,12 +45,7 @@ const VerifyEmail = () => {
     <div className="page-container" style={{textAlign: 'center', marginTop: '100px'}}>
         {status === 'loading' && <h2>⏳ {msg}</h2>}
         {status === 'success' && <h2 style={{color: 'green'}}>✅ {msg}</h2>}
-        {status === 'error' && (
-            <div>
-                <h2 style={{color: 'red'}}>❌ {msg}</h2>
-                <button onClick={() => navigate('/login')}>חזור לדף התחברות</button>
-            </div>
-        )}
+        
     </div>
   );
 };

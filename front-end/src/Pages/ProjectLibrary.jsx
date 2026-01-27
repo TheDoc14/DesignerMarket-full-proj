@@ -10,13 +10,14 @@ const ProjectLibrary = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
 
+// בתוך ProjectLibrary.js - עדכון ה-useEffect
 useEffect(() => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       
-      // הוספת הפרמטר published=true כדי להציג רק פרויקטים שאושרו על ידי אדמין
+      // הוספת הפרמטר ?published=true מבטיחה שהשרת יחזיר רק פרויקטים מאושרים
       const response = await axios.get('http://localhost:5000/api/projects?published=true', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
@@ -47,13 +48,18 @@ useEffect(() => {
     setDisplayList(result);
   }, [searchTerm, sortBy, projects]);
 
-  const getImageUrl = (project) => {
-    const img = project.media?.[0] || project.files?.find(f => f.fileType === 'image');
-    if (!img) return 'https://via.placeholder.com/300x200?text=No+Image';
-    const fileName = img.filename || img.path?.split('/').pop();
-    return `http://localhost:5000/api/files/projects/projectImages/${fileName}`;
-  };
+const getImageUrl = (project) => {
+    // 1. הכתובת המלאה שהשרת בנה (הכי בטוח)
+    if (project.mainImageUrl) return project.mainImageUrl;
 
+    // 2. גיבוי: אם יש מערך מדיה, הכתובת המלאה נמצאת בתוך שדה url
+    if (project.media && project.media.length > 0 && project.media[0].url) {
+        return project.media[0].url;
+    }
+
+    // 3. ברירת מחדל אם אין תמונה
+    return 'front-end\src\DefaultPics\projectDefault.png';
+};
   if (loading) return <div style={styles.loader}>טוען פרויקטים...</div>;
 
   return (

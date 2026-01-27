@@ -1,0 +1,81 @@
+.popup-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 2000; backdrop-filter: blur(5px);
+}
+
+.popup-content {
+    background: #fff;
+    width: 90%; max-width: 700px;
+    max-height: 85vh;
+    border-radius: 15px;
+    position: relative;
+    padding: 25px;
+    direction: rtl;
+    display: flex; flex-direction: column;
+}
+
+.popup-scroll-container {
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.close-btn {
+    position: absolute; top: 15px; left: 15px;
+    background: none; border: none; font-size: 28px; cursor: pointer; color: #333;
+}
+
+.popup-image {
+    width: 100%; height: 350px;
+    object-fit: cover; border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.image-container { position: relative; }
+
+.image-upload-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); display: flex; justify-content: center; align-items: center;
+    border-radius: 10px; opacity: 0; transition: 0.3s;
+}
+
+.image-container:hover .image-upload-overlay { opacity: 1; }
+
+.price-tag { font-size: 1.4rem; color: #27ae60; font-weight: bold; margin-bottom: 10px; }
+
+.description { line-height: 1.6; color: #444; font-size: 1.1rem; }
+
+/* Reviews */
+.reviews-section { margin-top: 30px; }
+
+.review-card {
+    background: #f9f9f9; padding: 15px; border-radius: 8px;
+    margin-bottom: 15px; border-right: 5px solid #3498db;
+}
+
+.review-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+
+.review-stars { color: #f1c40f; }
+
+.add-review-form {
+    margin-top: 20px; background: #f0f2f5; padding: 15px; border-radius: 10px;
+}
+
+.add-review-form textarea {
+    width: 100%; height: 80px; margin: 10px 0; padding: 10px;
+    border-radius: 5px; border: 1px solid #ddd; font-family: inherit;
+}
+
+/* Buttons */
+.action-buttons { display: flex; gap: 10px; margin-top: 15px; }
+
+.approve-btn { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+.edit-btn { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+.secondary-btn { background: #95a5a6; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+
+/* Edit Fields */
+.edit-input, .edit-textarea {
+    width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 5px;
+}

@@ -13,7 +13,7 @@ const AdminDashboard = () => {
         const fetchStats = async () => {
             try {
                 const token = localStorage.getItem('token');
-                // שליפת נתוני ה-stats המורחבים
+                // פנייה לנתיב הסטטיסטיקות שהגדרת ב-Routes
                 const res = await axios.get('http://localhost:5000/api/admin/stats', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -24,6 +24,7 @@ const AdminDashboard = () => {
                 setLoading(false);
             }
         };
+        // וידוא שהמשתמש הוא אדמין לפני השליפה
         if (currentUser?.role === 'admin') fetchStats();
     }, [currentUser]);
 
@@ -31,75 +32,73 @@ const AdminDashboard = () => {
     if (!stats) return <div className="alert alert-error">לא ניתן לטעון נתונים כרגע.</div>;
 
     return (
-        <div className="admin-container dashboard-enhanced">
-            <header className="dashboard-header">
-                <h1>סיכום נתוני מערכת</h1>
-                <p>מבט על הביצועים והפעילות באתר</p>
+        <div className="admin-container dashboard-enhanced" style={{ direction: 'rtl', padding: '20px' }}>
+            <header className="dashboard-header" style={{ marginBottom: '30px', textAlign: 'center' }}>
+                <h1 style={{ color: '#2c3e50' }}>לוח בקרה למנהל</h1>
+                <p style={{ color: '#7f8c8d' }}>סיכום פעילות המערכת וביצועים</p>
             </header>
 
-            {/* שורת כרטיסי פעולה דחופה (Urgent Actions) */}
-            <div className="action-cards">
-                <Link to="/admin/approvals" className="stat-card highlight-orange">
-                    <div className="stat-icon">🔔</div>
+            {/* שורת פעולות דחופות - אישורים ממתינים */}
+            <div className="action-cards" style={styles.flexRow}>
+                <Link to="/admin/user-approval" className="stat-card" style={{ ...styles.card, borderRight: '5px solid #f39c12' }}>
+                    <div className="stat-icon" style={{ fontSize: '2rem' }}>🔔</div>
                     <div className="stat-content">
-                        <h4>אישורי משתמשים</h4>
-                        <p className="stat-number">{stats.usersPendingApproval}</p>
-                        <span>ממתינים לבדיקה</span>
+                        <h4 style={{ margin: '5px 0' }}>אישורי משתמשים</h4>
+                        <p style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: '5px 0' }}>{stats.usersPendingApproval}</p>
+                        <span style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>ממתינים לבדיקה</span>
                     </div>
                 </Link>
 
-                <Link to="/admin/projects" className="stat-card highlight-purple">
-                    <div className="stat-icon">🚀</div>
+                <Link to="/admin/manage-projects" className="stat-card" style={{ ...styles.card, borderRight: '5px solid #9b59b6' }}>
+                    <div className="stat-icon" style={{ fontSize: '2rem' }}>🚀</div>
                     <div className="stat-content">
-                        <h4>פרויקטים חדשים</h4>
-                        <p className="stat-number">{stats.projectsPendingPublish}</p>
-                        <span>ממתינים לפרסום</span>
+                        <h4 style={{ margin: '5px 0' }}>פרויקטים חדשים</h4>
+                        <p style={{ fontSize: '1.8rem', fontWeight: 'bold', margin: '5px 0' }}>{stats.projectsPendingPublish}</p>
+                        <span style={{ fontSize: '0.9rem', color: '#7f8c8d' }}>ממתינים לפרסום</span>
                     </div>
                 </Link>
             </div>
 
-            {/* שורת סטטיסטיקה כללית */}
-            <div className="dashboard-grid">
-                <div className="stat-card info-blue">
-                    <div className="stat-label">סה"כ משתמשים רשומים</div>
-                    <div className="stat-value">{stats.usersTotal}</div>
-                    <div className="stat-footer">כולל אדמינים ולקוחות</div>
+            {/* נתונים כלליים */}
+            <div className="dashboard-grid" style={styles.grid}>
+                <div className="stat-card" style={{ ...styles.card, backgroundColor: '#e3f2fd' }}>
+                    <div style={{ color: '#1976d2', fontWeight: 'bold' }}>סה"כ משתמשים</div>
+                    <div style={{ fontSize: '2rem', margin: '10px 0' }}>{stats.usersTotal}</div>
+                    <small>אדמינים, מעצבים ולקוחות</small>
                 </div>
-                <div className="stat-card info-green">
-                    <div className="stat-label">פרויקטים במאגר</div>
-                    <div className="stat-value">{stats.projectsTotal}</div>
-                    <div className="stat-footer">פרויקטים שהועלו סה"כ</div>
+                <div className="stat-card" style={{ ...styles.card, backgroundColor: '#e8f5e9' }}>
+                    <div style={{ color: '#388e3c', fontWeight: 'bold' }}>פרויקטים באתר</div>
+                    <div style={{ fontSize: '2rem', margin: '10px 0' }}>{stats.projectsTotal}</div>
+                    <small>סה"כ פרויקטים שהועלו</small>
                 </div>
-                <div className="stat-card info-gray">
-                    <div className="stat-label">תגובות שנכתבו</div>
-                    <div className="stat-value">{stats.reviewsTotal}</div>
-                    <div className="stat-footer">אינטראקציה בין משתמשים</div>
+                <div className="stat-card" style={{ ...styles.card, backgroundColor: '#f5f5f5' }}>
+                    <div style={{ color: '#616161', fontWeight: 'bold' }}>תגובות ודירוגים</div>
+                    <div style={{ fontSize: '2rem', margin: '10px 0' }}>{stats.reviewsTotal}</div>
+                    <small>אינטראקציה בקהילה</small>
                 </div>
             </div>
 
-            {/* טבלאות דירוג ופופולריות */}
-            <div className="analytics-section">
-                <div className="analytics-card">
-                    <h3>🏆 מובילים בדירוג (Top Rated)</h3>
-                    <div className="ranking-list">
+            {/* ניתוח נתונים ודירוגים */}
+            <div className="analytics-section" style={{ ...styles.grid, gridTemplateColumns: '1fr 1fr' }}>
+                <div className="analytics-card" style={styles.card}>
+                    <h3 style={{ borderBottom: '2px solid #f1c40f', paddingBottom: '10px' }}>🏆 מובילים בדירוג</h3>
+                    <div className="ranking-list" style={{ marginTop: '15px' }}>
                         {stats.topRated.map((p, index) => (
-                            <div key={p.id || index} className="ranking-item">
-                                <span className="rank-number">{index + 1}</span>
-                                <span className="rank-title">{p.title}</span>
-                                <span className="rank-score">⭐ {Number(p.averageRating).toFixed(1)}</span>
+                            <div key={p._id || index} style={styles.rankingItem}>
+                                <span>{index + 1}. {p.title}</span>
+                                <span style={{ color: '#f1c40f', fontWeight: 'bold' }}>⭐ {Number(p.averageRating).toFixed(1)}</span>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="analytics-card">
-                    <h3>🔥 הכי הרבה תגובות (Engaged)</h3>
-                    <div className="ranking-list">
+                <div className="analytics-card" style={styles.card}>
+                    <h3 style={{ borderBottom: '2px solid #e67e22', paddingBottom: '10px' }}>🔥 הכי פופולריים</h3>
+                    <div className="ranking-list" style={{ marginTop: '15px' }}>
                         {stats.mostReviewed.map((p, index) => (
-                            <div key={p.id || index} className="ranking-item">
-                                <span className="rank-number">{index + 1}</span>
-                                <span className="rank-title">{p.title}</span>
-                                <span className="rank-score">💬 {p.reviewsCount}</span>
+                            <div key={p._id || index} style={styles.rankingItem}>
+                                <span>{index + 1}. {p.title}</span>
+                                <span style={{ color: '#e67e22', fontWeight: 'bold' }}>💬 {p.reviewsCount} תגובות</span>
                             </div>
                         ))}
                     </div>
@@ -107,6 +106,13 @@ const AdminDashboard = () => {
             </div>
         </div>
     );
+};
+
+const styles = {
+    flexRow: { display: 'flex', gap: '20px', marginBottom: '30px' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '30px' },
+    card: { backgroundColor: '#fff', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', textDecoration: 'none', color: 'inherit' },
+    rankingItem: { display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #f0f0f0' }
 };
 
 export default AdminDashboard;

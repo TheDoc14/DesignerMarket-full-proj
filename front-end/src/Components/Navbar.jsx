@@ -18,7 +18,13 @@ const Navbar = () => {
             {/* קישורים רגילים למשתמש מחובר */}
             <Link to="/dashboard">אזור אישי</Link>
             <Link to="/projects">קטלוג</Link>
+
+        {(user.role === 'designer' || user.role==='student') && (
+            <div style={{ display: 'flex', gap: '15px', padding: '0 10px', borderRight: '2px solid #ccc', marginLeft: '10px' }}>
+
             <Link to="/add-project">הוסף מוצר</Link>
+            </div>
+        )}
 
             {/* תפריט אדמין - יוצג רק אם התפקיד הוא admin */}
             {user.role === 'admin' && (
@@ -43,7 +49,6 @@ const Navbar = () => {
           // תצוגה לאורח
           <div style={{ display: 'flex', gap: '10px' }}>
             <Link to="/projects">קטלוג</Link>
-            <Link to="/add-project">הוסף מוצר</Link>
             <Link to="/login">התחברות</Link>
             <Link to="/Register">הרשמה</Link>
           </div>
