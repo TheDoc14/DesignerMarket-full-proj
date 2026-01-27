@@ -1,0 +1,532 @@
+/* פלטת צבעים ומשתנים גלובליים */
+:root {
+  --primary-teal: #1a4d4a;
+  --primary-teal-hover: #23635f;
+  --accent-orange: #d35400;
+  --accent-orange-light: #e67e22;
+  --error-red: #e74c3c;
+  --success-green: #27ae60;
+  --text-light: #ffffff;
+  --text-dark: #2c3e50;
+  --text-muted: #7f8c8d;
+  --bg-light: #f8f9fa;
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 25px 50px rgba(0, 0, 0, 0.2);
+  --transition: all 0.3s ease;
+  --radius-lg: 24px;
+  --radius-md: 12px;
+}
+
+/* Navbar */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 2rem;
+  background-color: var(--primary-teal);
+  box-shadow: var(--shadow-sm);
+  direction: rtl;
+}
+
+.logo-container img {
+  height: 45px;
+  transition: var(--transition);
+}
+
+.logo-container img:hover {
+  transform: scale(1.05);
+}
+
+.menu-items {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-link {
+  color: var(--text-light);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+  position: relative;
+}
+
+.nav-link:hover {
+  color: var(--accent-orange-light);
+}
+
+.nav-link:after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -5px;
+  right: 0;
+  background-color: var(--accent-orange);
+  transition: var(--transition);
+}
+
+.nav-link:hover:after {
+  width: 100%;
+}
+
+.admin-link {
+  color: var(--accent-orange) !important;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.logout-btn {
+  background: transparent;
+  color: var(--text-light);
+  border: 1.5px solid var(--text-light);
+  padding: 6px 15px;
+  border-radius: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.logout-btn:hover {
+  background-color: var(--error-red);
+  border-color: var(--error-red);
+}
+
+/* Popup Overlay & Structure */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 77, 74, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.popup-content {
+  background: #ffffff;
+  width: 95%;
+  max-width: 1100px;
+  height: 90vh;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  direction: rtl;
+}
+
+.close-btn {
+  position: absolute;
+  border-color: red;
+  top: 20px;
+  right: 20px;
+  /* נשאר בימין כי האתר ב-RTL */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid red;
+  font-size: 24px;
+  display: flex;
+  color: red;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 1001;
+  /* מעל הכל */
+  transition: var(--transition);
+}
+
+.close-btn:hover {
+  background: rgb(255, 170, 170);
+  color: var(--error-red);
+  transform: rotate(180deg);
+}
+
+.popup-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Popup Main Layout (Grid) */
+.popup-main-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  /* חלוקה שווה ומדויקת לשני טורים */
+  gap: 30px;
+  padding: 20px;
+  align-items: start;
+  direction: rtl;
+}
+
+/* Image Side */
+.image-side {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.main-popup-img {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  object-fit: cover;
+}
+
+/* Info Side */
+.info-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.title-area h2 {
+  font-size: 2.2rem;
+  color: var(--primary-teal);
+  margin: 0;
+}
+
+.creator-tag {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.price-row {
+  background: #f8fafb;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.price-row .value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--accent-orange);
+}
+
+/* Messages & Feedback */
+.popup-feedback {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 30px;
+  border-radius: 50px;
+  z-index: 100;
+  font-weight: 600;
+  color: white;
+  animation: slideDown 0.3s ease;
+}
+
+.popup-feedback.success {
+  background: var(--success-green);
+}
+
+.popup-feedback.error {
+  background: var(--error-red);
+}
+
+.unavailable-notice {
+  background-color: #fff5f5;
+  color: var(--error-red);
+  padding: 15px;
+  border-radius: 8px;
+  border-right: 4px solid var(--error-red);
+  font-weight: 600;
+}
+
+/* Admin Actions */
+.admin-approve-action {
+  background: var(--primary-teal);
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: var(--radius-md);
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.admin-approve-action:disabled {
+  background-color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+}
+
+.admin-approve-action:hover {
+  background: var(--primary-teal-hover);
+}
+
+/* Edit Mode */
+.edit-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.edit-mode input,
+.edit-mode textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .popup-main-layout {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+
+  .image-side {
+    order: -1;
+  }
+
+  .navbar {
+    padding: 0.8rem 1rem;
+  }
+
+  .user-greeting {
+    display: none;
+    color: #f8f9fa;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    top: -50px;
+    opacity: 0;
+  }
+
+  to {
+    top: 30px;
+    opacity: 1;
+  }
+}
+
+.popup-header {
+  padding-right: 60px;
+  /* המרווח שמונע מהכותרת להיכנס תחת כפתור הסגירה */
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.title-area h2 {
+  font-size: 2.2rem;
+  color: var(--primary-teal);
+  margin: 0;
+  line-height: 1.2;
+  word-wrap: break-word;
+  /* מונע מהטקסט לצאת מהגבולות אם הוא ארוך מאוד */
+}
+
+/* מכולת הכפתורים בתחתית הפופאפ */
+.footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 40px;
+  background: #fdfdfd;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* כפתור ה-Edit המרכזי */
+.edit-trigger-btn {
+  background-color: #ffffff;
+  color: var(--primary-teal);
+  border: 1.5px solid var(--primary-teal);
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.edit-trigger-btn:hover {
+  background-color: var(--primary-teal);
+  color: white;
+  box-shadow: 0 4px 12px rgba(26, 77, 74, 0.2);
+}
+
+/* כפתור השמירה (במצב עריכה) */
+.save-btn {
+  background-color: var(--primary-teal);
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: var(--radius-md);
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.save-btn:hover {
+  background-color: var(--primary-teal-hover);
+  transform: translateY(-1px);
+}
+
+/* כפתור הביטול */
+.cancel-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid #ddd;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.cancel-btn:hover {
+  background: #f5f5f5;
+  color: var(--text-dark);
+}
+
+/* --- מדור תגובות --- */
+.reviews-section {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 2px solid #f0f0f0;
+  direction: rtl;
+  /* יישור לימין */
+}
+
+.reviews-section h3 {
+  font-size: 1.4rem;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+/* רשימת תגובות */
+.reviews-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 30px;
+  padding-left: 10px;
+}
+
+.review-item {
+  background: #f9f9f9;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
+}
+
+.review-item:hover {
+  transform: translateY(-2px);
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.review-header strong {
+  color: #2c3e50;
+  font-size: 1.05rem;
+}
+
+.review-rating {
+  letter-spacing: 2px;
+  font-size: 0.9rem;
+}
+
+.review-text {
+  color: #555;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+
+.review-date {
+  color: #999;
+  font-size: 0.8rem;
+  display: block;
+  text-align: left;
+}
+
+/* טופס הוספת תגובה */
+.add-review-form {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.add-review-form h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #444;
+}
+
+.rating-select {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.star {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #ccc;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.star.active {
+  color: #ffc107;
+  /* צהוב זהב */
+}
+
+.add-review-form textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  font-family: inherit;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+
+.submit-review-btn {
+  background-color: royalblue;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+  transition: background 0.3s;
+}
+
+
+
+.no-reviews {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+}

@@ -1,80 +1,122 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import '../PublicPages.css';
 
 const CreateAdmin = () => {
-    const [formData, setFormData] = useState({
-        username: '', email: '', password: '', firstName: '', lastName: '', role: 'admin'
-    });
-    const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    role: 'admin',
+  });
+  const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/auth/register', formData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            alert('מנהל מערכת חדש נוצר בהצלחה');
-            setFormData({ username: '', email: '', password: '', firstName: '', lastName: '', role: 'admin' });
-        } catch (err) {
-            alert(err.response?.data?.message || 'שגיאה ביצירת אדמין');
-        } finally {
-            setLoading(false);
-        }
-    };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/auth/register', formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      alert('מנהל מערכת חדש נוצר בהצלחה');
+      setFormData({
+        username: '',
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        role: 'admin',
+      });
+    } catch (err) {
+      alert(err.response?.data?.message || 'שגיאה ביצירת אדמין');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    return (
-        <div style={{ direction: 'rtl', padding: '20px', maxWidth: '500px' }}>
-            <h2>יצירת מנהל מערכת (Admin)</h2>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
-                <input 
-                    style={inputStyle} 
-                    placeholder="שם משתמש" 
-                    value={formData.username} 
-                    onChange={e => setFormData({...formData, username: e.target.value})} 
-                    required 
-                />
-                <input 
-                    style={inputStyle} 
-                    type="email" 
-                    placeholder="אימייל" 
-                    value={formData.email} 
-                    onChange={e => setFormData({...formData, email: e.target.value})} 
-                    required 
-                />
-                <input 
-                    style={inputStyle} 
-                    type="password" 
-                    placeholder="סיסמה" 
-                    value={formData.password} 
-                    onChange={e => setFormData({...formData, password: e.target.value})} 
-                    required 
-                />
-                <input 
-                    style={inputStyle} 
-                    placeholder="שם פרטי" 
-                    value={formData.firstName} 
-                    onChange={e => setFormData({...formData, firstName: e.target.value})} 
-                />
-                <input 
-                    style={inputStyle} 
-                    placeholder="שם משפחה" 
-                    value={formData.lastName} 
-                    onChange={e => setFormData({...formData, lastName: e.target.value})} 
-                />
-                <button 
-                    type="submit" 
-                    disabled={loading}
-                    style={{ background: '#007bff', color: 'white', border: 'none', padding: '12px', borderRadius: '5px', cursor: 'pointer' }}
-                >
-                    {loading ? 'יוצר...' : 'צור מנהל מערכת'}
-                </button>
-            </form>
+  return (
+    <div className="admin-page-container">
+      <div className="admin-form-card">
+        <div className="admin-card-header">
+          <h2>🛡️ יצירת מנהל מערכת</h2>
+          <p>הוספת משתמש חדש עם הרשאות ניהול מלאות</p>
         </div>
-    );
-};
 
-const inputStyle = { padding: '10px', borderRadius: '4px', border: '1px solid #ccc' };
+        <form onSubmit={handleSubmit} className="admin-vertical-form">
+          <div className="form-group">
+            <label className="form-label">שם משתמש</label>
+            <input
+              className="form-input"
+              placeholder="לדוגמה: admin_israel"
+              value={formData.username}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">כתובת אימייל</label>
+            <input
+              className="form-input"
+              type="email"
+              placeholder="email@example.com"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">סיסמה</label>
+            <input
+              className="form-input"
+              type="password"
+              placeholder="לפחות 8 תווים"
+              value={formData.password}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
+              required
+            />
+          </div>
+
+          <div className="form-row-dual">
+            <div className="form-group">
+              <label className="form-label">שם פרטי</label>
+              <input
+                className="form-input"
+                value={formData.firstName}
+                onChange={(e) =>
+                  setFormData({ ...formData, firstName: e.target.value })
+                }
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">שם משפחה</label>
+              <input
+                className="form-input"
+                value={formData.lastName}
+                onChange={(e) =>
+                  setFormData({ ...formData, lastName: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <button type="submit" disabled={loading} className="admin-submit-btn">
+            {loading ? 'מבצע רישום...' : 'צור מנהל מערכת חדש'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
 
 export default CreateAdmin;

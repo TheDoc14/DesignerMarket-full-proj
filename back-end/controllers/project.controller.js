@@ -105,6 +105,8 @@ const createProject = async (req, res, next) => {
       createdBy: req.user.id,
       files,
       mainImageId: mainFile._id,
+      /*or*/
+      isPublished: false, // פרויקט חדש תמיד לא מפורסם
     });
 
     // 7) החזרת פרויקט מסוריאלייז (אחיד ובטוח)

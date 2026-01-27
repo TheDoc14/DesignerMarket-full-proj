@@ -13,10 +13,12 @@ const Checkout = () => {
     const fetchProject = async () => {
       try {
         // שליפת הפרויקט לפי ID כפי שמופיע בתיעוד 4.3
-        const response = await axios.get(`http://localhost:5000/api/projects/${projectId}`);
+        const response = await axios.get(
+          `http://localhost:5000/api/projects/${projectId}`
+        );
         setProject(response.data.project);
       } catch (err) {
-        console.error("שגיאה בטעינת פרויקט לתשלום", err);
+        console.error('שגיאה בטעינת פרויקט לתשלום', err);
       } finally {
         setLoading(false);
       }
@@ -37,7 +39,7 @@ const Checkout = () => {
         alert(`התשלום על סך ₪${project.price} הושלם! הקבצים נשלחו למייל שלך.`);
         navigate('/projects');
       } catch (err) {
-        alert("שגיאה בתהליך הרכישה");
+        alert('שגיאה בתהליך הרכישה');
       } finally {
         setIsProcessing(false);
       }
@@ -52,17 +54,39 @@ const Checkout = () => {
       <div style={styles.checkoutCard}>
         <h2 style={styles.title}>סיכום הזמנה</h2>
         <div style={styles.projectSummary}>
-          <p><strong>פרויקט:</strong> {project.title}</p>
-          <p><strong>יוצר:</strong> {project.createdBy?.username || "מעצב במערכת"}</p>
-          <p style={styles.price}><strong>לתשלום:</strong> ₪{project.price}</p>
+          <p>
+            <strong>פרויקט:</strong> {project.title}
+          </p>
+          <p>
+            <strong>יוצר:</strong>{' '}
+            {project.createdBy?.username || 'מעצב במערכת'}
+          </p>
+          <p style={styles.price}>
+            <strong>לתשלום:</strong> ₪{project.price}
+          </p>
         </div>
 
         <form onSubmit={handlePayment} style={styles.form}>
           <h3 style={styles.subTitle}>פרטי אשראי (סימולציה)</h3>
-          <input type="text" placeholder="מספר כרטיס" style={styles.input} required />
+          <input
+            type="text"
+            placeholder="מספר כרטיס"
+            style={styles.input}
+            required
+          />
           <div style={styles.row}>
-            <input type="text" placeholder="תוקף" style={styles.inputSmall} required />
-            <input type="text" placeholder="CVV" style={styles.inputSmall} required />
+            <input
+              type="text"
+              placeholder="תוקף"
+              style={styles.inputSmall}
+              required
+            />
+            <input
+              type="text"
+              placeholder="CVV"
+              style={styles.inputSmall}
+              required
+            />
           </div>
           <button type="submit" disabled={isProcessing} style={styles.payBtn}>
             {isProcessing ? 'מעבד תשלום...' : `שלם עכשיו ₪${project.price}`}
@@ -75,19 +99,65 @@ const Checkout = () => {
 };
 
 const styles = {
-  container: { direction: 'rtl', padding: '50px 20px', backgroundColor: '#f4f7f6', minHeight: '100vh', display: 'flex', justifyContent: 'center' },
-  checkoutCard: { backgroundColor: '#fff', padding: '30px', borderRadius: '20px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', width: '100%', maxWidth: '500px' },
+  container: {
+    direction: 'rtl',
+    padding: '50px 20px',
+    backgroundColor: '#f4f7f6',
+    minHeight: '100vh',
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  checkoutCard: {
+    backgroundColor: '#fff',
+    padding: '30px',
+    borderRadius: '20px',
+    boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+    width: '100%',
+    maxWidth: '500px',
+  },
   title: { textAlign: 'center', color: '#2c3e50', marginBottom: '20px' },
-  projectSummary: { backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #eee' },
+  projectSummary: {
+    backgroundColor: '#f8f9fa',
+    padding: '15px',
+    borderRadius: '12px',
+    marginBottom: '25px',
+    border: '1px solid #eee',
+  },
   price: { fontSize: '20px', color: '#27ae60', fontWeight: 'bold' },
   form: { display: 'flex', flexDirection: 'column', gap: '15px' },
   subTitle: { fontSize: '16px', color: '#34495e' },
-  input: { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none' },
-  inputSmall: { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', outline: 'none', flex: 1 },
+  input: {
+    padding: '12px',
+    borderRadius: '8px',
+    border: '1px solid #ddd',
+    outline: 'none',
+  },
+  inputSmall: {
+    padding: '12px',
+    borderRadius: '8px',
+    border: '1px solid #ddd',
+    outline: 'none',
+    flex: 1,
+  },
   row: { display: 'flex', gap: '10px' },
-  payBtn: { padding: '15px', borderRadius: '10px', border: 'none', backgroundColor: '#2ecc71', color: '#fff', fontSize: '18px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' },
-  note: { fontSize: '12px', color: '#888', textAlign: 'center', marginTop: '15px' },
-  center: { textAlign: 'center', marginTop: '100px', fontSize: '20px' }
+  payBtn: {
+    padding: '15px',
+    borderRadius: '10px',
+    border: 'none',
+    backgroundColor: '#2ecc71',
+    color: '#fff',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    transition: '0.3s',
+  },
+  note: {
+    fontSize: '12px',
+    color: '#888',
+    textAlign: 'center',
+    marginTop: '15px',
+  },
+  center: { textAlign: 'center', marginTop: '100px', fontSize: '20px' },
 };
 
 export default Checkout;

@@ -1,56 +1,93 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
+import logo from '../DefaultPics/Logo.svg';
+import './componentStyle.css'; // ייבוא ה-CSS החדש
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  console.log("Current User:", user);
 
   return (
-    <nav style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', background: '#eee' }}>
-      
+    <nav className="navbar">
+      <div className="logo-container">
+        <Link to="/">
+          <img src={logo} alt="Designer Market Logo" />
+        </Link>
+      </div>
+
       <div className="menu-items">
         {user ? (
-          // תצוגה למשתמש מחובר
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <span>שלום, <strong>{user.username}</strong> </span>
-            
-            {/* קישורים רגילים למשתמש מחובר */}
-            <Link to="/dashboard">אזור אישי</Link>
-            <Link to="/projects">קטלוג</Link>
-
-        {(user.role === 'designer' || user.role==='student') && (
-            <div style={{ display: 'flex', gap: '15px', padding: '0 10px', borderRight: '2px solid #ccc', marginLeft: '10px' }}>
-
-            <Link to="/add-project">הוסף מוצר</Link>
+          <>
+            <div style={{ color: '#f8f9fa' }}>
+              <span className="user-greeting">
+                שלום, <strong>{user.username}</strong>
+              </span>
             </div>
-        )}
+            <Link to="/dashboard" className="nav-link">
+              אזור אישי
+            </Link>
+            <Link to="/projects" className="nav-link">
+              קטלוג
+            </Link>
+            <Link to="/about" className="nav-link">
+              אודות
+            </Link>
 
-            {/* תפריט אדמין - יוצג רק אם התפקיד הוא admin */}
-            {user.role === 'admin' && (
-              <div style={{ display: 'flex', gap: '15px', padding: '0 10px', borderRight: '2px solid #ccc', marginLeft: '10px' }}>
-                <Link to="/admin/user-approval" style={{ color: '#d32f2f', fontWeight: 'bold' }}>אישור משתמשים</Link>
-                <Link to="/admin/create-admin" style={{ color: '#d32f2f', fontWeight: 'bold' }}>הוספת מנהל מערכת</Link>
-                <Link to="/admin/manage-users" style={{ color: '#d32f2f', fontWeight: 'bold' }}>ניהול משתמשים</Link>
-                <Link to="/admin/manage-projects" style={{ color: '#d32f2f', fontWeight: 'bold' }}>ניהול פרויקטים</Link>
-                <Link to="/admin/manage-reviews" style={{ color: '#d32f2f', fontWeight: 'bold' }}>ניהול תגובות</Link>
-                <Link to="/admin/dashboard" style={{ color: '#d32f2f', fontWeight: 'bold' }}>לוח בקרה</Link>
+            {(user.role === 'designer' || user.role === 'student') && (
+              <div className="special-group">
+                <Link to="/add-project" className="nav-link">
+                  הוסף מוצר
+                </Link>
               </div>
             )}
 
-            <button 
-              onClick={logout} 
-              style={{ background: 'red', color: 'white', border: 'none', padding: '5px 10px', cursor: 'pointer', marginRight: '10px' }}
-            >
+            {user.role === 'admin' && (
+              <div className="special-group">
+                <Link to="/admin/user-approval" className="nav-link admin-link">
+                  אישור משתמשים
+                </Link>
+                <Link to="/admin/create-admin" className="nav-link admin-link">
+                  הוספת מנהל מערכת
+                </Link>
+                <Link to="/admin/manage-users" className="nav-link admin-link">
+                  ניהול משתמשים
+                </Link>
+                <Link
+                  to="/admin/manage-projects"
+                  className="nav-link admin-link"
+                >
+                  ניהול פרויקטים
+                </Link>
+                <Link
+                  to="/admin/manage-reviews"
+                  className="nav-link admin-link"
+                >
+                  ניהול תגובות
+                </Link>
+                <Link to="/admin/dashboard" className="nav-link admin-link">
+                  לוח בקרה
+                </Link>
+              </div>
+            )}
+
+            <button onClick={logout} className="logout-btn">
               התנתק
             </button>
-          </div>
+          </>
         ) : (
-          // תצוגה לאורח
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <Link to="/projects">קטלוג</Link>
-            <Link to="/login">התחברות</Link>
-            <Link to="/Register">הרשמה</Link>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <Link to="/About" className="nav-link">
+              אודות
+            </Link>
+            <Link to="/projects" className="nav-link">
+              קטלוג
+            </Link>
+            <Link to="/login" className="nav-link">
+              התחברות
+            </Link>
+            <Link to="/Register" className="nav-link">
+              הרשמה
+            </Link>
           </div>
         )}
       </div>

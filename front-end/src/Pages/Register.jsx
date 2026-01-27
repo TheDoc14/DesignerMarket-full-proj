@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    username: '', // השרת מצפה ל-username
+    username: '',
     email: '',
     password: '',
     role: 'customer',
-    approvalDocument: null // הקובץ היחיד שהשרת יודע לקבל בהרשמה
+    approvalDocument: null,
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
-  // ודאי שהפורט תואם לשרת (5000)
-  const API_BASE_URL = 'http://localhost:5000'; 
+  const navigate = useNavigate();
+  const { executeRecaptcha } = useGoogleReCaptcha();
+  const API_BASE_URL = 'http://localhost:5000';
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
-    
     if (type === 'file') {
       setFormData({ ...formData, [name]: files[0] });
     } else {
@@ -29,46 +31,48 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
 
-    // ולידציה: אם התפקיד הוא סטודנט או מעצב - חייב להעלות קובץ
-    if ((formData.role === 'student' || formData.role === 'designer') && !formData.approvalDocument) {
-        setError('עבור תפקיד זה חובה להעלות קובץ אישור/תעודה.');
-        setLoading(false);
-        return;
+    if (!executeRecaptcha) {
+      setError('שירות האבטחה אינו מוכן. נסה שנית בעוד רגע.');
+      return;
     }
 
+    if (
+      (formData.role === 'student' || formData.role === 'designer') &&
+      !formData.approvalDocument
+    ) {
+      setError('עבור תפקיד זה חובה להעלות קובץ אישור/תעודה.');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     try {
+      // 1. הפקת טוקן reCAPTCHA
+      const captchaToken = await executeRecaptcha('register');
+
+      // 2. הכנת הנתונים למשלוח
       const dataToSend = new FormData();
-      
-      // שדות הטקסט שהשרת מצפה להם (לפי הקונטרולר שלך)
-      dataToSend.append('username', formData.username); 
+      dataToSend.append('username', formData.username);
       dataToSend.append('email', formData.email);
       dataToSend.append('password', formData.password);
       dataToSend.append('role', formData.role);
-      
-      // שליחת הקובץ - אך ורק אם הוא קיים (לסטודנט/מעצב)
-      // השם חייב להיות 'approvalDocument' כי זה מה שמוגדר ב-Router בשרת
+      dataToSend.append('captchaToken', captchaToken); // הטוקן נשלח כאן
+
       if (formData.approvalDocument) {
         dataToSend.append('approvalDocument', formData.approvalDocument);
       }
-      
-      const url = `${API_BASE_URL}/api/auth/register`;
-      
-      // שליחה לשרת
-      await axios.post(url, dataToSend, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+
+      // 3. שליחה לשרת
+      await axios.post(`${API_BASE_URL}/api/auth/register`, dataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setSuccess(true);
-
     } catch (err) {
-      console.error('Registration Error:', err);
       const serverMsg = err.response?.data?.message;
-      // הצגת השגיאה מהשרת או שגיאה כללית
-      setError(serverMsg || 'שגיאה בהרשמה. ודא שהשרת רץ ונסה שנית.');
+      setError(serverMsg || 'שגיאה בתהליך ההרשמה.');
     } finally {
       setLoading(false);
     }
@@ -76,85 +80,112 @@ const Register = () => {
 
   if (success) {
     return (
-        <div className="page-container" style={{textAlign: 'center', marginTop: '50px'}}>
-            <h2 style={{color: 'green'}}>ההרשמה בוצעה בהצלחה!</h2>
-            <div style={{backgroundColor: '#f9f9f9', padding: '20px', borderRadius: '8px', display: 'inline-block', marginTop: '20px'}}>
-                <p>שלחנו מייל אימות לכתובת <strong>{formData.email}</strong>.</p>
-                <p>יש להיכנס למייל וללחוץ על הקישור כדי להפעיל את החשבון.</p>
-            </div>
+      <div className="user-page-container">
+        <div className="auth-card success-card">
+          <div className="success-icon">✓</div>
+          <h2>ההרשמה בוצעה בהצלחה!</h2>
+
+          <div className="success-content">
+            <p>
+              שלחנו מייל אימות לכתובת:
+              <br />
+              <strong className="email-highlight">{formData.email}</strong>
+            </p>
+            <p>אנא אמת את חשבונך כדי שתוכל להתחיל להשתמש ב-Designer Market.</p>
+          </div>
+
+          <button onClick={() => navigate('/login')} className="primary-btn">
+            עבור להתחברות
+          </button>
         </div>
+      </div>
     );
   }
 
   return (
-    <div className="page-container">
-      <h2>הרשמה למערכת</h2>
-      {error && <div style={{ color: '#721c24', backgroundColor: '#f8d7da', padding: '10px', marginBottom: '15px', borderRadius: '5px' }}>{error}</div>}
-      
-      <form onSubmit={handleSubmit}>
-        <div>
+    <div className="user-page-container">
+      <div className="auth-card">
+        <h2>יצירת חשבון חדש</h2>
+        {error && <div className="error-message">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
             <label>שם משתמש</label>
-            <input 
-                name="username" 
-                type="text" 
-                value={formData.username}
-                onChange={handleChange} 
-                required 
-                placeholder="User Name" 
+            <input
+              name="username"
+              type="text"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              placeholder="ישראל ישראלי"
             />
-        </div>
-        
-        <div>
+          </div>
+
+          <div className="form-group">
             <label>אימייל</label>
-            <input 
-                name="email" 
-                type="email" 
-                value={formData.email}
-                onChange={handleChange} 
-                required 
+            <input
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="your@mail.com"
             />
-        </div>
-        
-        <div>
-            <label>סיסמה</label>
-            <input 
-                name="password" 
-                type="password" 
-                value={formData.password}
-                onChange={handleChange} 
-                required 
-            />
-        </div>
-        
-        <div>
-            <label>תפקיד</label>
-            <select name="role" value={formData.role} onChange={handleChange} required>
-                <option value="customer">לקוח (רגיל)</option>
-                <option value="student">סטודנט</option>
-                <option value="designer">מעצב</option>
+          </div>
+
+          <div className="form-group">
+            <label>בחרו סוג משתמש</label>
+            <select
+              name="role"
+              className="role-select"
+              onChange={handleChange}
+              value={formData.role}
+            >
+              <option value="customer">לקוח (רכישת פרויקטים)</option>
+              <option value="student">סטודנט לעיצוב</option>
+              <option value="designer">מעצב תעשייתי</option>
             </select>
-        </div>
-        
-        {/* שדה הקובץ מופיע אך ורק אם נבחר סטודנט או מעצב */}
-        {(formData.role === 'student' || formData.role === 'designer') && (
-            <div style={{marginTop: '15px', padding: '10px', backgroundColor: '#e2e3e5', borderRadius: '5px'}}>
-                <label style={{fontWeight: 'bold', display: 'block', marginBottom: '5px'}}>
-                    {formData.role === 'student' ? 'צרף אישור לימודים (חובה):' : 'צרף תעודה (חובה):'}
-                </label>
-                <input 
-                    name="approvalDocument" 
-                    type="file" 
-                    onChange={handleChange} 
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    required 
-                />
+          </div>
+
+          <div className="form-group">
+            <label>סיסמה</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          {(formData.role === 'student' || formData.role === 'designer') && (
+            <div className="file-upload-area">
+              <label style={{ fontWeight: 'bold' }}>
+                {formData.role === 'student'
+                  ? '📁 צרף אישור לימודים:'
+                  : '📁 צרף תעודת מעצב:'}
+              </label>
+              <input
+                name="approvalDocument"
+                type="file"
+                onChange={handleChange}
+                accept=".pdf,.jpg,.jpeg,.png"
+                required
+                style={{ marginTop: '10px' }}
+              />
             </div>
-        )}
-        
-        <button type="submit" disabled={loading} style={{marginTop: '20px'}}>
-          {loading ? 'מבצע רישום...' : 'הירשם'}
-        </button>
-      </form>
+          )}
+
+          <button type="submit" className="primary-btn">
+            הרשמה למערכת
+          </button>
+        </form>
+        <div className="auth-footer">
+          <span>כבר יש לך חשבון? </span>
+          <button className="link-btn" onClick={() => navigate('/login')}>
+            הירשם
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

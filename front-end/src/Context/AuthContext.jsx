@@ -11,12 +11,12 @@ export const AuthProvider = ({ children }) => {
       try {
         const storedUser = localStorage.getItem('user');
         const token = localStorage.getItem('token');
-        
-        if (storedUser && token && storedUser !== "undefined") {
+
+        if (storedUser && token && storedUser !== 'undefined') {
           setUser(JSON.parse(storedUser));
         }
       } catch (error) {
-        console.error("Failed to parse user from localStorage", error);
+        console.error('Failed to parse user from localStorage', error);
         localStorage.removeItem('user'); // ניקוי נתונים משובשים
       } finally {
         setLoading(false);
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (updatedData) => {
-    setUser(prevUser => {
+    setUser((prevUser) => {
       const newUser = { ...prevUser, ...updatedData };
       localStorage.setItem('user', JSON.stringify(newUser));
       return newUser;
@@ -53,7 +53,13 @@ export const AuthProvider = ({ children }) => {
       {/* חשוב: אנחנו לא מרנדרים את הילדים עד שהבדיקה הסתיימה.
          זה מונע מה-PrivateRoute לזרוק אותך ללוגין בזמן שהדף נטען.
       */}
-      {!loading ? children : <div style={{textAlign: 'center', marginTop: '50px'}}>מאתחל מערכת...</div>}
+      {!loading ? (
+        children
+      ) : (
+        <div style={{ textAlign: 'center', marginTop: '50px' }}>
+          מאתחל מערכת...
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };
