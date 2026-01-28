@@ -10,6 +10,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const app = express();
 const helmet = require('helmet');
+const mongoSanitize = require('@exortek/express-mongo-sanitize');
 const isProd = process.env.NODE_ENV === 'production';
 if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
@@ -51,6 +52,7 @@ app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(mongoSanitize());
 
 /**
  * ✅ Routes mounting

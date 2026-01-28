@@ -17,22 +17,18 @@ const registerValidators = [
     .withMessage('Username is required')
     .isLength({ min: 3, max: 20 })
     .withMessage('Username must be between 3 and 20 characters'),
-
   body('email')
     .trim()
     .notEmpty()
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Email is invalid'),
-
   body('password')
     .notEmpty()
     .withMessage('Password is required')
     .isLength({ min: 6 })
     .withMessage('Password is too short'),
-
   body('role').optional().isIn(['student', 'designer', 'customer']).withMessage('Invalid role'),
-
   captchaTokenValidator,
 ];
 
@@ -43,9 +39,7 @@ const loginValidators = [
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Email is invalid'),
-
   body('password').notEmpty().withMessage('Password is required'),
-
   captchaTokenValidator,
 ];
 
@@ -60,7 +54,6 @@ const resendVerificationValidators = [
     .withMessage('Email is required')
     .isEmail()
     .withMessage('Email is invalid'),
-
   captchaTokenValidator,
 ];
 
@@ -73,7 +66,6 @@ const resendVerificationValidators = [
  */
 const forgotPasswordValidators = [
   body('email').optional({ checkFalsy: true }).isEmail().withMessage('Email is invalid'),
-
   captchaTokenValidator,
 ];
 
@@ -88,7 +80,6 @@ const resetPasswordValidators = [
     .withMessage('New password is required')
     .isLength({ min: 6 })
     .withMessage('Password is too short'),
-
   captchaTokenValidator,
 ];
 

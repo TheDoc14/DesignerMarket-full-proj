@@ -17,7 +17,8 @@ const {
 const { deleteUploadByFileUrl, deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
 const { getPaging, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
-
+const { normalizeEmail } = require('../utils/normalize.utils');
+const { ROLES } = require('../constants/roles.constants');
 /**
  * 👤 getMyProfile
  * מחזיר פרופיל של המשתמש המחובר + רשימת הפרויקטים שלו עם פגינציה ומיון (כמו כל list אצלך).
@@ -123,7 +124,7 @@ const updateMyProfile = async (req, res, next) => {
     if (birthDate) updates.birthDate = new Date(birthDate);
 
     if (typeof paypalEmail === 'string') {
-      const v = paypalEmail.trim().toLowerCase();
+      const v = normalizeEmail(paypalEmail);
 
       // מאפשר לנקות
       updates.paypalEmail = v;
@@ -211,14 +212,14 @@ const deleteAccount = async (req, res, next) => {
     const { id } = req.params;
 
     const isSelf = String(req.user.id) === String(id);
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === ROLES.ADMIN;
     if (!isSelf && !isAdmin) throw new Error('Access denied');
 
     const user = await User.findById(id).select('role profileImage approvalDocument');
     if (!user) throw new Error('User not found');
 
     // לא מאפשרים למחוק אדמין
-    if (user.role === 'admin') throw new Error('Invalid request');
+    if (user.role === ROLES.ADMIN) throw new Error('Invalid request');
 
     // 1) מחיקת קבצים אישיים (best-effort)
     if (user.profileImage) {
@@ -288,7 +289,7 @@ const getPublicProfileWithProjects = async (req, res, next) => {
     const targetUserId = req.params.id;
 
     const viewer = req.user || null;
-    const isAdmin = viewer?.role === 'admin';
+    const isAdmin = viewer?.role === ROLES.ADMIN;
     const isSelf = viewer?.id === targetUserId || String(viewer?._id) === String(targetUserId);
     const canSeeUnpublished = isAdmin || isSelf;
 
@@ -302,7 +303,7 @@ const getPublicProfileWithProjects = async (req, res, next) => {
 
     // 2) user payload
     const userPayload = canSeeUnpublished
-      ? pickUserPublic(user, { forRole: isAdmin ? 'admin' : user.role, baseUrl })
+      ? pickUserPublic(user, { forRole: isAdmin ? ROLES.ADMIN : user.role, baseUrl })
       : pickUserProfilePublic(user, { baseUrl });
 
     // 3) pagination / sorting

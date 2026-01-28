@@ -2,6 +2,7 @@
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { FILE_FOLDERS } = require('../constants/files.constants');
 
 // סוגי קבצים מותרים – כולל תמונות, סרטונים, מסמכים ומצגות
 const allowed = /jpeg|jpg|png|gif|mp4|avi|mov|pdf|doc|docx|ppt|pptx|txt|zip/;
@@ -15,8 +16,9 @@ const allowedProfileImages = /jpeg|jpg|png|gif|webp/;
  * תמונות/וידאו -> projectImages, כל השאר -> projectFiles.
  */
 const getProjectSubfolder = (mimetype) => {
-  if (mimetype.startsWith('image/') || mimetype.startsWith('video/')) return 'projectImages';
-  return 'projectFiles';
+  if (mimetype.startsWith('image/') || mimetype.startsWith('video/'))
+    return FILE_FOLDERS.PROJECT_IMAGES;
+  return FILE_FOLDERS.PROJECT_FILES;
 };
 
 /**
@@ -25,7 +27,7 @@ const getProjectSubfolder = (mimetype) => {
  * בפרויקטים – מנתב לתת-תיקיות לפי סוג הקובץ.
  */
 const createMulter = (baseFolder) => {
-  const basePath = path.join('uploads', baseFolder);
+  const basePath = path.join(FILE_FOLDERS.UPLOADS, baseFolder);
 
   // יצירת תיקייה ראשית אם אינה קיימת
   if (!fs.existsSync(basePath)) {
@@ -33,11 +35,11 @@ const createMulter = (baseFolder) => {
   }
 
   const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (_req, file, cb) => {
       let targetPath = basePath;
 
       // אם מדובר בפרויקטים, ניצור תת-תיקייה בהתאם לסוג הקובץ
-      if (baseFolder === 'projects') {
+      if (baseFolder === FILE_FOLDERS.PROJECTS) {
         const subfolder = getProjectSubfolder(file.mimetype);
         targetPath = path.join(basePath, subfolder);
       }
@@ -49,16 +51,16 @@ const createMulter = (baseFolder) => {
 
       cb(null, targetPath);
     },
-    filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+    filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
   });
 
-  const fileFilter = (req, file, cb) => {
+  const fileFilter = (_req, file, cb) => {
     try {
       const ext = path.extname(file.originalname).toLowerCase();
       const mimetype = file.mimetype || '';
 
       // ✅ פרופיל: תמונות בלבד
-      if (baseFolder === 'profileImages') {
+      if (baseFolder === FILE_FOLDERS.PROFILE_IMAGES) {
         const extClean = ext.replace('.', '');
         const extOk = allowedProfileImages.test(extClean);
         const mimeOk = mimetype.startsWith('image/');
@@ -91,7 +93,7 @@ const createMulter = (baseFolder) => {
     fileFilter,
     limits: {
       fileSize:
-        baseFolder === 'projects'
+        baseFolder === FILE_FOLDERS.PROJECTS
           ? 300 * 1024 * 1024 // ✅ עד 500MB לקובצי פרויקט
           : 50 * 1024 * 1024, // עד 50MB לשאר
     },
@@ -100,7 +102,7 @@ const createMulter = (baseFolder) => {
 
 // ✅ Middleware-ים לפי סוג העלאה
 module.exports = {
-  uploadApproval: createMulter('approvalDocuments'), // נשאר פתוח גם לתמונות
-  uploadProject: createMulter('projects'),
-  uploadProfile: createMulter('profileImages'), // תמונות בלבד
+  uploadApproval: createMulter(FILE_FOLDERS.APPROVAL_DOCUMENTS), // נשאר פתוח גם לתמונות
+  uploadProject: createMulter(FILE_FOLDERS.PROJECTS),
+  uploadProfile: createMulter(FILE_FOLDERS.PROFILE_IMAGES), // תמונות בלבד
 };

@@ -18,7 +18,7 @@ const {
   updateReviewValidators,
 } = require('../validators/reviews.validators');
 const { tryAuth } = require('../middleware/tryAuth.middleware'); // חשוב ל-viewer אופציונלי
-
+const { ROLE_GROUPS } = require('../constants/roles.constants');
 /**
  * ⭐ Reviews Routes
  * אחריות: ביקורות לפרויקטים (create/list/update/delete).
@@ -43,7 +43,7 @@ router.get('/:id', tryAuth, reviewIdParam, validate, getReviewById);
 router.post(
   '/',
   authMiddleware,
-  permit('admin', 'student', 'designer', 'customer'),
+  permit(ROLE_GROUPS.ANY_AUTH),
   createReviewValidators,
   validate,
   createReview
@@ -54,7 +54,7 @@ router.post(
 router.put(
   '/:id',
   authMiddleware,
-  permit('admin', 'student', 'designer', 'customer'),
+  permit(ROLE_GROUPS.ANY_AUTH),
   updateReviewValidators,
   validate,
   updateReview
@@ -65,7 +65,7 @@ router.put(
 router.delete(
   '/:id',
   authMiddleware,
-  permit('admin', 'student', 'designer', 'customer'),
+  permit(ROLE_GROUPS.ANY_AUTH),
   reviewIdParam,
   validate,
   deleteReview
