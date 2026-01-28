@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 const orderSchema = new mongoose.Schema(
   {
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
-    buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: true },
-    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: true },
+    buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
     currency: { type: String, default: 'USD' },
 

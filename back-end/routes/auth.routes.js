@@ -13,7 +13,6 @@ const { uploadApproval } = require('../middleware/multer.middleware');
 const { authLimiterStrict, authLimiterSoft } = require('../middleware/rateLimit.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const { verifyRecaptchaV3 } = require('../middleware/captcha.middleware');
-
 const {
   registerValidators,
   loginValidators,
@@ -53,7 +52,7 @@ router.post(
   authLimiterSoft,
   resendVerificationValidators,
   validate,
-  verifyRecaptchaV3('resend-verification'),
+  verifyRecaptchaV3('resend_verification'),
   resendVerificationEmail
 );
 
@@ -77,7 +76,7 @@ router.post(
   authLimiterStrict,
   forgotPasswordValidators,
   validate,
-  verifyRecaptchaV3('forgot-password'),
+  verifyRecaptchaV3('forgot_password'),
   forgotPassword
 );
 
@@ -88,7 +87,7 @@ router.post(
   authLimiterStrict,
   resetPasswordValidators,
   validate,
-  verifyRecaptchaV3('reset-password'),
+  verifyRecaptchaV3('reset_password'),
   resetPassword
 );
 

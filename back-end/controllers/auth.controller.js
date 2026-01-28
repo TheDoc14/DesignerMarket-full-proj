@@ -11,7 +11,8 @@ const { sendVerificationEmail, sendResetPasswordEmail } = require('../utils/emai
 const { pickUserPublic } = require('../utils/serializers.utils');
 const { getBaseUrl, buildFileUrl } = require('../utils/url.utils');
 const { deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
-
+const { normalizeEmail } = require('../utils/normalize.utils');
+const { ROLES } = require('../constants/roles.constants');
 /**
  * 📝 registerUser
  * יוצר משתמש חדש במערכת, כולל העלאת approvalDocument לסטודנט/מעצב לפי הצורך.
@@ -21,19 +22,19 @@ const { deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
 const registerUser = async (req, res, next) => {
   try {
     // ---- בסיס: גוף הבקשה ----
-    const { username, email, password, role } = req.body;
+    const { username, password, role } = req.body;
 
     // ---- נרמול בסיסי ----
     const trimmedUsername = (username || '').trim();
     const usernameLower = trimmedUsername.toLowerCase();
-    const emailNorm = (email || '').trim().toLowerCase();
-    const safeRole = ['student', 'designer', 'customer', 'admin'].includes(role)
+    const emailNorm = normalizeEmail(req.body.email);
+    const safeRole = [ROLES.STUDENT, ROLES.DESIGNER, ROLES.CUSTOMER, ROLES.ADMIN].includes(role)
       ? role
-      : 'customer';
+      : ROLES.CUSTOMER;
 
     // ---- הגנה: לקוח לא אמור להעלות מסמך אישור ----
     // multer יכול לשמור את הקובץ לפני הקונטרולר, לכן מנקים כאן ומחזירים שגיאה.
-    if (safeRole === 'customer' && req.file && req.file.path) {
+    if (safeRole === ROLES.CUSTOMER && req.file && req.file.path) {
       try {
         deleteUploadByFsPath(String(req.file.path));
       } catch (_err) {}
@@ -51,7 +52,7 @@ const registerUser = async (req, res, next) => {
     // ---- לסטודנט/מעצב – נדרש מסמך אישור ----
     // כאן אנחנו שומרים URL (ולא fsPath) כי זה מה שנכנס למסד.
     let approvalPath = '';
-    if (safeRole === 'student' || safeRole === 'designer') {
+    if (safeRole === ROLES.STUDENT || safeRole === ROLES.DESIGNER) {
       if (!req.file) throw new Error('Approval document is required for this role');
       approvalPath = buildFileUrl(req, 'approvalDocuments', req.file.filename);
     }
@@ -71,7 +72,7 @@ const registerUser = async (req, res, next) => {
       password: hashedPassword,
       role: safeRole,
       isVerified: false,
-      isApproved: safeRole === 'customer',
+      isApproved: safeRole === ROLES.CUSTOMER, // לקוח מאושר אוטומטית
       verificationToken,
       approvalDocument: approvalPath,
     });
@@ -125,7 +126,7 @@ const verifyEmail = async (req, res, next) => {
  */
 const resendVerificationEmail = async (req, res, next) => {
   try {
-    const emailNorm = (req.body.email || '').trim().toLowerCase();
+    const emailNorm = normalizeEmail(req.body.email);
     const user = await User.findOne({ email: emailNorm });
     if (!user) throw new Error('User not found');
     if (user.isVerified) throw new Error('User is already verified');
@@ -150,7 +151,7 @@ const resendVerificationEmail = async (req, res, next) => {
  */
 const loginUser = async (req, res, next) => {
   try {
-    const emailNorm = (req.body.email || '').trim().toLowerCase();
+    const emailNorm = normalizeEmail(req.body.email);
     const { password } = req.body;
 
     // 1) מציאת המשתמש לפי אימייל מנורמל
@@ -165,7 +166,7 @@ const loginUser = async (req, res, next) => {
     if (!user.isVerified) throw new Error('Please verify your email before logging in');
 
     // 4) אישור אדמין עבור student/designer
-    if ((user.role === 'student' || user.role === 'designer') && !user.isApproved) {
+    if ((user.role === ROLES.STUDENT || user.role === ROLES.DESIGNER) && !user.isApproved) {
       throw new Error('Your account is pending admin approval');
     }
 
@@ -197,7 +198,7 @@ const loginUser = async (req, res, next) => {
  */
 const forgotPassword = async (req, res, next) => {
   try {
-    const emailNorm = (req.body.email || '').trim().toLowerCase();
+    const emailNorm = normalizeEmail(req.body.email);
 
     // תמיד נחזיר אותה תשובה בסוף
     const genericMsg = 'If the email exists in our system, we will send a password reset link.';

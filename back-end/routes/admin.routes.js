@@ -21,6 +21,7 @@ const {
   adminSetProjectPublishBody,
   adminListReviewsQuery,
 } = require('../validators/admin.validators');
+const { ROLE_GROUPS } = require('../constants/roles.constants');
 
 /**
  * 🛠️ Admin Routes
@@ -28,7 +29,7 @@ const {
  *
  * כלל־על: כל הראוטים כאן מוגנים ב־JWT + permit('admin') ברמת הראוטר.
  */
-router.use(authMiddleware, permit('admin'));
+router.use(authMiddleware, permit(ROLE_GROUPS.ADMIN_ONLY));
 
 // GET /api/admin/users?q=&role=&approved=&page=&limit=
 // רשימת משתמשים (כולל pending approvals לסטודנטים/מעצבים)

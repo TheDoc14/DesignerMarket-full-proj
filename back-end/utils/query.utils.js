@@ -32,7 +32,7 @@ const toSort = (sortBy, order, allowedFields, defaultField = 'createdAt') => {
   return { [field]: dir };
 };
 
-// ✅ NEW: standard paging helper
+// standard paging helper
 const getPaging = (query = {}, defaultLimit = 20) => {
   const page = Math.max(1, toInt(query.page, 1));
   const limit = Math.min(100, Math.max(1, toInt(query.limit, defaultLimit))); // guard

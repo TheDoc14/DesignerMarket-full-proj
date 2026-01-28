@@ -4,6 +4,8 @@
  * מסננת שדות רגישים, בונה URLs, ושולטת בחשיפת קבצים לפי הרשאות viewer.
  */
 const { buildFileUrl } = require('../utils/url.utils');
+const { ROLES } = require('../constants/roles.constants');
+const { FILE_FOLDERS } = require('../constants/files.constants');
 
 /**
  * Utilities
@@ -69,9 +71,9 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
   };
 
   // הרחבות לאדמין בלבד
-  if (forRole === 'admin') {
+  if (forRole === ROLES.ADMIN) {
     userBase.flags = {
-      pendingApproval: !(u.role === 'customer') && !safeBool(u.isApproved),
+      pendingApproval: !(u.role === ROLES.CUSTOMER) && !safeBool(u.isApproved),
     };
 
     // URL למסמך אישור (לא נתיב דיסק)
@@ -91,7 +93,7 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
 const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
   const p = toPlain(projectDoc) || {};
 
-  const isAdmin = viewer?.role === 'admin';
+  const isAdmin = viewer?.role === ROLES.ADMIN;
   const isOwner = viewer?.id && String(viewer.id) === String(p.createdBy?._id || p.createdBy);
 
   // ✅ חדש: גם קונה ששילם יכול לראות files רגישים
@@ -105,7 +107,10 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
       const filename = safeStr(f.filename);
       const savedUrl = safeStr(f.path); // URL תקין שנשמר בזמן יצירה
       const url =
-        savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectImages'], filename) : '');
+        savedUrl ||
+        (filename
+          ? buildFileUrl(req, [FILE_FOLDERS.PROJECTS, FILE_FOLDERS.PROJECT_IMAGES], filename)
+          : '');
       return {
         id: String(f._id || ''),
         filename,
@@ -119,7 +124,11 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
   const mainImageUrl = mainImage
     ? safeStr(mainImage.path) ||
       (safeStr(mainImage.filename)
-        ? buildFileUrl(req, ['projects', 'projectImages'], safeStr(mainImage.filename))
+        ? buildFileUrl(
+            req,
+            [FILE_FOLDERS.PROJECTS, FILE_FOLDERS.PROJECT_IMAGES],
+            safeStr(mainImage.filename)
+          )
         : '')
     : '';
 
@@ -133,7 +142,10 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
         const filename = safeStr(f.filename);
         const savedUrl = safeStr(f.path);
         const url =
-          savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectFiles'], filename) : '');
+          savedUrl ||
+          (filename
+            ? buildFileUrl(req, [FILE_FOLDERS.PROJECTS, FILE_FOLDERS.PROJECT_FILES], filename)
+            : '');
         return {
           id: String(f._id || ''),
           filename,
@@ -184,7 +196,7 @@ const pickReviewPublic = (reviewDoc, { viewer } = {}) => {
   const viewerRole = viewer?.role;
 
   const canEdit = viewerId && viewerId === authorId; // רק יוצר יכול לערוך
-  const canDelete = canEdit || viewerRole === 'admin'; // יוצר או אדמין
+  const canDelete = canEdit || viewerRole === ROLES.ADMIN; // יוצר או אדמין
 
   return {
     id: String(r._id || ''),
