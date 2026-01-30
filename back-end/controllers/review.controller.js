@@ -6,7 +6,7 @@ const { recalcProjectRatings } = require('../utils/reviews.utils');
 const { pickReviewPublic } = require('../utils/serializers.utils');
 const { getPaging, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
-
+const { ROLES } = require('../constants/roles.constants');
 /**
  * ➕ createReview
  * יוצר תגובה חדשה לפרויקט עבור המשתמש המחובר (תגובה ייחודית per user+project).
@@ -131,7 +131,7 @@ const deleteReview = async (req, res, next) => {
     if (!review) throw new Error('Review not found');
 
     const isOwner = String(review.userId) === String(req.user.id);
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === ROLES.ADMIN;
     if (!isOwner && !isAdmin) throw new Error('Access denied');
 
     await Review.findByIdAndDelete(id);

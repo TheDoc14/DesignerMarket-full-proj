@@ -16,6 +16,7 @@
     "lint:fix": "eslint \"**/*.js\" --fix"
   },
   "dependencies": {
+    "@exortek/express-mongo-sanitize": "^1.1.1",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",

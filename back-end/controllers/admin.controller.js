@@ -11,7 +11,7 @@ const {
 const { getBaseUrl } = require('../utils/url.utils');
 const { getPaging, escapeRegex, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
-
+const { ROLES } = require('../constants/roles.constants');
 /**
  * 👥 adminListUsers
  * מחזיר רשימת משתמשים לאדמין עם פילטרים (q/role/approved) ופגינציה.
@@ -26,7 +26,7 @@ const adminListUsers = async (req, res, next) => {
 
     const filter = {};
 
-    if (role && ['admin', 'customer', 'student', 'designer'].includes(role)) {
+    if (role && [ROLES.ADMIN, ROLES.CUSTOMER, ROLES.STUDENT, ROLES.DESIGNER].includes(role)) {
       filter.role = role;
     }
 
@@ -70,7 +70,7 @@ const adminSetUserApproval = async (req, res, next) => {
     const user = await User.findById(req.params.id);
     if (!user) throw new Error('User not found');
 
-    if (user.role !== 'student' && user.role !== 'designer') {
+    if (user.role !== ROLES.STUDENT && user.role !== ROLES.DESIGNER) {
       throw new Error('Invalid request');
     }
 
@@ -219,7 +219,7 @@ const adminGetStats = async (req, res, next) => {
     const [usersTotal, usersPendingApproval, projectsTotal, projectsPendingPublish, reviewsTotal] =
       await Promise.all([
         User.countDocuments({}),
-        User.countDocuments({ role: { $in: ['student', 'designer'] }, isApproved: false }),
+        User.countDocuments({ role: { $in: [ROLES.STUDENT, ROLES.DESIGNER] }, isApproved: false }),
         Project.countDocuments({}),
         Project.countDocuments({ isPublished: false }),
         Review.countDocuments({}),

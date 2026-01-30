@@ -19,7 +19,7 @@ const {
   createProjectValidators,
   updateProjectValidators,
 } = require('../validators/projects.validators');
-
+const { ROLE_GROUPS } = require('../constants/roles.constants');
 /**
  * 🧩 Projects Routes
  * אחריות: CRUD לפרויקטים + חשיפה מבוקרת לפי isPublished/ownership/admin.
@@ -34,7 +34,7 @@ const {
 router.post(
   '/',
   authMiddleware,
-  permit('designer', 'student', 'admin'),
+  permit(ROLE_GROUPS.CREATORS),
   uploadProject.array('files', 10),
   createProjectValidators,
   validate,
@@ -54,7 +54,7 @@ router.get('/:id', tryAuth, projectIdParam, validate, getProjectById);
 router.put(
   '/:id',
   authMiddleware,
-  permit('designer', 'student', 'admin'),
+  permit(ROLE_GROUPS.CREATORS),
   projectIdParam, // ✅ לפני multer כדי לא להעלות קבצים על id לא תקין
   validate, // ✅ גם לפני multer כדי לעצור מוקדם
   uploadProject.array('files', 10),
@@ -68,7 +68,7 @@ router.put(
 router.delete(
   '/:id',
   authMiddleware,
-  permit('student', 'designer', 'admin'),
+  permit(ROLE_GROUPS.CREATORS),
   projectIdParam,
   validate,
   deleteProject

@@ -1,7 +1,7 @@
-// back-end/middleware/recaptcha.middleware.js
+// back-end/middleware/captcha.middleware.js
 
 /**
- * recaptcha.middleware.js
+ * captcha.middleware.js
  * מאמת Google reCAPTCHA v3 לפי הטוקן שמגיע מהפרונט.
  *
  * ✅ לפי הסטנדרט אצלנו:
@@ -18,7 +18,10 @@
  * - אפשר לבדוק action אם רוצים (recommended).
  */
 
-const { deleteUploadsFromFilesArray, deleteUploadByFsPath } = require('../utils/filesCleanup.utils');
+const {
+  deleteUploadsFromFilesArray,
+  deleteUploadByFsPath,
+} = require('../utils/filesCleanup.utils');
 
 const RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify';
 

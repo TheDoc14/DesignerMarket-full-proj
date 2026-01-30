@@ -15,6 +15,8 @@ const { pickProjectPublic } = require('../utils/serializers.utils');
 const { escapeRegex, toSort, getPaging } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
 const { normalizeTags } = require('../utils/tags.utils');
+const { ROLES } = require('../constants/roles.constants');
+const { FILE_FOLDERS } = require('../constants/files.constants');
 
 /**
  * getFileType
@@ -57,7 +59,7 @@ const getFileType = (mimetype, filename) => {
 const createProject = async (req, res, next) => {
   try {
     const me = await User.findById(req.user.id).select('paypalEmail role');
-    if ((me.role === 'student' || me.role === 'designer') && !me.paypalEmail) {
+    if ((me.role === ROLES.STUDENT || me.role === ROLES.DESIGNER) && !me.paypalEmail) {
       throw new Error('PayPal email is required before creating a project');
     }
 
@@ -81,13 +83,15 @@ const createProject = async (req, res, next) => {
 
       // images/videos -> projectImages, כל השאר -> projectFiles
       const subfolder =
-        fileType === 'image' || fileType === 'video' ? 'projectImages' : 'projectFiles';
+        fileType === 'image' || fileType === 'video'
+          ? FILE_FOLDERS.PROJECT_IMAGES
+          : FILE_FOLDERS.PROJECT_FILES;
 
       return {
         _id: id,
         filename: file.filename,
         fileType,
-        path: buildFileUrl(req, ['projects', subfolder], file.filename),
+        path: buildFileUrl(req, [FILE_FOLDERS.PROJECTS, subfolder], file.filename),
       };
     });
 
@@ -131,7 +135,7 @@ const getAllProjects = async (req, res, next) => {
   try {
     // 1) זיהוי הצופה (viewer) לפי token אופציונלי
     const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
-    const isAdmin = viewer?.role === 'admin';
+    const isAdmin = viewer?.role === ROLES.ADMIN;
 
     // 2) פילטר הרשאות (accessFilter)
     let accessFilter = { isPublished: true };
@@ -217,7 +221,7 @@ const getProjectById = async (req, res, next) => {
     // 2) זיהוי viewer (tryAuth) כדי לאפשר owner/admin
     const viewer = req.user ? { id: req.user.id, role: req.user.role } : undefined;
 
-    const isAdmin = viewer?.role === 'admin';
+    const isAdmin = viewer?.role === ROLES.ADMIN;
     const isOwner = viewer?.id && String(viewer.id) === String(p.createdBy?._id || p.createdBy);
 
     // 3) אם לא מפורסם - רק owner/admin
@@ -262,7 +266,7 @@ const updateProject = async (req, res, next) => {
     if (!p) throw new Error('Project not found');
 
     // 2) בדיקת הרשאה: owner/admin בלבד
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === ROLES.ADMIN;
     const isOwner = String(p.createdBy._id) === String(req.user.id);
     if (!isAdmin && !isOwner) throw new Error('Access denied');
 
@@ -291,13 +295,15 @@ const updateProject = async (req, res, next) => {
       req.files.forEach((file) => {
         const fileType = getFileType(file.mimetype, file.originalname);
         const subfolder =
-          fileType === 'image' || fileType === 'video' ? 'projectImages' : 'projectFiles';
+          fileType === 'image' || fileType === 'video'
+            ? FILE_FOLDERS.PROJECT_IMAGES
+            : FILE_FOLDERS.PROJECT_FILES;
 
         p.files.push({
           _id: new mongoose.Types.ObjectId(),
           filename: file.filename,
           fileType,
-          path: buildFileUrl(req, ['projects', subfolder], file.filename),
+          path: buildFileUrl(req, [FILE_FOLDERS.PROJECTS, subfolder], file.filename),
         });
       });
     }
@@ -330,7 +336,7 @@ const deleteProject = async (req, res, next) => {
 
     // 2) בדיקת הרשאה: owner/admin
     const isOwner = String(project.createdBy) === String(req.user.id);
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === ROLES.ADMIN;
     if (!isOwner && !isAdmin) throw new Error('Access denied');
 
     // 3) ניקוי קבצים פיזיים מה-uploads (best-effort)

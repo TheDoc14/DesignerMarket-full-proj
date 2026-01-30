@@ -82,6 +82,9 @@ function classifyError(err, _req, _res, _next) {
   } else if (msg.includes('User not found')) {
     statusCode = 404;
     message = 'User not found.';
+  } else if (msg.includes('User is already verified')) {
+    statusCode = 400;
+    message = 'User is already verified.';
   }
 
   // =====================
@@ -149,9 +152,6 @@ function classifyError(err, _req, _res, _next) {
   } else if (msg.includes('Invalid order state')) {
     statusCode = 409;
     message = 'Invalid order state.';
-  } else if (msg.includes('PayPal capture failed')) {
-    statusCode = 400;
-    message = 'PayPal capture failed.';
   } else if (msg.includes('Seller PayPal email missing')) {
     statusCode = 400;
     message = 'Seller PayPal email is missing.';
@@ -161,6 +161,18 @@ function classifyError(err, _req, _res, _next) {
   } else if (msg.includes('PayPal email is required before creating a project')) {
     statusCode = 400;
     message = 'PayPal email is required before creating a project.';
+  } else if (msg.includes('PayPal credentials missing')) {
+    statusCode = 500;
+    message = 'Payment service misconfigured.';
+  } else if (msg.includes('PayPal auth failed')) {
+    statusCode = 502;
+    message = 'Payment provider authentication failed.';
+  } else if (msg.includes('PayPal create order failed')) {
+    statusCode = 502;
+    message = 'Payment provider error (create order failed).';
+  } else if (msg.includes('PayPal capture failed')) {
+    statusCode = 502;
+    message = 'Payment provider error (capture failed).';
   }
 
   // =====================
@@ -213,6 +225,9 @@ function classifyError(err, _req, _res, _next) {
   } else if (err?.code === 'EACCES') {
     statusCode = 403;
     message = 'File access denied.';
+  } else if (msg.includes('Invalid file path')) {
+    statusCode = 400;
+    message = 'Invalid file path.';
   }
 
   // =====================
