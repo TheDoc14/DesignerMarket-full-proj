@@ -1,5 +1,6 @@
 // back-end/validators/admin.validators.js
-const { body, query } = require('express-validator');
+const { body, query, param } = require('express-validator');
+const Role = require('../models/Role.model');
 const {
   pageLimitQuery,
   searchQuery,
@@ -9,25 +10,38 @@ const {
   mongoIdParam,
 } = require('./common.validators');
 const { SORT_FIELDS } = require('../constants/validation.constants');
-const { ROLES } = require('../constants/roles.constants');
+const { PERMS } = require('../constants/permissions.constants');
+
 /**
- * ✅ Admin Validators
- * מטרה: לעצור בקשות לא תקינות לפני שהקונטרולר רץ.
- * זה נותן:
- * - הודעות 400 אחידות וברורות
- * - פחות if-ים בתוך הקונטרולר
+ * ✅ Admin Validators (Dynamic RBAC aware)
  */
 
 // params
 const userIdParam = mongoIdParam('id', 'Invalid user id');
 const projectIdParam = mongoIdParam('id', 'Invalid project id');
+
+const roleKeySlug = (value) => /^[a-z0-9-]{2,40}$/.test(String(value || '').trim());
+
+const roleKeyExists = async (value) => {
+  const key = String(value || '')
+    .trim()
+    .toLowerCase();
+  const exists = await Role.exists({ key });
+  if (!exists) throw new Error('role not found');
+  return true;
+};
+
+const allowedPermsSet = new Set(Object.values(PERMS || {}));
+
 // GET /api/admin/users?q=&role=&approved=&page=&limit=
 const adminListUsersQuery = [
   ...searchQuery,
   query('role')
     .optional()
-    .isIn([ROLES.ADMIN, ROLES.STUDENT, ROLES.DESIGNER, ROLES.CUSTOMER])
-    .withMessage('role is invalid'),
+    .custom(roleKeySlug)
+    .withMessage('role must be lowercase slug: a-z 0-9 -')
+    .bail()
+    .custom(roleKeyExists),
   query('approved')
     .optional()
     .isIn(['true', 'false'])
@@ -73,6 +87,62 @@ const adminListReviewsQuery = [
   ...orderQuery,
 ];
 
+// ===== Dynamic RBAC: Roles management =====
+
+const adminCreateRoleValidators = [
+  body('key')
+    .notEmpty()
+    .withMessage('key is required')
+    .custom((v) => /^[a-z0-9-]{2,40}$/.test(String(v || '').trim()))
+    .withMessage('role key must be lowercase slug: a-z 0-9 -'),
+
+  body('label').optional().isString().trim().isLength({ max: 60 }).withMessage('label too long'),
+
+  body('permissions').optional().isArray().withMessage('permissions must be an array'),
+
+  body('permissions.*')
+    .optional()
+    .isString()
+    .trim()
+    .custom((p) => {
+      if (!allowedPermsSet.has(p)) {
+        throw new Error(`invalid permission: ${p}`);
+      }
+      return true;
+    }),
+];
+
+const adminUpdateRoleValidators = [
+  body('label').optional().isString().trim().isLength({ max: 60 }).withMessage('label too long'),
+
+  body('permissions').optional().isArray().withMessage('permissions must be an array'),
+
+  body('permissions.*')
+    .optional()
+    .isString()
+    .trim()
+    .isIn(Object.values(PERMS || {}))
+    .withMessage('invalid permission'),
+];
+
+const adminDeleteRoleValidators = [
+  param('key')
+    .notEmpty()
+    .withMessage('key is required')
+    .custom(roleKeySlug)
+    .withMessage('invalid role key'),
+];
+
+const adminAssignUserRoleValidators = [
+  body('role')
+    .notEmpty()
+    .withMessage('role is required')
+    .custom(roleKeySlug)
+    .withMessage('role must be lowercase slug: a-z 0-9 -')
+    .bail()
+    .custom(roleKeyExists),
+];
+
 module.exports = {
   userIdParam,
   projectIdParam,
@@ -81,4 +151,8 @@ module.exports = {
   adminListProjectsQuery,
   adminSetProjectPublishBody,
   adminListReviewsQuery,
+  adminCreateRoleValidators,
+  adminUpdateRoleValidators,
+  adminDeleteRoleValidators,
+  adminAssignUserRoleValidators,
 };

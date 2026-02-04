@@ -44,7 +44,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'designer', 'customer', 'admin'],
+      trim: true,
+      lowercase: true,
       default: 'customer',
     },
     // מאושר ע"י אדמין (לקוחות – אוטומטי)

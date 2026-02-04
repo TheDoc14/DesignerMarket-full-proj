@@ -2,14 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { permit } = require('../middleware/role.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const { paypalCreateOrder, paypalCaptureOrder } = require('../controllers/order.controller');
 const {
   createPaypalOrderValidators,
   capturePaypalOrderValidators,
 } = require('../validators/orders.validators');
-const { ROLE_GROUPS } = require('../constants/roles.constants');
 
 /**
  * 🛒 Order Routes
@@ -22,7 +20,6 @@ const { ROLE_GROUPS } = require('../constants/roles.constants');
 router.post(
   '/paypal/create',
   authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
   createPaypalOrderValidators,
   validate,
   paypalCreateOrder
@@ -33,7 +30,6 @@ router.post(
 router.post(
   '/paypal/capture',
   authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
   capturePaypalOrderValidators,
   validate,
   paypalCaptureOrder

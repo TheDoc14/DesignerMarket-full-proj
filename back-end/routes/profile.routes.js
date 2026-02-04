@@ -10,7 +10,6 @@ const {
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { tryAuth } = require('../middleware/tryAuth.middleware');
 const { uploadProfile } = require('../middleware/multer.middleware');
-const { permit } = require('../middleware/role.middleware');
 const { validate } = require('../middleware/validate.middleware');
 const {
   userIdParam,
@@ -18,7 +17,6 @@ const {
   myProfileProjectsQuery,
   profileProjectsQuery,
 } = require('../validators/profile.validators');
-const { ROLE_GROUPS } = require('../constants/roles.constants');
 /**
  * 👤 Profile Routes
  * אחריות: פרופיל של המשתמש המחובר (me), עדכון פרופיל + תמונת פרופיל, ומחיקת משתמש (self/admin).
@@ -28,21 +26,13 @@ const { ROLE_GROUPS } = require('../constants/roles.constants');
 
 // GET /api/profile/me
 // שליפת פרופיל המשתמש המחובר + הפרויקטים שלו
-router.get(
-  '/me',
-  authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
-  myProfileProjectsQuery,
-  validate,
-  getMyProfile
-);
+router.get('/me', authMiddleware, myProfileProjectsQuery, validate, getMyProfile);
 
 // PUT /api/profile/me
 // עדכון פרופיל (כולל העלאת profileImage); social עובר normalize ולידציה “רכה”
 router.put(
   '/me',
   authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
   uploadProfile.single('profileImage'),
   updateMyProfileValidators,
   validate,
@@ -51,14 +41,7 @@ router.put(
 
 // DELETE /api/profile/:id
 // מחיקת משתמש – self או admin (כולל ניקוי קבצים + מחיקת פרויקטים/תגובות רלוונטיות)
-router.delete(
-  '/:id',
-  authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
-  userIdParam,
-  validate,
-  deleteAccount
-);
+router.delete('/:id', authMiddleware, userIdParam, validate, deleteAccount);
 
 // GET /api/profile/:id
 // שליפת פרופיל ציבורי + הפרויקטים שלו עם pagination/סינון
