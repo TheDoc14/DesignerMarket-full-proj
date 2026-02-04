@@ -117,7 +117,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - Admin stats endpoint
 - Dynamic roles management (CRUD) + assign role to user
 
-### System Manager Panel (Read-Only)
+#### System Manager Panel (Read-Only)
 - System statistics endpoints (read-only dashboards)
 - Finance/revenue summary endpoints (read-only)
 
@@ -311,17 +311,21 @@ RECAPTCHA_HOSTNAME=localhost
   - `GET /files/approvalDocuments/:file` (permission-based, admin by default)
 
 ### Admin
-- `GET /admin/users` (admin-only)
-- `PUT /admin/users/:id/approval` (admin-only)
-- `PUT /admin/users/:id/role` (admin-only, dynamic RBAC)
-- `GET /admin/roles` (admin-only)
-- `POST /admin/roles` (admin-only)
-- `PUT /admin/roles/:key` (admin-only)
-- `DELETE /admin/roles/:key` (admin-only)
-- `GET /admin/projects` (admin-only)
-- `PUT /admin/projects/:id/publish` (admin-only)
-- `GET /admin/reviews` (admin-only)
-- `GET /admin/stats` (admin-only)
+- Users:
+  - `GET /admin/users` (admin-only)
+  - `PUT /admin/users/:id/approval` (admin-only)
+  - `PUT /admin/users/:id/role` (admin-only, dynamic RBAC)
+- Roles:
+  - `GET /admin/roles` (admin-only)
+  - `POST /admin/roles` (admin-only)
+  - `PUT /admin/roles/:key` (admin-only)
+  - `DELETE /admin/roles/:key` (admin-only)
+- Projects:
+  - `GET /admin/projects` (admin-only)
+  - `PUT /admin/projects/:id/publish` (admin-only)
+- Reviews:
+  - `GET /admin/reviews` (admin-only)
+  - `GET /admin/stats` (admin-only)
 
 ### System (Read-only)
 - `GET /system/stats` (system-manager)
