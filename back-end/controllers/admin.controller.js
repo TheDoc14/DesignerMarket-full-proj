@@ -1,5 +1,6 @@
 // back-end/controllers/admin.controller.js
 const User = require('../models/Users.models');
+const Role = require('../models/Role.model');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
 const {
@@ -26,7 +27,12 @@ const adminListUsers = async (req, res, next) => {
 
     const filter = {};
 
-    if (role && [ROLES.ADMIN, ROLES.CUSTOMER, ROLES.STUDENT, ROLES.DESIGNER].includes(role)) {
+    if (
+      role &&
+      [ROLES.ADMIN, ROLES.CUSTOMER, ROLES.STUDENT, ROLES.DESIGNER, ROLES.SYSTEM_MANAGER].includes(
+        role
+      )
+    ) {
       filter.role = role;
     }
 
@@ -252,6 +258,156 @@ const adminGetStats = async (req, res, next) => {
   }
 };
 
+// ==============================
+// Roles (Dynamic RBAC) - Admin
+// ==============================
+
+/**
+ * 🧩 adminListRoles
+ * מחזיר רשימת Roles (כולל system roles) עם פגינציה ומטא אחיד.
+ * מיועד למסך ניהול Roles בפאנל.
+ */
+const adminListRoles = async (req, res, next) => {
+  try {
+    const { page, limit, skip } = getPaging(req.query, 50);
+
+    const [total, roles] = await Promise.all([
+      Role.countDocuments({}),
+      Role.find({}).sort({ isSystem: -1, key: 1 }).skip(skip).limit(limit).lean(),
+    ]);
+
+    return res.status(200).json({
+      message: 'Roles fetched',
+      meta: buildMeta(total, page, limit),
+      roles,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * ➕ adminCreateRole
+ * יוצר Role חדש (לא system).
+ */
+const adminCreateRole = async (req, res, next) => {
+  try {
+    const { key, label = '', permissions = [] } = req.body;
+
+    const normalizedKey = String(key).trim().toLowerCase();
+
+    const exists = await Role.findOne({ key: normalizedKey }).lean();
+    if (exists) throw new Error('Role already exists');
+
+    const role = await Role.create({
+      key: normalizedKey,
+      label,
+      permissions,
+      isSystem: false,
+    });
+
+    return res.status(201).json({
+      message: 'Role created',
+      role,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * ✏️ adminUpdateRole
+ * מעדכן label/permissions ל-Role לפי key.
+ * (לפי החלטה שלך – מאפשר גם system roles, אבל לא שינוי key)
+ */
+const adminUpdateRole = async (req, res, next) => {
+  try {
+    const normalizedKey = String(req.params.key).trim().toLowerCase();
+    const { label, permissions } = req.body;
+
+    const role = await Role.findOne({ key: normalizedKey });
+    if (!role) throw new Error('Role not found');
+    if (typeof label === 'string') role.label = label;
+    if (Array.isArray(permissions)) role.permissions = permissions;
+
+    await role.save();
+
+    return res.status(200).json({
+      message: 'Role updated',
+      role,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * 🗑️ adminDeleteRole
+ * מוחק Role שאינו system ושאינו בשימוש.
+ */
+const adminDeleteRole = async (req, res, next) => {
+  try {
+    const normalizedKey = String(req.params.key).trim().toLowerCase();
+
+    const role = await Role.findOne({ key: normalizedKey });
+    if (!role) throw new Error('Role not found');
+    if (role.isSystem) throw new Error('Cannot delete system role');
+
+    const used = await User.exists({ role: role.key });
+    if (used) throw new Error('Cannot delete role that is assigned to users');
+
+    await role.deleteOne();
+
+    return res.status(200).json({
+      message: 'Role deleted',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ==============================
+// Assign role to user - Admin
+// ==============================
+
+/**
+ * 👤 adminAssignUserRole
+ * משייך Role למשתמש לפי key דינמי.
+ * מחזיר user מסוריאלייז כמו שאר הפאנל (pickUserPublic).
+ */
+const adminAssignUserRole = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { role: roleKey } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) throw new Error('User not found');
+
+    const normalizedKey = String(roleKey).trim().toLowerCase();
+    const role = await Role.findOne({ key: normalizedKey }).lean();
+    if (!role) throw new Error('Role does not exist');
+
+    user.role = role.key;
+
+    // לא חובה, אבל מונע מצב ש-role חדש תקוע "לא מאושר"
+    if (user.role !== ROLES.STUDENT && user.role !== ROLES.DESIGNER) {
+      user.isApproved = true;
+    }
+
+    await user.save();
+
+    const baseUrl = getBaseUrl(req);
+    const safe = pickUserPublic(user, { forRole: 'admin', baseUrl });
+
+    return res.status(200).json({
+      message: 'User role updated',
+      user: safe,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   adminListUsers,
   adminSetUserApproval,
@@ -259,4 +415,9 @@ module.exports = {
   adminSetProjectPublish,
   adminListReviews,
   adminGetStats,
+  adminListRoles,
+  adminCreateRole,
+  adminUpdateRole,
+  adminDeleteRole,
+  adminAssignUserRole,
 };

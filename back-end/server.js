@@ -24,9 +24,28 @@ const fileRoutes = require('./routes/file.routes');
 const reviewRoutes = require('./routes/review.routes');
 const adminRoutes = require('./routes/admin.routes');
 const orderRoutes = require('./routes/order.routes');
+const systemRoutes = require('./routes/system.routes');
 const { errorHandler } = require('./middleware/error.middleware');
+const { ensureBaseRoles } = require('./utils/bootstrapRbac.utils');
 
 // ✅ מידלוורים כלליים
+
+// ✅ sanitize ONLY mongo keys ($ and .) to prevent NoSQL injection
+// ⚠️ IMPORTANT: do NOT touch string values (we store permissions like "admin.panel.access")
+const sanitizeMongoKeysOnly = (data) => {
+  if (Array.isArray(data)) return data.map(sanitizeMongoKeysOnly);
+
+  if (data && typeof data === 'object' && data.constructor === Object) {
+    const out = {};
+    for (const [k, v] of Object.entries(data)) {
+      const safeKey = String(k).replace(/\$/g, '').replace(/\./g, '');
+      out[safeKey] = sanitizeMongoKeysOnly(v);
+    }
+    return out;
+  }
+
+  return data; // keep primitives (strings) as-is
+};
 
 /**
  * 🛡️ Security headers (Helmet)
@@ -52,7 +71,7 @@ app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(mongoSanitize());
+app.use(mongoSanitize({ customSanitizer: (data, _options) => sanitizeMongoKeysOnly(data) }));
 
 /**
  * ✅ Routes mounting
@@ -66,6 +85,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/system', systemRoutes);
 
 app.get('/api/test', (req, res) => {
   res.status(200).json({ message: 'API is working fine 🚀' });
@@ -90,6 +110,9 @@ async function startServer() {
   try {
     await mongoose.connect(process.env.DB_URI);
     console.log('✅ MongoDB connected successfully');
+
+    await ensureBaseRoles();
+    console.log('✅ RBAC base roles ensured');
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

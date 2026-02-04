@@ -9,17 +9,17 @@ const {
   deleteProject,
 } = require('../controllers/project.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { permit } = require('../middleware/role.middleware');
-const { uploadProject } = require('../middleware/multer.middleware');
 const { tryAuth } = require('../middleware/tryAuth.middleware');
 const { validate } = require('../middleware/validate.middleware');
+const { uploadProject } = require('../middleware/multer.middleware');
+const { permitPerm } = require('../middleware/rbac.middleware');
+const { PERMS } = require('../constants/permissions.constants');
 const {
   projectIdParam,
   listProjectsQuery,
   createProjectValidators,
   updateProjectValidators,
 } = require('../validators/projects.validators');
-const { ROLE_GROUPS } = require('../constants/roles.constants');
 /**
  * 🧩 Projects Routes
  * אחריות: CRUD לפרויקטים + חשיפה מבוקרת לפי isPublished/ownership/admin.
@@ -34,7 +34,7 @@ const { ROLE_GROUPS } = require('../constants/roles.constants');
 router.post(
   '/',
   authMiddleware,
-  permit(ROLE_GROUPS.CREATORS),
+  permitPerm(PERMS.PROJECTS_CREATE),
   uploadProject.array('files', 10),
   createProjectValidators,
   validate,
@@ -54,7 +54,7 @@ router.get('/:id', tryAuth, projectIdParam, validate, getProjectById);
 router.put(
   '/:id',
   authMiddleware,
-  permit(ROLE_GROUPS.CREATORS),
+  permitPerm(PERMS.PROJECTS_UPDATE),
   projectIdParam, // ✅ לפני multer כדי לא להעלות קבצים על id לא תקין
   validate, // ✅ גם לפני multer כדי לעצור מוקדם
   uploadProject.array('files', 10),
@@ -68,7 +68,7 @@ router.put(
 router.delete(
   '/:id',
   authMiddleware,
-  permit(ROLE_GROUPS.CREATORS),
+  permitPerm(PERMS.PROJECTS_DELETE),
   projectIdParam,
   validate,
   deleteProject

@@ -3,17 +3,25 @@
 // Define user roles
 const ROLES = Object.freeze({
   ADMIN: 'admin',
+  SYSTEM_MANAGER: 'systemManager',
   STUDENT: 'student',
   DESIGNER: 'designer',
   CUSTOMER: 'customer',
 });
 
-// Define role groups for access control
+// קבוצות הרשאה (אל תשתמש יותר ב-CREATORS בשביל projectFiles)
 const ROLE_GROUPS = Object.freeze({
+  //Admin only
   ADMIN_ONLY: [ROLES.ADMIN],
-  ANY_AUTH: [ROLES.ADMIN, ROLES.STUDENT, ROLES.DESIGNER, ROLES.CUSTOMER],
-  CREATORS: [ROLES.ADMIN, ROLES.STUDENT, ROLES.DESIGNER],
-  NON_CUSTOMER: [ROLES.ADMIN, ROLES.STUDENT, ROLES.DESIGNER],
+
+  // כל מי שמחובר
+  ANY_AUTH: [ROLES.ADMIN, ROLES.SYSTEM_MANAGER, ROLES.STUDENT, ROLES.DESIGNER, ROLES.CUSTOMER],
+
+  // מי שמותר לו להעלות פרויקט/להתייעץ עם AI (לפי הכללים שלכם)
+  UPLOADERS: [ROLES.STUDENT, ROLES.DESIGNER],
+
+  // מי שמותר לו לצפות בדוחות/סטטיסטיקות מערכת (System Manager + Admin)
+  SYSTEM_VIEWERS: [ROLES.ADMIN, ROLES.SYSTEM_MANAGER],
 });
 
 module.exports = { ROLES, ROLE_GROUPS };
