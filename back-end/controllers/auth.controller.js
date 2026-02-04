@@ -28,9 +28,8 @@ const registerUser = async (req, res, next) => {
     const trimmedUsername = (username || '').trim();
     const usernameLower = trimmedUsername.toLowerCase();
     const emailNorm = normalizeEmail(req.body.email);
-    const safeRole = [ROLES.STUDENT, ROLES.DESIGNER, ROLES.CUSTOMER, ROLES.ADMIN].includes(role)
-      ? role
-      : ROLES.CUSTOMER;
+    const allowedSelfRegisterRoles = [ROLES.STUDENT, ROLES.DESIGNER, ROLES.CUSTOMER];
+    const safeRole = allowedSelfRegisterRoles.includes(role) ? role : ROLES.CUSTOMER;
 
     // ---- הגנה: לקוח לא אמור להעלות מסמך אישור ----
     // multer יכול לשמור את הקובץ לפני הקונטרולר, לכן מנקים כאן ומחזירים שגיאה.

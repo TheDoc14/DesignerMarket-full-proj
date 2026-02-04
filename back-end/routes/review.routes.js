@@ -2,7 +2,6 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { permit } = require('../middleware/role.middleware');
 const {
   createReview,
   listReviews,
@@ -18,7 +17,6 @@ const {
   updateReviewValidators,
 } = require('../validators/reviews.validators');
 const { tryAuth } = require('../middleware/tryAuth.middleware'); // חשוב ל-viewer אופציונלי
-const { ROLE_GROUPS } = require('../constants/roles.constants');
 /**
  * ⭐ Reviews Routes
  * אחריות: ביקורות לפרויקטים (create/list/update/delete).
@@ -40,35 +38,14 @@ router.get('/:id', tryAuth, reviewIdParam, validate, getReviewById);
 
 // POST /api/reviews
 // יצירה: כל המשתמשים המחוברים
-router.post(
-  '/',
-  authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
-  createReviewValidators,
-  validate,
-  createReview
-);
+router.post('/', authMiddleware, createReviewValidators, validate, createReview);
 
 // PUT /api/reviews/:id
 // עריכה: רק יוצר (נבדק בקונטרולר)
-router.put(
-  '/:id',
-  authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
-  updateReviewValidators,
-  validate,
-  updateReview
-);
+router.put('/:id', authMiddleware, updateReviewValidators, validate, updateReview);
 
 // DELETE /api/reviews/:id
 // מחיקה: יוצר או אדמין (נבדק בקונטרולר)
-router.delete(
-  '/:id',
-  authMiddleware,
-  permit(ROLE_GROUPS.ANY_AUTH),
-  reviewIdParam,
-  validate,
-  deleteReview
-);
+router.delete('/:id', authMiddleware, reviewIdParam, validate, deleteReview);
 
 module.exports = router;

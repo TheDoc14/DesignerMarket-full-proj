@@ -3,8 +3,8 @@ const express = require('express');
 const router = express.Router();
 const { getFile } = require('../controllers/file.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { permit } = require('../middleware/role.middleware');
-const { ROLE_GROUPS } = require('../constants/roles.constants');
+const { permitPerm } = require('../middleware/rbac.middleware');
+const { PERMS } = require('../constants/permissions.constants');
 const { FILE_FOLDERS } = require('../constants/files.constants');
 /**
  * 📂 Files Routes
@@ -28,7 +28,7 @@ router.get(`/${FILE_FOLDERS.PROJECTS}/${FILE_FOLDERS.PROJECT_IMAGES}/:filename`,
 router.get(
   `/${FILE_FOLDERS.PROJECTS}/${FILE_FOLDERS.PROJECT_FILES}/:filename`,
   authMiddleware,
-  permit(ROLE_GROUPS.CREATORS),
+  permitPerm(PERMS.FILES_PROJECTS_READ),
   getFile
 );
 
@@ -37,7 +37,7 @@ router.get(
 router.get(
   `/${FILE_FOLDERS.APPROVAL_DOCUMENTS}/:filename`,
   authMiddleware,
-  permit(ROLE_GROUPS.ADMIN_ONLY),
+  permitPerm(PERMS.FILES_APPROVALDOCS_READ),
   getFile
 );
 

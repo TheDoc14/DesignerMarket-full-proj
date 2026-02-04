@@ -29,13 +29,11 @@ const createReviewValidators = [
     .withMessage('Project ID is required')
     .isMongoId()
     .withMessage('Invalid project id'),
-
   body('rating')
     .notEmpty()
     .withMessage('Rating is required')
     .isInt({ min: LIMITS.MIN_LIMIT, max: 5 })
     .withMessage('Rating must be between 1 and 5'),
-
   // אצלכם השדה נקרא text
   body('text')
     .optional()

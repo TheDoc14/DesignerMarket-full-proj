@@ -27,9 +27,9 @@ function classifyError(err, _req, _res, _next) {
   const msg = typeof err?.message === 'string' ? err.message : '';
   const msgLower = msg.toLowerCase();
 
-  // =====================
-  // 🛡️ JWT / Auth / Permissions
-  // =====================
+  // ==================================
+  // ===🛡️ JWT / Auth / Permissions===
+  // ==================================
   if (err?.name === 'JsonWebTokenError') {
     statusCode = 401;
     message = 'Invalid or malformed token.';
@@ -47,9 +47,26 @@ function classifyError(err, _req, _res, _next) {
     message = 'Access denied: insufficient permissions.';
   }
 
-  // =====================
+  // =======================================
+  // ===== Dynamic RBAC / Roles errors =====
+  // =======================================
+  else if (msg.includes('Role already exists')) {
+    statusCode = 409;
+    message = 'Role already exists.';
+  } else if (msg.includes('Cannot delete role that is assigned to users')) {
+    statusCode = 409;
+    message = 'Cannot delete role that is assigned to users.';
+  } else if (msg.includes('Cannot delete system role')) {
+    statusCode = 400;
+    message = 'Cannot delete system role.';
+  } else if (msg.includes('Role not found')) {
+    statusCode = 404;
+    message = 'Role not found.';
+  }
+
+  // =============================================
   // 👥 Users / Authn / Signup / Verify / Profile
-  // =====================
+  // =============================================
   else if (msg.includes('Invalid credentials')) {
     statusCode = 400;
     message = 'Invalid credentials.';
@@ -87,9 +104,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'User is already verified.';
   }
 
-  // =====================
-  // 🔁 Reset Password
-  // =====================
+  // =============================
+  // =====🔁 Reset Password======
+  // =============================
   else if (msg.includes('Reset token is required')) {
     statusCode = 400;
     message = 'Reset token is required.';
@@ -104,9 +121,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Reset token invalid or expired.';
   }
 
-  // =====================
+  // ========================================
   // 📦 Projects / Reviews / Business rules
-  // =====================
+  // ========================================
   else if (msg.includes('Invalid mainImageIndex')) {
     // ✅ זה היה אצלך 500 בלוג — צריך להיות 400
     statusCode = 400;
@@ -134,9 +151,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Rating is required.';
   }
 
-  // =====================
-  // 💳 Orders / PayPal
-  // =====================
+  // =================================
+  // =======💳 Orders / PayPal=======
+  // =================================
   else if (msg.includes('Order not found')) {
     statusCode = 404;
     message = 'Order not found.';
@@ -175,9 +192,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Payment provider error (capture failed).';
   }
 
-  // =====================
-  // 💾 Mongo / Mongoose
-  // =====================
+  // ==================================
+  // =======💾 Mongo / Mongoose=======
+  // ==================================
   else if (err instanceof mongoose.Error.ValidationError) {
     statusCode = 400;
     const msgs = Object.values(err.errors).map((e) => e.message);
@@ -191,9 +208,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Duplicate key: record already exists.';
   }
 
-  // =====================
-  // 📤 Multer / Uploads
-  // =====================
+  // ===================================
+  // =======📤 Multer / Uploads========
+  // ===================================
   else if (err?.name === 'MulterError') {
     if (err.code === 'LIMIT_FILE_SIZE') {
       statusCode = 413;
@@ -216,9 +233,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Unsupported file type.';
   }
 
-  // =====================
-  // 📂 FS / Files
-  // =====================
+  // ============================
+  // =======📂 FS / Files=======
+  // ============================
   else if (err?.code === 'ENOENT' || msg.includes('File not found')) {
     statusCode = 404;
     message = 'File not found.';
@@ -230,9 +247,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Invalid file path.';
   }
 
-  // =====================
-  // 🌐 Infra / Network / DB
-  // =====================
+  // ===================================
+  // =====🌐 Infra / Network / DB======
+  // ===================================
   else if (msg.includes('Failed to connect to DB')) {
     statusCode = 503;
     message = 'Database connection failed.';
@@ -244,9 +261,9 @@ function classifyError(err, _req, _res, _next) {
     message = 'Network communication error.';
   }
 
-  // =====================
-  // 🎯 Generic fallbacks
-  // =====================
+  // ===============================
+  // =====🎯 Generic fallbacks=====
+  // ===============================
   else if (msg.includes('Invalid request')) {
     statusCode = 400;
     message = 'Invalid request.';
@@ -255,15 +272,15 @@ function classifyError(err, _req, _res, _next) {
     // message יוחלט למטה לפי כללי חשיפה
   }
 
-  // =====================
+  // =======================================================================
   // Respect explicit status flags (אם תחליטו להוסיף בעתיד err.statusCode)
-  // =====================
+  // =======================================================================
   if (typeof err?.statusCode === 'number') statusCode = err.statusCode;
   if (typeof err?.status === 'number') statusCode = err.status;
 
-  // =====================
-  // Message exposure policy
-  // =====================
+  // ==============================
+  // ===Message exposure policy===
+  // ==============================
   const isDev = process.env.NODE_ENV === 'development';
 
   // אם מותר לחשוף (למשל expose=true), נכבד

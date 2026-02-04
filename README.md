@@ -30,7 +30,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - API follows consistent patterns (central error handler, validators, and `meta` for list endpoints)
 
 **What makes this project “production-ready”:**
-- Role-based access control (RBAC) across the API
+- Dynamic RBAC across the API (DB-driven roles + permissions)
 - Hardened auth flows (rate limiting + validation + security headers)
 - Safe serializers that prevent leaking sensitive fields
 - Secure file access with explicit public vs protected routes
@@ -47,7 +47,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - **JWT Auth** `jsonwebtoken`
 - **Password hashing**: `bcrypt`
 - **Validation**: `express-validator`
-- **Security**: `helmet`, `express-rate-limit`, `cors`
+- **Security**: `helmet`, `express-rate-limit`, `cors`, `mongo sanitize` (keys hardening)
 - **File uploads**: `multer`
 - **Email**: `nodemailer`
 - **Environment**: `dotenv`
@@ -70,7 +70,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 ## Key Features
 ### Implemented:
 #### API Conventions (Consistency)
-- Consistent JSON responses with `message`
+- JSON responses include `message` consistently
 - List endpoints return `meta` (pagination) + data arrays
 - Central validation layer (request validation before DB)
 - Central error handler for consistent error responses
@@ -88,13 +88,14 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 #### Users / Profile
 - Get/update my profile
 - My projects “wall” with **pagination + sorting + meta**
+- Get other user profile, his projects with **pagination + sorting + meta**
 
 #### Projects
 - Create/update/delete projects (authorized roles)
 - Visibility rules:
   - Public viewers see **published** projects only
   - Owner/Admin see additional content
-- Project listing with filtering + pagination + sorting + meta
+- Listing supports filtering + pagination + sorting + meta
 - Safe serializers to prevent leaking sensitive fields
 
 #### Reviews
@@ -104,14 +105,21 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 
 #### Files API (secure)
 - Public: project images + profile images
-- Protected: project files (downloadables), approval documents (admin-only)
-- Access enforcement is role- and purchase-based
+- Protected:
+  - project files (downloadables) – owner/admin/buyer-after-purchase
+  - approval documents – permission-based (admin only by default)
+- Defense-in-depth: route-level RBAC + controller checks
 
 #### Admin Panel
 - User approval management (student/designer verification workflow)
 - Project publishing management
 - Reviews management
-- Basic stats endpoints
+- Admin stats endpoint
+- Dynamic roles management (CRUD) + assign role to user
+
+#### System Manager Panel (Read-Only)
+- System statistics endpoints (read-only dashboards)
+- Finance/revenue summary endpoints (read-only)
 
 #### Orders / Purchases (PayPal)
 - Create PayPal order → returns approve link
@@ -125,20 +133,28 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 
 ---
 
-## Roles & Permissions
+## Dynamic RBAC (Roles & Permissions)
 
-### Roles
-- Admin
-- Student / Designer
-- Customer (Buyer)
+This project implements **real dynamic RBAC**:
+- `User.role` stores a **role key** (string), e.g. `admin`, `systemManager`, `student`, `designer`,    `customer`, or any custom role created later.
+- `Role` documents in MongoDB store:
+  - `key` (role identifier)
+  - `permissions[]` (array of permission strings)
+  - `isSystem` (system roles cannot be deleted)
+- Authorization is enforced using middleware (permission checks), not hardcoded role checks.
 
-### Rules (high-level)
-- Only Student/Designer can upload projects
-- Admin approves Student/Designer accounts and publishes projects
-- Any registered user can purchase
-- Protected project files are accessible only to:
-  - Project owner / admin
-  - Buyers who completed purchase
+### Default system roles (typical)
+- `admin` – admin panel access (approvals, publishing, roles management)
+- `systemManager` – read-only system panel (stats/finance)
+- `student`, `designer`, `customer`
+
+### Role management (Admin)
+Roles can be created/updated/deleted **without code changes** using admin endpoints:
+- `GET /api/admin/roles`
+- `POST /api/admin/roles`
+- `PUT /api/admin/roles/:key`
+- `DELETE /api/admin/roles/:key`
+- `PUT /api/admin/users/:id/role` (assign role key to user)
 
 ---
 
@@ -271,6 +287,7 @@ RECAPTCHA_HOSTNAME=localhost
 ### Profile
 - `GET /profile/me` (includes paginated projects + meta)
 - `PUT /profile/me`
+- `GET /profile/:id` (includes paginated projects + meta)
 
 ### Projects
 - `GET /projects` (filtering + pagination + meta)
@@ -291,15 +308,28 @@ RECAPTCHA_HOSTNAME=localhost
   - `GET /files/projectImages/:file`
 - Protected:
   - `GET /files/projectFiles/:file` (owner/admin/purchased)
-  - `GET /files/approvalDocuments/:file` (admin only)
+  - `GET /files/approvalDocuments/:file` (permission-based, admin by default)
 
 ### Admin
-- `GET /admin/users` (admin-only)
-- `PUT /api/admin/users/:id/approval` (admin-only)
-- `GET /admin/projects` (admin-only)
-- `PUT /api/admin/projects/:id/publish` (admin-only)
-- `GET /admin/reviews` (admin-only)
-- `GET /admin/stats` (admin-only)
+- Users:
+  - `GET /admin/users` (admin-only)
+  - `PUT /admin/users/:id/approval` (admin-only)
+  - `PUT /admin/users/:id/role` (admin-only, dynamic RBAC)
+- Roles:
+  - `GET /admin/roles` (admin-only)
+  - `POST /admin/roles` (admin-only)
+  - `PUT /admin/roles/:key` (admin-only)
+  - `DELETE /admin/roles/:key` (admin-only)
+- Projects:
+  - `GET /admin/projects` (admin-only)
+  - `PUT /admin/projects/:id/publish` (admin-only)
+- Reviews:
+  - `GET /admin/reviews` (admin-only)
+  - `GET /admin/stats` (admin-only)
+
+### System (Read-only)
+- `GET /system/stats` (system-manager)
+- `GET /system/finance` (system-manager)
 
 ### Orders (PayPal)
 - `POST /orders/paypal/create`
@@ -319,7 +349,7 @@ RECAPTCHA_HOSTNAME=localhost
 ---
 
 ## Testing & Verification (Manual)
-- All core flows were tested manually with Postman and verified via MongoDB Compass:
+- Core flows tested manually with Postman and verified via MongoDB Compass:
 
 ### Auth
 - Register, email verification, resend verification
@@ -329,8 +359,8 @@ RECAPTCHA_HOSTNAME=localhost
 - reCAPTCHA v3 verification tested (valid token via local HTML helper + invalid/missing token cases)
 
 ### RBAC / Permissions
-- Public vs owner vs admin visibility behavior
 - Admin-only endpoints guarded correctly
+- System Manager endpoints guarded correctly
 - Protected file endpoints enforce correct access rules
 
 ### Projects
