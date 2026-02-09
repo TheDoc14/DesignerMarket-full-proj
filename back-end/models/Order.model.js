@@ -15,7 +15,7 @@ const orderSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['CREATED', 'APPROVED', 'PAID', 'PAYOUT_SENT', 'PAYOUT_FAILED', 'CANCELED'],
+      enum: ['CREATED', 'APPROVED', 'PAID', 'PAYOUT_SENT', 'PAYOUT_FAILED', 'CANCELED', 'EXPIRED'],
       default: 'CREATED',
     },
 
@@ -24,6 +24,9 @@ const orderSchema = new mongoose.Schema(
 
     payoutBatchId: { type: String, default: '' },
     payoutItemId: { type: String, default: '' },
+
+    canceledAt: { type: Date, default: null },
+    canceledReason: { type: String, default: '' },
   },
   { timestamps: true }
 );

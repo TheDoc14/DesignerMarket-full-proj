@@ -12,12 +12,15 @@ const {
   adminSetProjectPublish,
   adminListReviews,
   adminGetStats,
-
   adminListRoles,
   adminCreateRole,
   adminUpdateRole,
   adminDeleteRole,
   adminAssignUserRole,
+  adminListCategories,
+  adminUpdateCategory,
+  adminCreateCategory,
+  adminDeleteCategory,
 } = require('../controllers/admin.controller');
 const {
   userIdParam,
@@ -31,6 +34,10 @@ const {
   adminUpdateRoleValidators,
   adminDeleteRoleValidators,
   adminAssignUserRoleValidators,
+  listCategoriesQuery,
+  createCategoryValidators,
+  updateCategoryValidators,
+  categoryKeyParam,
 } = require('../validators/admin.validators');
 
 /**
@@ -147,6 +154,49 @@ router.delete(
   adminDeleteRoleValidators,
   validate,
   adminDeleteRole
+);
+
+// Categories CRUD //
+
+// GET /api/admin/categories?q=&page=&limit=
+// רשימת קטגוריות עם חיפוש/סינון
+router.get(
+  '/categories',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  listCategoriesQuery,
+  validate,
+  adminListCategories
+);
+
+// POST /api/admin/categories
+// יצירת קטגוריה חדשה
+router.post(
+  '/categories',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  createCategoryValidators,
+  validate,
+  adminCreateCategory
+);
+
+// PUT /api/admin/categories/:key
+// עדכון קטגוריה קיימת
+router.put(
+  '/categories/:key',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  categoryKeyParam,
+  updateCategoryValidators,
+  validate,
+  adminUpdateCategory
+);
+
+// DELETE /api/admin/categories/:key
+// מחיקת קטגוריה (רק אם לא משויכת לפרויקטים)
+router.delete(
+  '/categories/:key',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  categoryKeyParam,
+  validate,
+  adminDeleteCategory
 );
 
 module.exports = router;

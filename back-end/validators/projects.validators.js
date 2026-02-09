@@ -1,5 +1,6 @@
 // back-end/validators/projects.validators.js
 const { body } = require('express-validator');
+const Category = require('../models/Category.model');
 const {
   pageLimitQuery,
   searchQuery,
@@ -43,7 +44,20 @@ const createProjectValidators = [
     .withMessage('Price is required')
     .isFloat({ min: LIMITS.MIN_LIMIT })
     .withMessage('Price must be a valid number'),
-  body('category').optional().isString().withMessage('category must be a string').trim(),
+  body('category')
+    .optional()
+    .isString()
+    .withMessage('category must be a string')
+    .trim()
+    .custom(async (value) => {
+      const key = String(value || '')
+        .trim()
+        .toLowerCase();
+      if (!key) return true;
+      const exists = await Category.exists({ key });
+      if (!exists) throw new Error('Invalid category');
+      return true;
+    }),
   // mainImageIndex מגיע מה-body ובקונטרולר אתם משווים מול req.files.length
   // פה רק מוודאים שזה מספר שלם >=0. בדיקת "בתוך הטווח" נשארת בקונטרולר (כי תלויה בכמות הקבצים).
   body('mainImageIndex')

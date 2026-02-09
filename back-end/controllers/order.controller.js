@@ -5,6 +5,23 @@ const User = require('../models/Users.models');
 const { createPaypalOrder, capturePaypalOrder, sendPayout } = require('../utils/paypal.utils');
 
 const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT || 0); // אפשר 0 אם ויתרת
+const PENDING_TTL_MIN = Number(process.env.ORDER_PENDING_TTL_MIN || 30);
+
+const markOrderCanceled = async (order, reason = 'canceled') => {
+  order.status = 'CANCELED';
+  order.canceledAt = new Date();
+  order.canceledReason = reason;
+  await order.save();
+  return order;
+};
+
+const markOrderExpired = async (order, reason = 'expired') => {
+  order.status = 'EXPIRED';
+  order.canceledAt = new Date();
+  order.canceledReason = reason;
+  await order.save();
+  return order;
+};
 
 const paypalCreateOrder = async (req, res, next) => {
   try {
@@ -24,10 +41,26 @@ const paypalCreateOrder = async (req, res, next) => {
       projectId: project._id,
       buyerId: req.user.id,
       status: { $in: ['CREATED', 'APPROVED'] },
-    }).select('_id status paypalOrderId');
+    }).select('_id status paypalOrderId updatedAt createdAt');
 
     if (pendingOrder) {
-      throw new Error('Order already pending for this project');
+      const ttlMs = PENDING_TTL_MIN * 60 * 1000;
+      const last = pendingOrder.updatedAt || pendingOrder.createdAt;
+      const isStale = last && Date.now() - new Date(last).getTime() > ttlMs;
+
+      // אם ההזמנה "ישנה" – נסגור אותה כדי לא לחסום את המשתמש
+      if (isStale) {
+        await markOrderExpired(pendingOrder, 'auto-expired (retry allowed)');
+      } else {
+        const e = new Error('Order already pending for this project');
+        e.statusCode = 409;
+        e.details = {
+          orderId: String(pendingOrder._id),
+          paypalOrderId: pendingOrder.paypalOrderId || '',
+          status: pendingOrder.status,
+        };
+        throw e;
+      }
     }
 
     const seller = await User.findById(project.createdBy).select('paypalEmail');
@@ -156,4 +189,88 @@ const paypalCaptureOrder = async (req, res, next) => {
   }
 };
 
-module.exports = { paypalCreateOrder, paypalCaptureOrder };
+// PayPal שולח את המשתמש חזרה ל-returnUrl שלנו אחרי התשלום (או לבטל ל-cancelUrl אם ביטל)
+const paypalReturn = async (req, res, next) => {
+  try {
+    // PayPal שולח token=PAYPAL_ORDER_ID ברוב הזרימות
+    const paypalOrderId = String(req.query.token || '').trim();
+    if (!paypalOrderId) throw new Error('Missing PayPal order id');
+
+    const order = await Order.findOne({ paypalOrderId });
+    if (!order) throw new Error('Order not found');
+
+    // אם כבר שולם/טופל — לא שוברים כלום
+    if (['PAID', 'PAYOUT_SENT', 'PAYOUT_FAILED'].includes(order.status)) {
+      return res.status(200).json({
+        message: 'PayPal return OK',
+        order: { id: String(order._id), status: order.status },
+      });
+    }
+
+    // אם המשתמש חזר בלי capture (או משהו נשבר בדרך) — נסמן כ-APPROVED בלבד
+    // (אפשר גם להשאיר CREATED, אבל APPROVED עוזר להבין שהמשתמש הגיע מפייפאל)
+    if (order.status === 'CREATED') {
+      order.status = 'APPROVED';
+      await order.save();
+    }
+
+    return res.status(200).json({
+      message: 'PayPal return OK',
+      order: { id: String(order._id), status: order.status, paypalOrderId: order.paypalOrderId },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// אם המשתמש ביטל את התשלום בפייפאל — נסמן את ההזמנה כ-canceled כדי לא לחסום אותו
+const paypalCancel = async (req, res, next) => {
+  try {
+    const paypalOrderId = String(req.query.token || '').trim();
+    if (!paypalOrderId) throw new Error('Missing PayPal order id');
+
+    const order = await Order.findOne({ paypalOrderId });
+    if (!order) throw new Error('Order not found');
+
+    // אם עוד pending — לבטל כדי לא לחסום קנייה עתידית
+    if (['CREATED', 'APPROVED'].includes(order.status)) {
+      await markOrderCanceled(order, 'paypal-cancel');
+    }
+
+    return res.status(200).json({
+      message: 'PayPal cancel OK',
+      order: { id: String(order._id), status: order.status, paypalOrderId: order.paypalOrderId },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// משתמש יכול לבטל בעצמו הזמנה pending כדי לא להיתקע
+const cancelMyPendingOrder = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) throw new Error('Order not found');
+
+    if (String(order.buyerId) !== String(req.user.id)) throw new Error('Access denied');
+
+    if (!['CREATED', 'APPROVED'].includes(order.status)) throw new Error('Invalid order state');
+
+    await markOrderCanceled(order, 'user-cancel');
+
+    return res.status(200).json({
+      message: 'Order canceled',
+      order: { id: String(order._id), status: order.status },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  paypalCreateOrder,
+  paypalCaptureOrder,
+  paypalReturn,
+  paypalCancel,
+  cancelMyPendingOrder,
+};
