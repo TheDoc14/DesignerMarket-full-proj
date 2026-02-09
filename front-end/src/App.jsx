@@ -11,11 +11,13 @@ import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
 import { AuthProvider, useAuth } from './Context/AuthContext';
 import Navbar from './Components/Navbar';
+import axios from 'axios';
+import { getFriendlyError } from './Constants/errorMessages';
 
 // ייבוא עמודי המערכת
 import Login from './Pages/Login';
 import Register from './Pages/Register';
-import Dashboard from './Pages/Dashboard';
+import PersonalDashboard from './Pages/PersonalDashboard';
 import ProjectLibrary from './Pages/ProjectLibrary';
 import AddProject from './Pages/AddProject';
 import VerifyEmail from './Pages/VerifyEmail';
@@ -33,7 +35,28 @@ import ManageProjects from './Pages/Admin/ManageProjects';
 import UserApproval from './Pages/Admin/UserApproval';
 import CreateAdmin from './Pages/Admin/CreateAdmin';
 import ManageReviews from './Pages/Admin/ManageReviews';
+import ManageRoles from './Pages/Admin/ManageRoles';
+import SystemDashboard from './Pages/systemManager/SystemDashboard';
+import ManageCategories from './Pages/Admin/ManageCategories.jsx';
 
+// --- 🛡️ הוספת המתרגם האוטומטי (Axios Interceptor) ---
+// אנחנו שמים את זה כאן כדי שזה יפעל על כל קריאת axios בפרויקט
+axios.interceptors.response.use(
+  (response) => response, // אם הכל תקין, פשוט תמשיך
+  (error) => {
+    // שליפת ההודעה מהשרת
+    const serverMsg = error.response?.data?.message;
+
+    // תרגום ההודעה לעברית באמצעות המילון שיצרנו ב-constants
+    const friendlyMessage = getFriendlyError(serverMsg);
+
+    // הצמדת ההודעה המתורגמת לאובייקט השגיאה
+    // כך שבכל עמוד נוכל להשתמש ב: err.friendlyMessage
+    error.friendlyMessage = friendlyMessage;
+
+    return Promise.reject(error);
+  }
+);
 function App() {
   const initialOptions = {
     'client-id':
@@ -61,7 +84,10 @@ function App() {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/projects" element={<ProjectLibrary />} />
               <Route path="/add-project" element={<AddProject />} />
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/PersonalDashboard"
+                element={<PersonalDashboard />}
+              />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/edit-project/:id" element={<EditProject />} />
@@ -70,12 +96,19 @@ function App() {
 
               {/* --- נתיבי ניהול (אדמין בלבד) --- */}
               <Route path="/admin">
+                <Route path="system-stats" element={<SystemDashboard />} />
+
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="manage-users" element={<ManageUsers />} />
                 <Route path="manage-projects" element={<ManageProjects />} />
                 <Route path="user-approval" element={<UserApproval />} />
                 <Route path="create-admin" element={<CreateAdmin />} />
                 <Route path="manage-reviews" element={<ManageReviews />} />
+                <Route path="manage-roles" element={<ManageRoles />} />
+                <Route
+                  path="manage-categories"
+                  element={<ManageCategories />}
+                />
               </Route>
 
               {/* דף 404 */}

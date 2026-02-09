@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../PublicPages.css';
+import './AdminDesign.css';
 
 const UserApproval = () => {
   const [users, setUsers] = useState([]);
@@ -75,12 +75,7 @@ const UserApproval = () => {
     }
   };
 
-  if (loading)
-    return (
-      <div style={{ padding: '50px', textAlign: 'center' }}>
-        טוען משתמשים ממתינים...
-      </div>
-    );
+  if (loading) return <div>טוען משתמשים ממתינים...</div>;
 
   return (
     <div className="admin-container">
@@ -89,12 +84,7 @@ const UserApproval = () => {
       <div className="table-wrapper">
         <table className="admin-table">
           <thead>
-            <tr
-              style={{
-                background: '#f8f9fa',
-                borderBottom: '2px solid #dee2e6',
-              }}
-            >
+            <tr>
               <th>שם משתמש</th>
               <th>אימייל</th>
               <th>תפקיד</th>
@@ -104,7 +94,7 @@ const UserApproval = () => {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} style={{ borderBottom: '1px solid #eee' }}>
+              <tr key={u.id}>
                 <td>{u.username}</td>
                 <td>{u.email}</td>
                 <td>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../Context/AuthContext';
 import { PayPalButtons } from '@paypal/react-paypal-js';
+import projectDefault from '../DefaultPics/projectDefault.png';
 import './componentStyle.css';
 
 const Popup = ({ project, onClose, onUpdate }) => {
@@ -10,7 +11,7 @@ const Popup = ({ project, onClose, onUpdate }) => {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState({ type: '', msg: '' });
+  const [feedback, setFeedback] = useState({ type: '', msg: null });
 
   const [editData, setEditData] = useState({
     title: project?.title || '',
@@ -22,9 +23,12 @@ const Popup = ({ project, onClose, onUpdate }) => {
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
   const [selectedImage, setSelectedImage] = useState(null);
-  const fileInputRef = useRef(null);
+  const projectId = project._id || project.id;
+  const storageKey = `pending_paypal_${projectId}`;
 
-  // בדיקה האם היוצר קיים
+  // שליפת שם המעצב בצורה בטוחה
+  const creatorName =
+    project?.createdBy?.username || project?.creatorName || 'מעצב במערכת';
   const isCreatorMissing =
     !project?.createdBy ||
     (typeof project.createdBy === 'object' && !project.createdBy?._id);
@@ -38,29 +42,115 @@ const Popup = ({ project, onClose, onUpdate }) => {
 
   const showFeedback = (type, msg) => {
     setFeedback({ type, msg });
-    setTimeout(() => setFeedback({ type: '', msg: '' }), 4000);
+    const timer = type === 'success' ? 10000 : 6000;
+    setTimeout(() => setFeedback({ type: '', msg: null }), timer);
   };
 
+  // טיפול בתמונה שבורה
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = projectDefault;
+  };
+
+  // --- לוגיקת PayPal ---
+  const createOrder = async () => {
+    if (isCreatorMissing) {
+      showFeedback('error', 'לא ניתן לרכוש פרויקט זה (חשבון המוכר אינו פעיל).');
+      return;
+    }
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/api/orders/paypal/create`,
+        { projectId: projectId },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          validateStatus: (s) => s < 500,
+        }
+      );
+
+      if (response.status === 409) {
+        const ordersRes = await axios.get('http://localhost:5000/api/orders', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const found = (ordersRes.data.orders || []).find(
+          (o) =>
+            String(o.projectId?._id || o.projectId) === String(projectId) &&
+            ['CREATED', 'APPROVED'].includes(o.status)
+        );
+        return found?.paypalOrderId || localStorage.getItem(storageKey);
+      }
+      const newId = response.data.order.paypalOrderId;
+      localStorage.setItem(storageKey, newId);
+      return newId;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const onApprove = async (data) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `http://localhost:5000/api/orders/paypal/capture`,
+        { paypalOrderId: data.orderID },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      localStorage.removeItem(storageKey);
+
+      // הודעת הצלחה עם הפניה לאזור האישי
+      showFeedback(
+        'success',
+        <span>
+          הרכישה הושלמה! הקבצים ממתינים לך ב-
+          <a href="/PersonalDashboard">אזור האישי שלך</a>
+        </span>
+      );
+
+      if (onUpdate) onUpdate();
+      setTimeout(onClose, 8000);
+    } catch (err) {
+      showFeedback('error', 'שגיאה בהשלמת הרכישה.');
+    }
+  };
+
+  // --- לוגיקת תגובות ---
   const fetchReviews = useCallback(async () => {
     try {
       setReviewsLoading(true);
-      const projectId = project._id || project.id;
       const res = await axios.get(
         `http://localhost:5000/api/reviews?projectId=${projectId}`
       );
       setReviews(res.data.reviews || []);
     } catch (err) {
-      console.error('Failed to load reviews', err);
+      console.error('Reviews load failed', err);
     } finally {
       setReviewsLoading(false);
     }
-  }, [project]);
+  }, [projectId]);
 
   useEffect(() => {
     if (project) fetchReviews();
   }, [project, fetchReviews]);
 
-  // פונקציית שמירת עריכה
+  const handleAddReview = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `http://localhost:5000/api/reviews`,
+        { projectId, rating: newRating, text: newComment },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setNewComment('');
+      fetchReviews();
+      if (onUpdate) onUpdate(); // עדכון הקטלוג למעלה
+      showFeedback('success', 'התגובה נוספה והדירוג הממוצע עודכן!');
+    } catch (err) {
+      showFeedback('error', 'שגיאה בהוספת תגובה.');
+    }
+  };
+
   const handleSaveProject = async () => {
     try {
       setLoading(true);
@@ -68,13 +158,9 @@ const Popup = ({ project, onClose, onUpdate }) => {
       const data = new FormData();
       data.append('title', editData.title);
       data.append('description', editData.description);
-      data.append('category', editData.category);
       data.append('price', editData.price);
       if (selectedImage) data.append('image', selectedImage);
 
-      const projectId = project._id || project.id;
-
-      // גם כאן - וודאי ש-response מוגדר
       const response = await axios.put(
         `http://localhost:5000/api/projects/${projectId}`,
         data,
@@ -85,88 +171,16 @@ const Popup = ({ project, onClose, onUpdate }) => {
           },
         }
       );
-
       if (onUpdate) onUpdate(response.data.project);
       setIsEditing(false);
       showFeedback('success', 'הפרויקט עודכן בהצלחה!');
     } catch (err) {
-      const errMsg =
-        err.response?.data?.message || 'אירעה שגיאה בעדכון הפרויקט.';
-      showFeedback('error', errMsg);
+      // במקום הודעה קבועה, נשתמש ב-friendlyMessage שנוצר ב-App.js
+      showFeedback('error', err.friendlyMessage || 'עדכון הפרויקט נכשל.');
     } finally {
       setLoading(false);
     }
   };
-
-  // --- לוגיקת PAYPAL מתוקנת ---
-  const createOrder = async () => {
-    if (isCreatorMissing) {
-      showFeedback(
-        'error',
-        'לא ניתן לרכוש פרויקט זה כיוון שחשבון המוכר אינו פעיל.'
-      );
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        'http://localhost:5000/api/orders/paypal/create',
-        { projectId: project._id || project.id },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      return response.data.order.paypalOrderId;
-    } catch (err) {
-      console.error('PayPal Create Error:', err);
-      showFeedback(
-        'error',
-        err.response?.data?.message || 'שגיאה ביצירת הזמנה'
-      );
-      throw err;
-    }
-  };
-
-  const onApprove = async (data) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        'http://localhost:5000/api/orders/paypal/capture',
-        { paypalOrderId: data.orderID },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      showFeedback('success', 'התשלום בוצע בהצלחה! הפרויקט זמין עבורך.');
-      if (onUpdate) onUpdate();
-      setTimeout(onClose, 2000);
-    } catch (err) {
-      console.error('PayPal Capture Error:', err);
-      showFeedback('error', 'התשלום נכשל בעדכון המערכת.');
-    }
-  };
-
-  const handleAddReview = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `http://localhost:5000/api/reviews`,
-        {
-          projectId: project._id || project.id,
-          rating: newRating,
-          text: newComment,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setNewComment('');
-      fetchReviews();
-      showFeedback('success', 'התגובה נוספה!');
-      if (onUpdate) onUpdate();
-    } catch (err) {
-      showFeedback(
-        'error',
-        err.response?.data?.message || 'שגיאה בהוספת תגובה'
-      );
-    }
-  };
-
   if (!project) return null;
 
   return (
@@ -175,14 +189,12 @@ const Popup = ({ project, onClose, onUpdate }) => {
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
-        <br />
 
         {feedback.msg && (
           <div className={`popup-feedback ${feedback.type}`}>
             {feedback.msg}
           </div>
         )}
-        <br />
 
         <div className="popup-scroll-container">
           <div className="popup-header">
@@ -198,9 +210,8 @@ const Popup = ({ project, onClose, onUpdate }) => {
               <div className="title-area">
                 <h2>{project.title}</h2>
                 <span className="creator-tag">
-                  מאת:{' '}
-                  {project.creatorName ||
-                    (isCreatorMissing ? 'חשבון לא פעיל' : 'מעצב במערכת')}
+                  מאת: <strong>{creatorName}</strong>
+                  {isCreatorMissing && <span> (חשבון לא פעיל)</span>}
                 </span>
               </div>
             )}
@@ -217,6 +228,7 @@ const Popup = ({ project, onClose, onUpdate }) => {
                   }
                   alt={project.title}
                   className="main-popup-img"
+                  onError={handleImageError} // טיפול בתמונה שבורה
                 />
               </div>
 
@@ -245,33 +257,24 @@ const Popup = ({ project, onClose, onUpdate }) => {
                 ) : (
                   <div className="view-mode">
                     <div className="price-row">
-                      <span className="label">מחיר פרויקט:</span>
+                      <span className="label">מחיר פרויקט:</span>{' '}
                       <span className="value">₪{project.price}</span>
                     </div>
-
                     {isCreatorMissing ? (
-                      <div
-                        className="unavailable-notice"
-                        style={{
-                          color: 'red',
-                          fontWeight: 'bold',
-                          margin: '15px 0',
-                        }}
-                      >
-                        ⚠️ פרויקט זה אינו זמין לרכישה כרגע (חשבון המוכר אינו
-                        פעיל).
+                      <div className="unavailable-notice">
+                        ⚠️ רכישה חסומה - המוכר אינו פעיל במערכת.
                       </div>
                     ) : (
                       <>
                         <p className="desc-text">{project.description}</p>
                         {currentUser && !isOwner && (
-                          <div
-                            className="purchase-section"
-                            style={{ marginTop: '20px' }}
-                          >
+                          <div className="purchase-section">
                             <PayPalButtons
                               createOrder={createOrder}
                               onApprove={onApprove}
+                              onError={() =>
+                                showFeedback('error', 'שגיאת PayPal.')
+                              }
                             />
                           </div>
                         )}
@@ -281,75 +284,36 @@ const Popup = ({ project, onClose, onUpdate }) => {
                 )}
               </div>
             </div>
+
             <hr className="divider" />
-            {/* כאן יבואו התגובות */}
-            {/* --- מדור תגובות --- */}
+
             <div className="reviews-section">
               <h3>תגובות ודירוגים ({reviews.length})</h3>
-
-              {/* רשימת תגובות */}
               <div className="reviews-list">
                 {reviewsLoading ? (
                   <p>טוען תגובות...</p>
-                ) : reviews.length > 0 ? (
-                  reviews.map((rev, index) => {
-                    if (!rev) return null;
-
-                    // שימוש ב-userId במקום user, וב-username במקום name כפי שמופיע ב-Backend
-                    const reviewerName = rev.userId?.username || 'משתמש מערכת';
-
-                    return (
-                      <div
-                        key={rev._id || `review-${index}`}
-                        className="review-item"
-                      >
-                        <div className="review-header">
-                          <div className="review-user-info">
-                            {/* בדיקה כפולה: userId או user (לפי מה שהסוריאלייזר מחזיר) */}
-                            {(rev.userId?.profileImage ||
-                              rev.user?.profileImage) && (
-                              <img
-                                src={
-                                  rev.userId?.profileImage ||
-                                  rev.user?.profileImage
-                                }
-                                alt="פרופיל"
-                                className="review-avatar"
-                              />
-                            )}
-                            <strong>
-                              {rev.userId?.username ||
-                                rev.user?.username ||
-                                'משתמש'}
-                            </strong>
-                          </div>
-                          <span className="review-rating">
-                            {'⭐'.repeat(
-                              Math.max(0, Math.min(5, Number(rev.rating) || 0))
-                            )}
-                          </span>
-                        </div>
-                        <p className="review-text">{rev.text}</p>
-                        <small className="review-date">
-                          {rev.createdAt
-                            ? new Date(rev.createdAt).toLocaleDateString(
-                                'he-IL'
-                              )
-                            : ''}
-                        </small>
-                      </div>
-                    );
-                  })
                 ) : (
-                  <p className="no-reviews">אין עדיין תגובות לפרויקט זה.</p>
+                  reviews.map((rev, idx) => (
+                    <div key={rev._id || idx} className="review-item">
+                      <div className="review-header">
+                        {/* תמיכה בנתיבי שם משתמש שונים מה-API */}
+                        <strong>
+                          {rev.userId?.username ||
+                            rev.user?.username ||
+                            'משתמש מערכת'}
+                        </strong>
+                        <span>{'⭐'.repeat(rev.rating)}</span>
+                      </div>
+                      <p>{rev.text}</p>
+                    </div>
+                  ))
                 )}
               </div>
-              {/* טופס הוספת תגובה - רק למשתמשים מחוברים שאינם הבעלים */}
+
               {currentUser && !isOwner && (
                 <form className="add-review-form" onSubmit={handleAddReview}>
-                  <h4>הוסף תגובה</h4>
+                  <h4>הוסף חוות דעת</h4>
                   <div className="rating-select">
-                    <span>דירוג:</span>
                     {[1, 2, 3, 4, 5].map((num) => (
                       <button
                         type="button"
@@ -381,8 +345,12 @@ const Popup = ({ project, onClose, onUpdate }) => {
             <div className="footer-actions">
               {isEditing ? (
                 <>
-                  <button className="save-btn" onClick={handleSaveProject}>
-                    שמור שינויים
+                  <button
+                    className="save-btn"
+                    onClick={handleSaveProject}
+                    disabled={loading}
+                  >
+                    שמור
                   </button>
                   <button
                     className="cancel-btn"

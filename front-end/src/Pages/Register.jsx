@@ -49,30 +49,52 @@ const Register = () => {
     setError(null);
 
     try {
-      // 1. הפקת טוקן reCAPTCHA
       const captchaToken = await executeRecaptcha('register');
 
-      // 2. הכנת הנתונים למשלוח
       const dataToSend = new FormData();
       dataToSend.append('username', formData.username);
       dataToSend.append('email', formData.email);
       dataToSend.append('password', formData.password);
       dataToSend.append('role', formData.role);
-      dataToSend.append('captchaToken', captchaToken); // הטוקן נשלח כאן
+      dataToSend.append('captchaToken', captchaToken);
 
       if (formData.approvalDocument) {
         dataToSend.append('approvalDocument', formData.approvalDocument);
       }
 
-      // 3. שליחה לשרת
       await axios.post(`${API_BASE_URL}/api/auth/register`, dataToSend, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setSuccess(true);
     } catch (err) {
+      // חילוץ ההודעה מה-Middleware
       const serverMsg = err.response?.data?.message;
-      setError(serverMsg || 'שגיאה בתהליך ההרשמה.');
+
+      // מפת תרגומים המבוססת על error.middleware.js
+      const errorTranslations = {
+        'User already exists with this email.':
+          'כבר קיים משתמש עם כתובת אימייל זו.',
+        'Username already taken.': 'שם המשתמש כבר תפוס, נסה שם אחר.',
+        'Approval document is required for student/designer.':
+          'חובה לצרף מסמך אישור עבור סטודנט או מעצב.',
+
+        'Approval document is not allowed for customers.':
+          'לקוח אינו רשאי להעלות מסמך אישור.',
+        'Unsupported file type.': 'סוג הקובץ אינו נתמך (העלה PDF, JPG או PNG).',
+        'File too large.': 'הקובץ גדול מדי, הגבלת המערכת היא עד 5MB.',
+        'Password is too short': 'הסיסמה קצרה מדי, עליה להכיל לפחות 6 תווים.',
+        'Internal Server Error': 'אירעה שגיאה בשרת, אנא נסה שוב מאוחר יותר.',
+        'Too many requests. Please try again later.':
+          'הגעת למגבלת הבקשות. אנא נסה שוב מאוחר יותר.',
+        'Invalid role.': 'תפקיד משתמש לא תקין.', // השגיאה שקיבלת קודם
+        'Invalid role selected.': 'התפקיד שנבחר אינו מורשה במערכת.',
+      };
+
+      // הצגת התרגום או הודעה גנרית
+      const errorMessage =
+        errorTranslations[serverMsg] || serverMsg || 'שגיאה בתהליך ההרשמה.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -145,7 +167,22 @@ const Register = () => {
               <option value="designer">מעצב תעשייתי</option>
             </select>
           </div>
-
+          {(formData.role === 'student' || formData.role === 'designer') && (
+            <div className="file-upload-area">
+              <label>
+                {formData.role === 'student'
+                  ? '📁 צרף אישור לימודים:'
+                  : '📁 צרף תעודת מעצב:'}
+              </label>
+              <input
+                name="approvalDocument"
+                type="file"
+                onChange={handleChange}
+                accept=".pdf,.jpg,.jpeg,.png"
+                required
+              />
+            </div>
+          )}
           <div className="form-group">
             <label>סיסמה</label>
             <input
@@ -157,24 +194,6 @@ const Register = () => {
             />
           </div>
 
-          {(formData.role === 'student' || formData.role === 'designer') && (
-            <div className="file-upload-area">
-              <label style={{ fontWeight: 'bold' }}>
-                {formData.role === 'student'
-                  ? '📁 צרף אישור לימודים:'
-                  : '📁 צרף תעודת מעצב:'}
-              </label>
-              <input
-                name="approvalDocument"
-                type="file"
-                onChange={handleChange}
-                accept=".pdf,.jpg,.jpeg,.png"
-                required
-                style={{ marginTop: '10px' }}
-              />
-            </div>
-          )}
-
           <button type="submit" className="primary-btn">
             הרשמה למערכת
           </button>
@@ -182,7 +201,7 @@ const Register = () => {
         <div className="auth-footer">
           <span>כבר יש לך חשבון? </span>
           <button className="link-btn" onClick={() => navigate('/login')}>
-            הירשם
+            התחבר
           </button>
         </div>
       </div>

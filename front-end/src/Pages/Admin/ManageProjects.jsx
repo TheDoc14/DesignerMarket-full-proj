@@ -2,16 +2,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../../Context/AuthContext';
 import Popup from '../../Components/Popup';
+import {
+  Trash2,
+  Edit3,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Search,
+  Filter,
+} from 'lucide-react'; // הוספת אייקונים לבהירות
 import '../../App.css';
 
 const ManageProjects = () => {
   const { user: currentUser } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // שליטה על פופאפ צפייה ועריכה
   const [activeProject, setActiveProject] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+
   const [editData, setEditData] = useState({
     title: '',
     description: '',
@@ -28,7 +36,6 @@ const ManageProjects = () => {
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
   });
 
-  // שליפה מתוקנת - שולחת רק פרמטרים שאינם ריקים
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
@@ -37,16 +44,13 @@ const ManageProjects = () => {
       if (filters.published !== '') queryParams.published = filters.published;
 
       const params = new URLSearchParams(queryParams).toString();
-
       const res = await axios.get(
         `http://localhost:5000/api/admin/projects?${params}`,
         getAuthHeader()
       );
-
-      // לפי ה-Controller שלך, הנתונים חוזרים בתוך res.data.projects
       setProjects(res.data.projects || []);
     } catch (err) {
-      console.error('טעינת פרויקטים נכשלה', err.response?.data || err.message);
+      console.error('טעינת פרויקטים נכשלה', err.message);
     } finally {
       setLoading(false);
     }
@@ -56,7 +60,28 @@ const ManageProjects = () => {
     if (currentUser?.role === 'admin') fetchProjects();
   }, [currentUser, fetchProjects]);
 
-  // שינוי סטטוס פרסום (אדמין)
+  // פונקציית מחיקה חדשה
+  const handleDeleteProject = async (e, projectId) => {
+    e.stopPropagation();
+    if (
+      !window.confirm(
+        'האם אתה בטוח שברצונך למחוק פרויקט זה לצמיתות? פעולה זו תמחק גם את כל הקבצים והביקורות הקשורים.'
+      )
+    )
+      return;
+
+    try {
+      await axios.delete(
+        `http://localhost:5000/api/projects/${projectId}`,
+        getAuthHeader()
+      );
+      alert('הפרויקט נמחק בהצלחה');
+      fetchProjects();
+    } catch (err) {
+      alert('מחיקת הפרויקט נכשלה');
+    }
+  };
+
   const togglePublish = async (e, projectId, currentStatus) => {
     e.stopPropagation();
     try {
@@ -71,7 +96,6 @@ const ManageProjects = () => {
     }
   };
 
-  // פתיחת מצב עריכה
   const handleEditClick = (e, project) => {
     e.stopPropagation();
     setEditData({
@@ -83,7 +107,6 @@ const ManageProjects = () => {
     setIsEditing(true);
   };
 
-  // שמירת עריכה (משתמש בראוט הכללי של פרויקטים)
   const handleSaveEdit = async () => {
     try {
       const id = activeProject._id || activeProject.id;
@@ -97,111 +120,136 @@ const ManageProjects = () => {
       setActiveProject(null);
       fetchProjects();
     } catch (err) {
-      console.error('שגיאה בעדכון', err.response?.data);
-      alert('עדכון הפרויקט נכשל. וודא שהבאקנד מאפשר לאדמין לערוך בראוט זה.');
+      alert('עדכון הפרויקט נכשל.');
     }
   };
 
   if (!currentUser || currentUser.role !== 'admin')
-    return <div className="container">אין הרשאות.</div>;
+    return <div className="container">אין הרשאות ניהול למשתמש זה.</div>;
 
   return (
-    <div
-      className="admin-container"
-      style={{ direction: 'rtl', padding: '20px' }}
-    >
-      <h1>ניהול פרויקטים</h1>
+    <div className="admin-container">
+      <header className="admin-header">
+        <h1>🛠️ פאנל ניהול פרויקטים</h1>
+        <p>צפייה, אישור, עריכה או הסרה של תכנים מהפלטפורמה</p>
+      </header>
 
-      {/* סרגל כלים */}
-      <div
-        className="admin-toolbar"
-        style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}
-      >
-        <input
-          placeholder="חפש פרויקט..."
-          value={filters.q}
-          onChange={(e) =>
-            setFilters({ ...filters, q: e.target.value, page: 1 })
-          }
-          className="admin-input"
-          style={{ flex: 1, padding: '8px' }}
-        />
-        <select
-          value={filters.published}
-          onChange={(e) =>
-            setFilters({ ...filters, published: e.target.value, page: 1 })
-          }
-          style={{ padding: '8px' }}
-        >
-          <option value="">כל הסטטוסים</option>
-          <option value="true">מפורסמים ✅</option>
-          <option value="false">ממתינים ⏳</option>
-        </select>
+      {/* סרגל כלים משופר */}
+      <div className="admin-toolbar">
+        <div>
+          <input
+            placeholder="חפש לפי כותרת או תיאור..."
+            value={filters.q}
+            onChange={(e) =>
+              setFilters({ ...filters, q: e.target.value, page: 1 })
+            }
+            className="admin-input"
+          />
+        </div>
+        <div>
+          <select
+            value={filters.published}
+            onChange={(e) =>
+              setFilters({ ...filters, published: e.target.value, page: 1 })
+            }
+          >
+            <option value="">כל הסטטוסים</option>
+            <option value="true">מפורסמים בלבד</option>
+            <option value="false">ממתינים לאישור</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
-        <p>טוען פרויקטים...</p>
+        <div>טוען נתונים...</div>
       ) : (
         <div className="table-responsive">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>כותרת</th>
+                <th>פרטי הפרויקט</th>
                 <th>יוצר</th>
                 <th>סטטוס</th>
-                <th>פעולות</th>
+                <th>ניהול</th>
               </tr>
             </thead>
             <tbody>
-              {projects.map((p) => {
-                const id = p._id || p.id;
-                return (
-                  <tr
-                    key={id}
-                    onClick={() => setActiveProject(p)}
-                    className="clickable-row"
-                  >
-                    <td style={{ fontWeight: 'bold' }}>{p.title}</td>
-                    <td>{p.createdBy?.username || 'מעצב'}</td>
-                    <td>
-                      <span
-                        className={`status-tag ${p.isPublished ? 'approved' : 'pending'}`}
-                      >
-                        {p.isPublished ? 'מפורסם' : 'ממתין'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-actions-cell">
-                        <button
-                          onClick={(e) => handleEditClick(e, p)}
-                          className="btn-edit-small"
+              {projects.length > 0 ? (
+                projects.map((p) => {
+                  const id = p._id || p.id;
+                  return (
+                    <tr
+                      key={id}
+                      onClick={() => setActiveProject(p)}
+                      className="clickable-row"
+                    >
+                      <td>
+                        <div>{p.title}</div>
+                        <div>{p.category}</div>
+                      </td>
+                      <td>{p.createdBy?.username || 'משתמש מערכת'}</td>
+                      <td>
+                        <span
+                          className={`status-tag ${p.isPublished ? 'approved' : 'pending'}`}
                         >
-                          ✏️ ערוך
-                        </button>
-                        <button
-                          className={p.isPublished ? 'danger' : 'approve-btn'}
-                          onClick={(e) => togglePublish(e, id, p.isPublished)}
-                        >
-                          {p.isPublished ? 'הסר' : 'אשר'}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                          {p.isPublished ? (
+                            <CheckCircle size={14} />
+                          ) : (
+                            <Clock size={14} />
+                          )}
+                          {p.isPublished ? 'מפורסם' : 'ממתין'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-actions-cell">
+                          <button
+                            onClick={(e) => handleEditClick(e, p)}
+                            className="btn-icon"
+                            title="ערוך"
+                          >
+                            <Edit3 size={18} color="#0984e3" />
+                          </button>
+                          <button
+                            onClick={(e) => togglePublish(e, id, p.isPublished)}
+                            className="btn-icon"
+                            title={p.isPublished ? 'הסר פרסום' : 'אשר פרסום'}
+                          >
+                            {p.isPublished ? (
+                              <XCircle size={18} color="#d63031" />
+                            ) : (
+                              <CheckCircle size={18} color="#00b894" />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteProject(e, id)}
+                            className="btn-icon"
+                            title="מחק"
+                          >
+                            <Trash2 size={18} color="#e17055" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="4">לא נמצאו פרויקטים התואמים לחיפוש.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* מודאל עריכה (אדמין) */}
+      {/* מודאל עריכה (נשאר דומה עם שיפור עיצובי קל) */}
       {isEditing && (
         <div className="modal-overlay" onClick={() => setIsEditing(false)}>
           <div
             className="modal-content admin-edit-modal"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="profile-main-title">עריכת פרויקט (ניהול)</h2>
+            <h2 className="profile-main-title">✏️ עריכת פרטי פרויקט</h2>
             <div className="admin-vertical-form">
               <div className="form-group">
                 <label className="form-label">כותרת הפרויקט</label>
@@ -238,12 +286,12 @@ const ManageProjects = () => {
           </div>
         </div>
       )}
-      {/* פופאפ צפייה רגיל (נפתח רק כשלא בעריכה) */}
-      {activeProject && (
+
+      {activeProject && !isEditing && (
         <Popup
           project={activeProject}
           onClose={() => setActiveProject(null)}
-          onUpdate={() => fetchProjects()} // מעכשיו רענון יעבוד מיד אחרי שמירה/מחיקה
+          onUpdate={() => fetchProjects()}
         />
       )}
     </div>

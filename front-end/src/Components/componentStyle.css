@@ -1,532 +1,453 @@
-/* פלטת צבעים ומשתנים גלובליים */
+/* componentStyle.css - Turquoise Premium Fix */
+
 :root {
-  --primary-teal: #1a4d4a;
-  --primary-teal-hover: #23635f;
-  --accent-orange: #d35400;
-  --accent-orange-light: #e67e22;
-  --error-red: #e74c3c;
-  --success-green: #27ae60;
-  --text-light: #ffffff;
-  --text-dark: #2c3e50;
-  --text-muted: #7f8c8d;
-  --bg-light: #f8f9fa;
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 25px 50px rgba(0, 0, 0, 0.2);
-  --transition: all 0.3s ease;
-  --radius-lg: 24px;
-  --radius-md: 12px;
+  --teal-bg: #006D77;
+  /* הטורקיז שאהבת */
+  --teal-accent: #83C5BE;
+  /* טורקיז בהיר להדגשות */
+  --white-text: #ffffff;
+  --sidebar-width: 300px;
 }
 
-/* Navbar */
-.navbar {
+/* --- Sidebar Container --- */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  /* מתחיל מחוץ למסך */
+  width: var(--sidebar-width);
+  height: 100vh;
+  background-color: var(--teal-bg);
+  transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  /* פתיחה חלקה */
+  z-index: 2000;
+  padding: 30px 20px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.8rem 2rem;
-  background-color: var(--primary-teal);
-  box-shadow: var(--shadow-sm);
-  direction: rtl;
+  flex-direction: column;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
 }
 
-.logo-container img {
-  height: 45px;
-  transition: var(--transition);
-}
-
-.logo-container img:hover {
-  transform: scale(1.05);
-}
-
-.menu-items {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.nav-link {
-  color: var(--text-light);
-  text-decoration: none;
-  font-weight: 500;
-  transition: var(--transition);
-  position: relative;
-}
-
-.nav-link:hover {
-  color: var(--accent-orange-light);
-}
-
-.nav-link:after {
-  content: '';
-  position: absolute;
-  width: 0;
-  height: 2px;
-  bottom: -5px;
+.sidebar.open {
   right: 0;
-  background-color: var(--accent-orange);
-  transition: var(--transition);
+  /* מחליק פנימה */
 }
 
-.nav-link:hover:after {
+/* כפתור X לסגירה */
+.close-btn {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 30px;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #006D77;
+}
+
+/* --- שיפור הטקסט והאייקונים --- */
+.sidebar-item {
+  color: var(--white-text) !important;
+  text-decoration: none;
+  font-size: 1.15rem;
+  font-weight: 600;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  /* רקע עדין לכל פריט */
+  transition: all 0.2s ease;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #006D77;
+
+  transform: translateX(-5px);
+}
+
+/* כותרות סקציה (ניהול אדמין וכו') */
+.section-title {
+  color: var(--teal-accent);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 25px 15px 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 5px;
+}
+
+/* פריטי אדמין קטנים יותר ומסודרים */
+.admin-item {
+  color: #e0f2f1 !important;
+  /* לבן-טורקיזי עדין */
+  font-size: 1rem;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: color 0.2s;
+}
+
+.admin-item:hover {
+  color: #006D77 !important;
+}
+
+/* --- כפתור התנתקות --- */
+.logout-btn-sidebar {
+  margin-top: auto;
+  /* דוחף לתחתית */
+  background: #83C5BE;
+  /* כחול בולט */
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* שכבת Overlay כשהתפריט פתוח */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  z-index: 1500;
+}
+
+/* --- Navbar Premium Layout --- */
+.navbar {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  height: 70px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  border-bottom: 2px solid var(--teal-accent);
+  display: flex;
+  align-items: center;
+  padding: 0 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  direction: rtl;
+  /* מבטיח שהכל מתחיל מימין */
+}
+
+.navbar-fixed-part {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* דוחף הכל לימין */
+  gap: 25px;
+  /* מרווח קבוע ונעים בין ההמבורגר, הלוגו והשם */
   width: 100%;
 }
 
-.admin-link {
-  color: var(--accent-orange) !important;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.logout-btn {
-  background: transparent;
-  color: var(--text-light);
-  border: 1.5px solid var(--text-light);
-  padding: 6px 15px;
-  border-radius: 20px;
-  font-weight: bold;
+/* כפתור המבורגר (שלושת הפסים) */
+.hamburger {
+  background: none;
+  border: none;
+  color: var(--teal-dark);
+  font-size: 28px;
   cursor: pointer;
-  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  padding: 0;
+  transition: transform 0.2s;
 }
 
-.logout-btn:hover {
-  background-color: var(--error-red);
-  border-color: var(--error-red);
+.hamburger:hover {
+  transform: scale(1.1);
+  background-color: #83c5bfb0;
 }
 
-/* Popup Overlay & Structure */
+/* לוגו בגודל אופטימלי */
+.logo-container {
+  display: flex;
+  align-items: center;
+}
+
+.logo-container img {
+  height: 60px;
+  /* גובה מדויק שלא משתלט אבל נראה ברור */
+  width: auto;
+  object-fit: contain;
+}
+
+/* שלום שם משתמש */
+.user-greeting {
+  font-size: 1.05rem;
+  color: var(--teal-dark);
+  font-weight: 500;
+  white-space: nowrap;
+  /* מונע מהשם לרדת שורה */
+}
+
+.user-greeting strong {
+  color: var(--teal-primary);
+  font-weight: 700;
+}
+
+/* =========================================
+   POPUP PREMIUM RE-DESIGN (Teal/Turquoise)
+   ========================================= */
+
 .popup-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 77, 74, 0.4);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 40, 40, 0.7);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 10000;
+  justify-content: center;
 }
 
 .popup-content {
   background: #ffffff;
-  width: 95%;
-  max-width: 1100px;
-  height: 90vh;
-  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 1000px;
+  max-height: 85vh;
+  border-radius: 25px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-  position: relative;
-  direction: rtl;
 }
 
-.close-btn {
-  position: absolute;
-  border-color: red;
-  top: 20px;
-  right: 20px;
-  /* נשאר בימין כי האתר ב-RTL */
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #fff;
-  border: 1px solid red;
-  font-size: 24px;
-  display: flex;
-  color: red;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  z-index: 1001;
-  /* מעל הכל */
-  transition: var(--transition);
-}
-
-.close-btn:hover {
-  background: rgb(255, 170, 170);
-  color: var(--error-red);
-  transform: rotate(180deg);
-}
-
+/* מיכל גלילה פנימי */
 .popup-scroll-container {
-  flex: 1;
+  padding: 30px;
   overflow-y: auto;
+  flex: 1;
 }
 
-/* Popup Main Layout (Grid) */
+/* חלוקה ראשית: תמונה מצד אחד, מידע מצד שני */
 .popup-main-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  /* חלוקה שווה ומדויקת לשני טורים */
+  display: flex;
+  flex-direction: row-reverse;
+  /* לתצוגה נכונה בעברית */
   gap: 30px;
-  padding: 20px;
-  align-items: start;
-  direction: rtl;
+  margin-bottom: 30px;
+  align-items: flex-start;
 }
 
-/* Image Side */
+/* הגבלת התמונה - שלא תשתלט */
 .image-side {
-  width: 100%;
-  display: flex;
-  justify-content: center;
+  flex: 1;
+  max-width: 400px;
+  /* הגבלה קשיחה */
 }
 
 .main-popup-img {
   width: 100%;
-  max-width: 500px;
-  height: auto;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  object-fit: cover;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 109, 119, 0.1);
+  object-fit: contain;
 }
 
-/* Info Side */
+/* צד המידע - מרווח ויוקרתי */
 .info-side {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.title-area h2 {
-  font-size: 2.2rem;
-  color: var(--primary-teal);
-  margin: 0;
-}
-
-.creator-tag {
-  font-size: 0.95rem;
-  color: var(--text-muted);
-}
-
-.price-row {
-  background: #f8fafb;
-  padding: 20px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.price-row .value {
-  font-size: 1.8rem;
-  font-weight: 800;
-  color: var(--accent-orange);
-}
-
-/* Messages & Feedback */
-.popup-feedback {
-  position: absolute;
-  top: 30px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 12px 30px;
-  border-radius: 50px;
-  z-index: 100;
-  font-weight: 600;
-  color: white;
-  animation: slideDown 0.3s ease;
-}
-
-.popup-feedback.success {
-  background: var(--success-green);
-}
-
-.popup-feedback.error {
-  background: var(--error-red);
-}
-
-.unavailable-notice {
-  background-color: #fff5f5;
-  color: var(--error-red);
-  padding: 15px;
-  border-radius: 8px;
-  border-right: 4px solid var(--error-red);
-  font-weight: 600;
-}
-
-/* Admin Actions */
-.admin-approve-action {
-  background: var(--primary-teal);
-  color: white;
-  border: none;
-  padding: 15px;
-  border-radius: var(--radius-md);
-  font-weight: bold;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.admin-approve-action:disabled {
-  background-color: var(--text-muted);
-  cursor: not-allowed;
-  opacity: 0.7;
-  transform: none;
-}
-
-.admin-approve-action:hover {
-  background: var(--primary-teal-hover);
-}
-
-/* Edit Mode */
-.edit-mode {
+  flex: 1.2;
   display: flex;
   flex-direction: column;
   gap: 15px;
 }
 
-.edit-mode input,
-.edit-mode textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-}
-
-/* Responsive */
-@media (max-width: 900px) {
-  .popup-main-layout {
-    grid-template-columns: 1fr;
-    padding: 20px;
-  }
-
-  .image-side {
-    order: -1;
-  }
-
-  .navbar {
-    padding: 0.8rem 1rem;
-  }
-
-  .user-greeting {
-    display: none;
-    color: #f8f9fa;
-  }
-}
-
-@keyframes slideDown {
-  from {
-    top: -50px;
-    opacity: 0;
-  }
-
-  to {
-    top: 30px;
-    opacity: 1;
-  }
-}
-
-.popup-header {
-  padding-right: 60px;
-  /* המרווח שמונע מהכותרת להיכנס תחת כפתור הסגירה */
-  margin-bottom: 20px;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.title-area h2 {
+.popup-header h2 {
+  color: var(--teal-dark);
   font-size: 2.2rem;
-  color: var(--primary-teal);
-  margin: 0;
-  line-height: 1.2;
-  word-wrap: break-word;
-  /* מונע מהטקסט לצאת מהגבולות אם הוא ארוך מאוד */
+  font-weight: 800;
+  margin-bottom: 5px;
 }
 
-/* מכולת הכפתורים בתחתית הפופאפ */
-.footer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 20px 40px;
-  background: #fdfdfd;
-  border-top: 1px solid #f0f0f0;
+.price-row {
+  background: var(--bg-soft-teal);
+  padding: 15px 20px;
+  border-radius: 15px;
+  margin: 10px 0;
+  border-right: 5px solid var(--teal-primary);
 }
 
-/* כפתור ה-Edit המרכזי */
-.edit-trigger-btn {
-  background-color: #ffffff;
-  color: var(--primary-teal);
-  border: 1.5px solid var(--primary-teal);
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: var(--transition);
+.price-row .value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--teal-dark);
 }
 
-.edit-trigger-btn:hover {
-  background-color: var(--primary-teal);
-  color: white;
-  box-shadow: 0 4px 12px rgba(26, 77, 74, 0.2);
-}
-
-/* כפתור השמירה (במצב עריכה) */
+/* כפתורי מערכת בצבעי הטורקיז של ה-Navbar */
+.submit-review-btn,
+.edit-trigger-btn,
 .save-btn {
-  background-color: var(--primary-teal);
-  color: white;
+  background: var(--teal-gradient) !important;
+  color: white !important;
   border: none;
-  padding: 10px 25px;
-  border-radius: var(--radius-md);
-  font-weight: bold;
+  padding: 12px 25px;
+  border-radius: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: var(--transition);
+  box-shadow: 0 4px 10px rgba(0, 109, 119, 0.2);
+  transition: all 0.3s;
 }
 
+.submit-review-btn:hover,
+.edit-trigger-btn:hover,
 .save-btn:hover {
-  background-color: var(--primary-teal-hover);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 109, 119, 0.3);
 }
 
-/* כפתור הביטול */
-.cancel-btn {
-  background: transparent;
-  color: var(--text-muted);
-  border: 1px solid #ddd;
-  padding: 10px 20px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.cancel-btn:hover {
-  background: #f5f5f5;
-  color: var(--text-dark);
-}
-
-/* --- מדור תגובות --- */
+/* --- שיפור אזור התגובות --- */
 .reviews-section {
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 2px solid #f0f0f0;
-  direction: rtl;
-  /* יישור לימין */
-}
-
-.reviews-section h3 {
-  font-size: 1.4rem;
-  color: #333;
-  margin-bottom: 20px;
-}
-
-/* רשימת תגובות */
-.reviews-list {
-  max-height: 400px;
-  overflow-y: auto;
-  margin-bottom: 30px;
-  padding-left: 10px;
+  border-top: 1px solid #edf2f2;
+  padding-top: 25px;
 }
 
 .review-item {
-  background: #f9f9f9;
-  border-radius: 12px;
-  padding: 15px;
+  background: rgba(4, 100, 100, 0.295);
+  border-right: 4px solid var(--teal-light);
+  padding: 20px;
+  border-radius: 15px;
   margin-bottom: 15px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s;
-}
-
-.review-item:hover {
-  transform: translateY(-2px);
-}
-
-.review-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
 }
 
 .review-header strong {
-  color: #2c3e50;
-  font-size: 1.05rem;
+  color: var(--teal-dark);
+  font-size: 1.1rem;
 }
 
-.review-rating {
-  letter-spacing: 2px;
-  font-size: 0.9rem;
+/* תיקון דירוג הכוכבים (ביטול הכחול המיותר) */
+.rating-select .star {
+  font-size: 2rem;
+  color: #dfe6e9;
+  cursor: pointer;
+  background: none !important;
+  border: #006D77 !important;
+  padding: 0 5px;
 }
 
-.review-text {
-  color: #555;
-  line-height: 1.5;
-  margin: 8px 0;
+.rating-select .star:hover,
+.rating-select .star.active:hover {
+  color: var(--teal-bg) !important;
 }
 
-.review-date {
-  color: #999;
-  font-size: 0.8rem;
-  display: block;
-  text-align: left;
+.rating-select .star.active {
+  color: var(--teal-bg) !important;
 }
 
-/* טופס הוספת תגובה */
-.add-review-form {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.add-review-form h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #444;
-}
-
-.rating-select {
+/* כפתור ה-X */
+.close-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  /* הגדרת גודל שווה מבטיחה עיגול מושלם */
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  /* ביטול פדינג שמעוות את הצורה */
+  border-radius: 50%;
+  /* הופך לריבוע לעיגול */
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-bottom: 15px;
-}
-
-.star {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
+  justify-content: center;
+  background: #f1f5f9;
+  border: 1px solid var(--teal-light);
+  color: var(--teal-dark);
   cursor: pointer;
-  color: #ccc;
-  transition: color 0.2s;
-  padding: 0;
+  line-height: 1;
+  z-index: 100;
 }
 
-.star.active {
-  color: #ffc107;
-  /* צהוב זהב */
-}
-
-.add-review-form textarea {
-  width: 100%;
-  min-height: 80px;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  resize: vertical;
-  font-family: inherit;
-  margin-bottom: 15px;
-  box-sizing: border-box;
+.close-btn:hover {
+  background: #97260363;
+  color: var(--teal-primary);
 }
 
 .submit-review-btn {
-  background-color: royalblue;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: bold;
-  width: 100%;
-  transition: background 0.3s;
+  color: #006D77 !important;
+  background-color: #83C5BE;
+  margin-right: 20px;
 }
 
+.edit-trigger-btn {
+  color: #ffffff !important;
+  background-color: #83C5BE;
+  align-self: flex-end;
+  margin-right: 10px;
+  margin-bottom: 30px;
+}
 
-
-.no-reviews {
-  text-align: center;
-  color: #888;
-  font-style: italic;
+/* --- תיקון כפתורי עריכה (שמור וביטול) --- */
+.footer-actions {
+  display: flex;
+  justify-content: space-between;
+  /* דוחף שמור לימין וביטול לשמאל */
+  align-items: center;
+  width: 100%;
+  margin-top: 20px;
   padding: 20px;
+  border-top: 1px solid #eef2f2;
+}
+
+.cancel-btn {
+  background: white !important;
+  color: #ef4444 !important;
+  /* אדום עדין לביטול */
+  border: 1px solid #fee2e2 !important;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* כפתור שמור - מיושר לימין */
+.save-btn {
+  background: var(--teal-gradient) !important;
+  color: var(--teal-bg) !important;
+  padding: 10px 25px;
+  border-radius: 12px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+/* תיקון שדות קלט במצב עריכה */
+.edit-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+  background: #f8fbfb;
+  border-radius: 15px;
+}
+
+.edit-mode input,
+.edit-mode textarea {
+  border: 1px solid var(--teal-light);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
 }

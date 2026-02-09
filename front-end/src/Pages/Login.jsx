@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom'; // הוספנו את Link
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import './PublicPages.css';
+import { useAuth } from '../Context/AuthContext';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user, logout } = useAuth();
 
   const navigate = useNavigate();
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -22,18 +24,18 @@ const Login = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
     if (!executeRecaptcha) {
       setError('שירות האבטחה אינו זמין כרגע, נסה שוב');
       setLoading(false);
       return;
     }
+
     try {
       const token = await executeRecaptcha('login');
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
@@ -44,40 +46,49 @@ const Login = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        switch (response.status) {
-          case 400:
-            throw new Error(' אנא בדוק את הנתונים שהזנת.');
-          case 401:
-            throw new Error('האימייל או הסיסמה אינם נכונים.');
-          case 403:
-            throw new Error(
-              'חשבונך ממתין לאישור מנהל מערכת. תקבל הודעה ברגע שהחשבון יאושר.'
-            );
-          case 404:
-            throw new Error('משתמש זה אינו קיים במערכת.');
-          case 429:
-            throw new Error(
-              'יותר מדי ניסיונות התחברות. אנא נסה שוב בעוד מספר דקות.'
-            );
-          case 500:
-            throw new Error('ישנה תקלה בשרת שלנו. אנחנו כבר מטפלים בזה!');
-          default:
-            throw new Error(data.message || 'אירעה שגיאה לא צפויה, נסה שוב.');
+        const msg = data.message;
+
+        const errorTranslations = {
+          // 🛡️ אימות והרשאות
+          'Invalid credentials.': 'האימייל או הסיסמה אינם נכונים.',
+          'Email verification required.':
+            'אנא אמת את כתובת המייל שלך לפני ההתחברות.',
+          'Your account is awaiting admin approval.':
+            'חשבונך ממתין לאישור מנהל מערכת.',
+          'User not found.': 'משתמש זה אינו קיים במערכת.',
+
+          // 🔑 טוקנים וסשן (למקרה של ריפרש או פג תוקף)
+          'Session expired. Please log in again.': 'החיבור פג, אנא התחבר מחדש.',
+          'Invalid or malformed token.': 'חלקה תקלה באבטחה, אנא נסה שוב.',
+
+          // ⚠️ שגיאות מערכת וכלליות
+          'Internal Server Error': 'יש לנו תקלה בשרת, אנחנו כבר מטפלים בזה.',
+          'Verification token invalid or expired.':
+            'הקוד לאימות המייל אינו תקין או שפג תוקפו.',
+          'Too many files uploaded.': 'העלית יותר מדי קבצים.', // רלוונטי להרשמה אבל טוב שיהיה
+        };
+
+        if (msg === 'Your account is awaiting admin approval.') {
+          throw new Error('Pending_approval');
         }
+        // אם ההודעה קיימת במפה - נשתמש בתרגום. אם לא - נציג אותה או הודעה גנרית.
+        const errorMessage =
+          errorTranslations[msg] || msg || 'אירעה שגיאה בכניסה.';
+        throw new Error(errorMessage);
       }
 
+      // שמירה ב-LocalStorage ומעבר דף
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-
       navigate('/');
       window.location.reload();
     } catch (err) {
+      // עדכון הודעת השגיאה ב-State
       if (err.message === 'Pending_approval') {
         setError('חשבונך ממתין לאישור מנהל מערכת.');
       } else {
-        setError(err.message || 'שגיאה בתקשורת עם השרת');
+        setError(err.message);
       }
-      const serverMsg = err.response?.data?.message;
     } finally {
       setLoading(false);
     }
@@ -126,17 +137,7 @@ const Login = () => {
             <span>עוד לא נרשמת? </span>
             <Link to="/Register">ליצירת חשבון חדש</Link>
             <br />
-            <Link
-              to="/forgot-password"
-              style={{
-                fontSize: '0.8rem',
-                marginTop: '10px',
-                display: 'inline-block',
-                opacity: 0.8,
-              }}
-            >
-              שכחתי סיסמה
-            </Link>
+            <Link to="/forgot-password">שכחתי סיסמה</Link>
           </div>
         </form>{' '}
         {/* סגירה נכונה של הטופס כאן */}

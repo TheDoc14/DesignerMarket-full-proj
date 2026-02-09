@@ -1,17 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap');
+
 /* =========================================
    1. משתנים והגדרות בסיס (Variables & Reset)
    ========================================= */
 :root {
   /* פלטת צבעים מקצועית */
-  --primary-color: #2563eb; /* כחול ראשי - לפעולות עיקריות */
-  --primary-hover: #1d4ed8; /* כחול כהה - למעבר עכבר */
-  --secondary-color: #10b981; /* ירוק - להצלחות ופעולות חיוביות */
-  --danger-color: #ef4444; /* אדום - למחיקה ושגיאות */
-  --background-bg: #f3f4f6; /* אפור בהיר מאוד - רקע כללי */
-  --card-bg: #ffffff; /* לבן - כרטיסים ואזורי תוכן */
-  --text-main: #111827; /* כמעט שחור - טקסט ראשי */
-  --text-secondary: #6b7280; /* אפור - טקסט משני */
-  --border-color: #e5e7eb; /* אפור בהיר - גבולות */
+  --primary-color: #2563eb;
+  /* כחול ראשי - לפעולות עיקריות */
+  --primary-hover: #1d4ed8;
+  /* כחול כהה - למעבר עכבר */
+  --secondary-color: #10b981;
+  /* ירוק - להצלחות ופעולות חיוביות */
+  --danger-color: #ef4444;
+  /* אדום - למחיקה ושגיאות */
+  --background-bg: #f3f4f6;
+  /* אפור בהיר מאוד - רקע כללי */
+  --card-bg: #ffffff;
+  /* לבן - כרטיסים ואזורי תוכן */
+  --text-main: #111827;
+  /* כמעט שחור - טקסט ראשי */
+  --text-secondary: #6b7280;
+  /* אפור - טקסט משני */
+  --border-color: #e5e7eb;
+  /* אפור בהיר - גבולות */
 
   /* ריווח וצללים */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -31,7 +42,8 @@ body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background-color: var(--background-bg);
   color: var(--text-main);
-  direction: rtl; /* חובה לעברית */
+  direction: rtl;
+  /* חובה לעברית */
   line-height: 1.6;
 }
 
@@ -54,7 +66,8 @@ ul {
   max-width: var(--container-width);
   margin: 0 auto;
   padding: 20px;
-  min-height: 80vh; /* מבטיח שהפוטר לא יעלה למעלה */
+  min-height: 80vh;
+  /* מבטיח שהפוטר לא יעלה למעלה */
 }
 
 h1,
@@ -68,6 +81,7 @@ h3 {
 h1 {
   font-size: 2rem;
 }
+
 h2 {
   font-size: 1.5rem;
 }
@@ -82,7 +96,8 @@ nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  position: sticky; /* נדבק למעלה */
+  position: sticky;
+  /* נדבק למעלה */
   top: 0;
   z-index: 1000;
 }
@@ -194,10 +209,9 @@ button.danger {
    ========================================= */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(280px, 1fr)
-  ); /* רספונסיבי אוטומטי */
+  grid-template-columns: repeat(auto-fill,
+      minmax(280px, 1fr));
+  /* רספונסיבי אוטומטי */
   gap: 30px;
   margin-top: 20px;
 }
@@ -229,7 +243,8 @@ button.danger {
 
 .product-card .content {
   padding: 15px;
-  flex-grow: 1; /* דוחף את הכפתור למטה */
+  flex-grow: 1;
+  /* דוחף את הכפתור למטה */
   display: flex;
   flex-direction: column;
 }
@@ -301,6 +316,7 @@ button.danger {
    8. התאמה למובייל (Responsiveness)
    ========================================= */
 @media (max-width: 768px) {
+
   /* ניווט הופך לאנכי במובייל */
   nav {
     flex-direction: column;
@@ -358,7 +374,8 @@ button.danger {
 
 /* עיצוב הטבלה */
 .table-responsive {
-  overflow-x: auto; /* מאפשר גלילה במובייל */
+  overflow-x: auto;
+  /* מאפשר גלילה במובייל */
   margin-top: 20px;
 }
 
@@ -387,7 +404,8 @@ button.danger {
 }
 
 .admin-table tr:hover {
-  background-color: #f9fafb; /* אפקט מעבר על שורה */
+  background-color: #f9fafb;
+  /* אפקט מעבר על שורה */
 }
 
 /* עיצוב כפתור אישור בתוך טבלה */
@@ -398,7 +416,8 @@ button.danger {
 }
 
 .approve-btn:hover {
-  background-color: #059669; /* ירוק כהה יותר */
+  background-color: #059669;
+  /* ירוק כהה יותר */
 }
 
 /* עיצוב קישור למסמך */
@@ -465,6 +484,7 @@ button.danger {
 .stat-icon {
   font-size: 2.5rem;
 }
+
 .stat-number {
   font-size: 2rem;
   font-weight: 800;
@@ -476,6 +496,7 @@ button.danger {
   background: #fff5eb;
   color: #e67e22;
 }
+
 .highlight-purple {
   border-right: 5px solid #8e44ad;
   background: #f5ebff;
@@ -485,22 +506,26 @@ button.danger {
 .ranking-list {
   margin-top: 15px;
 }
+
 .ranking-item {
   display: flex;
   justify-content: space-between;
   padding: 12px;
   border-bottom: 1px solid var(--border-color);
 }
+
 .rank-number {
   font-weight: bold;
   color: var(--primary-color);
   width: 30px;
 }
+
 .rank-title {
   flex: 1;
   text-align: right;
   margin-right: 10px;
 }
+
 .rank-score {
   font-weight: 600;
 }

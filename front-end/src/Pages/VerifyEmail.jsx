@@ -46,12 +46,9 @@ const VerifyEmail = () => {
   }, [searchParams, navigate]);
 
   return (
-    <div
-      className="page-container"
-      style={{ textAlign: 'center', marginTop: '100px' }}
-    >
+    <div className="page-container">
       {status === 'loading' && <h2>⏳ {msg}</h2>}
-      {status === 'success' && <h2 style={{ color: 'green' }}>✅ {msg}</h2>}
+      {status === 'success' && <h2>✅ {msg}</h2>}
     </div>
   );
 };

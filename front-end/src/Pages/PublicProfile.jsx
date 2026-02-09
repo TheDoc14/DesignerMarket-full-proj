@@ -33,31 +33,21 @@ const PublicProfile = () => {
   if (!profile) return <div>משתמש לא נמצא.</div>;
 
   return (
-    <div
-      className="public-profile-container"
-      style={{ direction: 'rtl', padding: '20px' }}
-    >
+    <div className="public-profile-container">
       {/* כותרת הפרופיל */}
-      <div style={headerStyle}>
+      <div>
         <img
           src={profile.profileImage || '/default-avatar.png'}
           alt={profile.username}
-          style={avatarStyle}
         />
         <h1>{profile.username}</h1>
         <p>{profile.bio || 'אין ביוגרפיה זמינה'}</p>
-        <div style={socialLinksStyle}>
+        <div>
           {profile.social &&
             Object.entries(profile.social).map(
               ([platform, url]) =>
                 url && (
-                  <a
-                    key={platform}
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ margin: '0 5px' }}
-                  >
+                  <a key={platform} href={url} target="_blank" rel="noreferrer">
                     {platform}
                   </a>
                 )
@@ -69,14 +59,10 @@ const PublicProfile = () => {
 
       {/* רשימת הפרויקטים של המשתמש */}
       <h2>הפרויקטים של {profile.username}</h2>
-      <div style={projectsGridStyle}>
+      <div>
         {userProjects.map((project) => (
-          <div key={project.id} className="project-card" style={cardStyle}>
-            <img
-              src={project.mainImageUrl}
-              alt={project.title}
-              style={{ width: '100%', borderRadius: '8px' }}
-            />
+          <div key={project.id} className="project-card">
+            <img src={project.mainImageUrl} alt={project.title} />
             <h3>{project.title}</h3>
             <p>{project.price} ₪</p>
             <Link to={`/project/${project.id}`} className="view-btn">
@@ -87,28 +73,6 @@ const PublicProfile = () => {
       </div>
     </div>
   );
-};
-
-// סטייל בסיסי (ניתן להעביר ל-CSS)
-const headerStyle = { textAlign: 'center', marginBottom: '40px' };
-const avatarStyle = {
-  width: '150px',
-  height: '150px',
-  borderRadius: '50%',
-  objectFit: 'cover',
-  border: '3px solid #007bff',
-};
-const socialLinksStyle = { marginTop: '15px' };
-const projectsGridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-  gap: '20px',
-};
-const cardStyle = {
-  border: '1px solid #ddd',
-  padding: '15px',
-  borderRadius: '12px',
-  textAlign: 'center',
 };
 
 export default PublicProfile;

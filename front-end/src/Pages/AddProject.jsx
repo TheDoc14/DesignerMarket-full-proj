@@ -1,136 +1,171 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from '../Context/AuthContext';
+import projectDefault from '../DefaultPics/projectDefault.png';
 
 const AddProject = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     price: '',
-    category: 'architecture', // התאמה לקטגוריה שבתמונה
+    category: 'architecture',
     paypalEmail: '',
     tags: '',
   });
-  const [files, setFiles] = useState([]);
-  const [mainImageIndex, setMainImageIndex] = useState(0);
-  const [previews, setPreviews] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  const resetForm = () => {
-    setFormData('');
-    setFiles([]);
-    setPreviews([]);
-    setMainImageIndex(0);
-    // איפוס ידני של שדה הקובץ ב-DOM
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput) fileInput.value = '';
-  };
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [mainImageIndex, setMainImageIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // בדיקת הרשאות דינמית מה-AuthContext
+  const canCreate = user?.permissions?.includes('projects.create');
+
+  useEffect(() => {
+    if (user?.paypalEmail) {
+      setFormData((prev) => ({ ...prev, paypalEmail: user.paypalEmail }));
+    }
+  }, [user]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileChange = (e) => {
-    // המרת FileList למערך והגבלה ל-10 קבצים לפי המודל
-    const selectedFiles = Array.from(e.target.files).slice(0, 10);
-    setFiles(selectedFiles);
+  // פונקציית הטיפול בשגיאות תמונה שביקשת
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = projectDefault;
+  };
 
-    // יצירת תצוגה מקדימה לבחירת Thumbnail
-    const newPreviews = selectedFiles.map((file) =>
-      file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
+
+    let currentTotalSize = files.reduce((sum, file) => sum + file.size, 0);
+    const validNewFiles = [];
+    const errors = [];
+
+    selectedFiles.forEach((file) => {
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`הקובץ "${file.name}" חורג מ-5MB.`);
+      } else if (currentTotalSize + file.size > MAX_TOTAL_SIZE) {
+        errors.push(`חריגה מהנפח הכולל (25MB).`);
+      } else {
+        validNewFiles.push(file);
+        currentTotalSize += file.size;
+      }
+    });
+
+    if (errors.length > 0) {
+      setError(errors.join(' | '));
+      return;
+    }
+
+    setFiles((prev) => [...prev, ...validNewFiles]);
+    const newPreviews = validNewFiles.map((file) =>
+      file.type.startsWith('image/')
+        ? URL.createObjectURL(file)
+        : 'document-icon'
     );
-    setPreviews(newPreviews);
-    setMainImageIndex(0);
+    setPreviews((prev) => [...prev, ...newPreviews]);
+    setError(null);
+  };
+
+  const removeFile = (indexToRemove) => {
+    setFiles(files.filter((_, index) => index !== indexToRemove));
+    setPreviews(previews.filter((_, index) => index !== indexToRemove));
+    if (mainImageIndex === indexToRemove) setMainImageIndex(0);
+    else if (mainImageIndex > indexToRemove)
+      setMainImageIndex(mainImageIndex - 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canCreate) {
+      setError('אין לך הרשאות להעלאת פרויקט.');
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     try {
       const token = localStorage.getItem('token');
-      if (!token)
-        throw new Error('Authentication token missing. Please log in again.');
-
       const data = new FormData();
-
-      // הוספת שדות הטקסט - וודאי ששמות השדות תואמים ל-Validators בבקאנד
-      data.append('title', formData.title);
-      data.append('description', formData.description);
-      data.append('price', formData.price);
-      data.append('category', formData.category);
-      data.append('paypalEmail', formData.paypalEmail); // שדה חובה בשרת
-      data.append('mainImageIndex', mainImageIndex); // שדה חובה בשרת
-      data.append('isPublished', 'false'); // פרויקט חדש תמיד לא מפורסם
-
-      if (formData.tags) data.append('tags', formData.tags);
-
-      // הוספת כל הקבצים שנבחרו
-      if (files.length === 0) throw new Error('חובה להעלות לפחות קובץ אחד');
-
-      files.forEach((file) => {
-        data.append('files', file); // השם 'files' חייב להתאים ל-multer ב-Route
-      });
+      Object.keys(formData).forEach((key) => data.append(key, formData[key]));
+      data.append('mainImageIndex', mainImageIndex);
+      files.forEach((file) => data.append('files', file));
 
       await axios.post('http://localhost:5000/api/projects', data, {
         headers: {
-          Authorization: `Bearer ${token}`, // פותר שגיאת 401
+          Authorization: `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      alert('הפרויקט הועלה בהצלחה וממתין לאישור מנהל');
-      resetForm(); // ✅ איפוס הטופס לאחר הצלחה
+      alert('הפרויקט הועלה בהצלחה!');
+      resetForm();
     } catch (err) {
-      console.error('Upload Error:', err.response?.data || err.message);
-      alert(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || 'שגיאה בהעלאה.');
     } finally {
       setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      price: '',
+      category: 'architecture',
+      paypalEmail: user?.paypalEmail || '',
+      tags: '',
+    });
+    setFiles([]);
+    setPreviews([]);
+    setMainImageIndex(0);
+  };
+
+  if (!user) return <div>עליך להתחבר כדי להעלות פרויקט.</div>;
+
   return (
-    <div style={containerStyle}>
-      <form onSubmit={handleSubmit} style={formStyle}>
+    <div className="add-project-container">
+      <form onSubmit={handleSubmit} className="add-project-form">
+        <h2 className="add-project-title">העלאת פרויקט חדש</h2>
+
         <input
+          className="form-input"
           name="title"
           placeholder="שם הפרויקט"
+          value={formData.title}
           onChange={handleChange}
-          style={inputStyle}
           required
         />
         <textarea
+          className="form-textarea"
           name="description"
-          placeholder="תיאור הפרויקט"
+          placeholder="תיאור"
+          value={formData.description}
           onChange={handleChange}
-          style={{ ...inputStyle, height: '100px' }}
           required
         />
 
-        <div style={paypalBoxStyle}>
-          <label>אימייל למשיכת כספים (PayPal):</label>
-          <input
-            name="paypalEmail"
-            type="email"
-            placeholder="your-paypal@example.com"
-            onChange={handleChange}
-            style={inputStyle}
-            required
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="form-row">
           <input
             name="price"
             type="number"
             placeholder="מחיר"
+            value={formData.price}
             onChange={handleChange}
-            style={inputStyle}
             required
           />
           <select
             name="category"
-            onChange={handleChange}
-            style={inputStyle}
             value={formData.category}
+            onChange={handleChange}
           >
             <option value="architecture">ארכיטקטורה</option>
             <option value="graphic">גרפיקה</option>
@@ -138,116 +173,72 @@ const AddProject = () => {
           </select>
         </div>
 
-        <div style={uploadBoxStyle}>
-          <label>בחר עד 10 קבצים (תמונות, PDF, ZIP):</label>
+        <div>
+          <label className="paypal-highlight">PayPal למשיכת כספים:</label>
           <input
-            type="file"
-            multiple // מאפשר בחירת מספר קבצים
-            onChange={handleFileChange}
-            style={{ marginTop: '10px' }}
+            name="paypalEmail"
+            type="email"
+            value={formData.paypalEmail}
+            onChange={handleChange}
+            required
           />
         </div>
 
+        <div>
+          <label className="file-upload-zone">
+            <strong>+ הוסף קבצים (עד 10)</strong>
+            <input type="file" multiple onChange={handleFileChange} />
+          </label>
+        </div>
+
         {previews.length > 0 && (
-          <div style={previewContainerStyle}>
-            <p style={{ fontSize: '14px', marginBottom: '10px' }}>
-              לחץ על התמונה שתשמש כתצוגה מקדימה :
-            </p>
-            <div style={gridStyle}>
+          <div>
+            <div className="previews-grid">
               {previews.map((src, index) => (
-                <div
-                  key={index}
-                  onClick={() => setMainImageIndex(index)}
-                  style={previewCardStyle(mainImageIndex === index)}
-                >
-                  {src ? (
-                    <img src={src} alt="preview" style={imgStyle} />
-                  ) : (
-                    <div style={{ lineHeight: '80px' }}>📄</div>
-                  )}
-                  <div style={radioStyle(mainImageIndex === index)}></div>
+                <div key={index}>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(index)}
+                    className="remove-file-btn"
+                  >
+                    ×
+                  </button>
+                  <div onClick={() => setMainImageIndex(index)}>
+                    {src !== 'document-icon' ? (
+                      <img
+                        src={src}
+                        alt="preview"
+                        onError={handleImageError} // הטמעת התיקון שביקשת כאן
+                      />
+                    ) : (
+                      <div className="doc-icon">
+                        📄
+                        <br />
+                        <small>{files[index]?.name}</small>
+                      </div>
+                    )}
+                    {mainImageIndex === index && (
+                      <div className="second-badge">תמונה ראשית</div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <button type="submit" disabled={loading} style={submitBtnStyle}>
-          {loading ? 'שולח...' : 'פרסם פרויקט לאישור'}
+        {error && <div className="error-message">{error}</div>}
+
+        <button
+          type="submit"
+          className="submit-project-btn"
+          disabled={loading || !canCreate}
+        >
+          {loading ? 'מעלה...' : 'פרסם פרויקט'}
         </button>
       </form>
     </div>
   );
-};
-
-// Styles (Simplified)
-const containerStyle = {
-  direction: 'rtl',
-  padding: '20px',
-  maxWidth: '700px',
-  margin: '0 auto',
-  fontFamily: 'Arial',
-};
-const formStyle = { display: 'flex', flexDirection: 'column', gap: '15px' };
-const inputStyle = {
-  padding: '12px',
-  borderRadius: '8px',
-  border: '1px solid #ddd',
-  width: '100%',
-};
-const paypalBoxStyle = {
-  padding: '15px',
-  backgroundColor: '#e7f3ff',
-  borderRadius: '8px',
-  border: '1px solid #b3d7ff',
-};
-const uploadBoxStyle = {
-  padding: '20px',
-  border: '2px dashed #007bff',
-  borderRadius: '8px',
-  textAlign: 'center',
-  backgroundColor: '#f8f9fa',
-};
-const previewContainerStyle = {
-  padding: '15px',
-  border: '1px solid #eee',
-  borderRadius: '8px',
-};
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-  gap: '10px',
-};
-const previewCardStyle = (active) => ({
-  border: active ? '3px solid #28a745' : '1px solid #ddd',
-  borderRadius: '8px',
-  padding: '5px',
-  cursor: 'pointer',
-  position: 'relative',
-});
-const imgStyle = {
-  width: '100%',
-  height: '80px',
-  objectFit: 'cover',
-  borderRadius: '4px',
-};
-const radioStyle = (active) => ({
-  position: 'absolute',
-  top: '5px',
-  right: '5px',
-  width: '12px',
-  height: '12px',
-  borderRadius: '50%',
-  backgroundColor: active ? '#28a745' : '#ccc',
-});
-const submitBtnStyle = {
-  padding: '15px',
-  backgroundColor: '#007bff',
-  color: 'white',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
 };
 
 export default AddProject;

@@ -61,20 +61,14 @@ const ResetPassword = () => {
   };
 
   return (
-    <div
-      className="admin-container"
-      style={{ maxWidth: '500px', margin: '40px auto' }}
-    >
+    <div className="admin-container">
       <h1>איפוס סיסמה</h1>
 
       {!token ? (
         <div className="alert alert-error">{error}</div>
       ) : (
         <form onSubmit={handleSubmit}>
-          <div
-            className="form-group"
-            style={{ flexDirection: 'column', gap: '5px' }}
-          >
+          <div className="form-group">
             <label>סיסמה חדשה</label>
             <input
               type="password"
@@ -87,10 +81,7 @@ const ResetPassword = () => {
             />
           </div>
 
-          <div
-            className="form-group"
-            style={{ flexDirection: 'column', gap: '5px', marginTop: '10px' }}
-          >
+          <div className="form-group">
             <label>אימות סיסמה</label>
             <input
               type="password"
@@ -103,26 +94,14 @@ const ResetPassword = () => {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || !token}
-            style={{ width: '100%', marginTop: '20px' }}
-          >
+          <button type="submit" disabled={loading || !token}>
             {loading ? 'מעדכן סיסמה...' : 'אפס סיסמה'}
           </button>
         </form>
       )}
 
-      {message && (
-        <div className="alert alert-success" style={{ marginTop: '15px' }}>
-          {message}
-        </div>
-      )}
-      {error && token && (
-        <div className="alert alert-error" style={{ marginTop: '15px' }}>
-          {error}
-        </div>
-      )}
+      {message && <div className="alert alert-success">{message}</div>}
+      {error && token && <div className="alert alert-error">{error}</div>}
     </div>
   );
 };
