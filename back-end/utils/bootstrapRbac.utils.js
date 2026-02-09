@@ -34,11 +34,11 @@ const ensureBaseRoles = async () => {
     },
 
     {
-      key: ROLES.SYSTEM_MANAGER,
-      label: 'System Manager',
+      key: ROLES.BUSINESS_MANAGER,
+      label: 'Business Manager',
       isSystem: true,
       permissions: [
-        PERMS.SYSTEM_PANEL_ACCESS,
+        PERMS.BUSINESS_PANEL_ACCESS,
         PERMS.STATS_READ,
         // שים לב: אין לו ADMIN_PANEL_ACCESS ואין לו ניהול משתמשים/roles/categories
       ],

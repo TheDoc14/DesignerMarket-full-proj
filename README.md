@@ -38,20 +38,22 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 
 ---
 
-## Tech Stack
+## Tech Stack (MERN-STACK)
 
 ### Backend (Node/Express + MongoDB)
-- **Node.js** (CommonJS)
-- **Express 5**
+- **Node.js** (CommonJS) + **Express 5**
 - **MongoDB + Mongoose**
 - **JWT Auth** `jsonwebtoken`
 - **Password hashing**: `bcrypt`
-- **Validation**: `express-validator`
+- **Validation**: `express-validator`, `validate`
 - **Security**: `helmet`, `express-rate-limit`, `cors`, `mongo sanitize` (keys hardening)
 - **File uploads**: `multer`
 - **Email**: `nodemailer`
 - **Environment**: `dotenv`
 - **Utilities**: `crypto`, `path`
+- **Code style**: `reusable utils` (`meta`/`query`/`serializers`)
+- **PayPal** (Sandbox/Live ready)
+
 
 ### Tooling / Code Quality
 - **Nodemon** (dev server)
@@ -70,11 +72,10 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 ## Key Features
 ### Implemented:
 #### API Conventions (Consistency)
-- JSON responses include `message` consistently
-- List endpoints return `meta` (pagination) + data arrays
-- Central validation layer (request validation before DB)
-- Central error handler for consistent error responses
-- Reusable query helpers for pagination/sorting
+- JSON responses include `message` consistently.
+- List endpoints return `meta` `pagination`: `{ total, page, limit, items }`.
+- Central validation layer (request validation before DB).
+- Central error handler for consistent error responses.
 
 #### Auth & Security
 - Register / Login
@@ -91,7 +92,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - Get other user profile, his projects with **pagination + sorting + meta**
 
 #### Projects
-- Create/update/delete projects (authorized roles)
+- Create/update/delete projects (permission-based)
 - Visibility rules:
   - Public viewers see **published** projects only
   - Owner/Admin see additional content
@@ -101,12 +102,18 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 #### Reviews
 - CRUD reviews
 - Project rating stats recalculation
-- Admin management endpoints
+- Admin moderation endpoints
+
+### Categories (Admin-managed)
+- Categories are stored in MongoDB.
+- Base categories are ensured on server startup.
+- Admin can manage categories without code changes.
+- Project creation validates `category` against the Categories collection.
 
 #### Files API (secure)
 - Public: project images + profile images
 - Protected:
-  - project files (downloadables) – owner/admin/buyer-after-purchase
+  - project files (downloadables) – owner OR buyer-after-purchase OR permission bypass
   - approval documents – permission-based (admin only by default)
 - Defense-in-depth: route-level RBAC + controller checks
 
@@ -116,10 +123,11 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - Reviews management
 - Admin stats endpoint
 - Dynamic roles management (CRUD) + assign role to user
+- Categories management (CRUD)
 
-#### System Manager Panel (Read-Only)
-- System statistics endpoints (read-only dashboards)
-- Finance/revenue summary endpoints (read-only)
+### Business Manager Panel (Read-Only)
+- Read-only dashboards (stats/finance) via permission-based endpoints  
+  (Access is granted by permissions, not hardcoded roles)
 
 #### Orders / Purchases (PayPal)
 - Create PayPal order → returns approve link
@@ -130,13 +138,16 @@ Full-stack marketplace for industrial design students/designers to showcase and 
   - Prevent double capture / idempotency guard
   - Prevent self-purchase
   - Prevent duplicate pending orders
+  - Return/Cancel endpoints to avoid “stuck purchase” cases:
+    - `/orders/paypal/return`
+    - `/orders/paypal/cancel`
 
 ---
 
 ## Dynamic RBAC (Roles & Permissions)
 
 This project implements **real dynamic RBAC**:
-- `User.role` stores a **role key** (string), e.g. `admin`, `systemManager`, `student`, `designer`,    `customer`, or any custom role created later.
+- `User.role` stores a **role key** (string), e.g. `admin`, `businessManager`, `student`, `designer`,    `customer`, or any custom role created later.
 - `Role` documents in MongoDB store:
   - `key` (role identifier)
   - `permissions[]` (array of permission strings)
@@ -145,7 +156,7 @@ This project implements **real dynamic RBAC**:
 
 ### Default system roles (typical)
 - `admin` – admin panel access (approvals, publishing, roles management)
-- `systemManager` – read-only system panel (stats/finance)
+- `businessManager` – read-only system panel (stats/finance)
 - `student`, `designer`, `customer`
 
 ### Role management (Admin)
@@ -221,6 +232,7 @@ Never commit .env to GitHub.
 
 **What should it contain? (example)**
 ```env
+# back-end/.env.example
 # Server
 PORT=5000
 PUBLIC_BASE_URL=http://localhost:5000
@@ -257,11 +269,14 @@ PAYPAL_CURRENCY=ILS
 # Platform fee (optional)
 PLATFORM_FEE_PERCENT=10
 
+# Order pending time-to-live (in minutes)
+ORDER_PENDING_TTL_MIN=15
+
 # Frontend URLs (לחזרה אחרי תשלום)
 FRONTEND_BASE_URL=http://localhost:3000
 
 # (אופציונלי אבל מומלץ בהמשך)
-PAYPAL_WEBHOOK_ID=
+PAYPAL_WEBHOOK_ID=replace_me
 
 # Google reCAPTCHA v3
 RECAPTCHA_SITE_KEY=replace_me
@@ -307,7 +322,7 @@ RECAPTCHA_HOSTNAME=localhost
   - `GET /files/profileImages/:file`
   - `GET /files/projectImages/:file`
 - Protected:
-  - `GET /files/projectFiles/:file` (owner/admin/purchased)
+  - `GET /files/projectFiles/:file` (owner/admin/purchased/permission)
   - `GET /files/approvalDocuments/:file` (permission-based, admin by default)
 
 ### Admin
@@ -325,17 +340,24 @@ RECAPTCHA_HOSTNAME=localhost
   - `PUT /admin/projects/:id/publish` (admin-only)
 - Reviews:
   - `GET /admin/reviews` (admin-only)
+- Stats:
   - `GET /admin/stats` (admin-only)
+- Categories
+  - `GET /admin/categories` (admin-only)
+  - `POST /admin/categories` (admin-only)
+  - `PUT /admin/categories/:key` (admin-only)
+  - `DELETE /admin/categories/:key` (admin-only)
 
-### System (Read-only)
-- `GET /system/stats` (system-manager)
-- `GET /system/finance` (system-manager)
+### Business (Read-only)
+- `GET /business/stats` (business-manager)
+- `GET /business/finance` (business-manager)
 
 ### Orders (PayPal)
 - `POST /orders/paypal/create`
 - `POST /orders/paypal/capture`
 - `GET /orders/paypal/return`
 - `GET /orders/paypal/cancel`
+- `POST /orders/:id/cancel`
 
 ---
 
@@ -386,15 +408,19 @@ RECAPTCHA_HOSTNAME=localhost
 - Before purchase: protected files are hidden/blocked
 - After purchase: buyer gains access to protected project files
 
+### Categories
+- CRUD 
+- base categories ensured 
+- project validation
 ---
 
 ## Roadmap (Planned)
 
-### Phase 2: Public Profile + Wall -- DONE!!
+### Phase 2: Public Profile + Wall -- DONE !
 - Public user profile endpoint
 - Public projects wall (published only) with pagination/filtering/meta
 
-### Phase 3: CAPTCHA -- DONE!!
+### Phase 3: CAPTCHA -- DONE !
 - CAPTCHA on register/login/forgot/reset flows (MVP)
 - Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
 
@@ -419,6 +445,7 @@ RECAPTCHA_HOSTNAME=localhost
 ## Notes
 - Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.
 - Keep API responses consistent: `message` always included, `meta` for list endpoints.
+- RBAC is permission-based; UI should gate features by `permissions[]`.
 ---
 
 

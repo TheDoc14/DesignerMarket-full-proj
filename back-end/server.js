@@ -24,9 +24,10 @@ const fileRoutes = require('./routes/file.routes');
 const reviewRoutes = require('./routes/review.routes');
 const adminRoutes = require('./routes/admin.routes');
 const orderRoutes = require('./routes/order.routes');
-const systemRoutes = require('./routes/system.routes');
+const businessRoutes = require('./routes/business.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 const { ensureBaseRoles } = require('./utils/bootstrapRbac.utils');
+const { ensureBaseCategories } = require('./utils/bootstrapCategories.utils');
 
 // ✅ מידלוורים כלליים
 
@@ -85,7 +86,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/system', systemRoutes);
+app.use('/api/business', businessRoutes);
 
 app.get('/api/test', (req, res) => {
   res.status(200).json({ message: 'API is working fine 🚀' });
@@ -113,6 +114,9 @@ async function startServer() {
 
     await ensureBaseRoles();
     console.log('✅ RBAC base roles ensured');
+
+    await ensureBaseCategories();
+    console.log('✅ Base categories ensured');
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

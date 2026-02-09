@@ -2,7 +2,7 @@
 const PERMS = Object.freeze({
   // Panels
   ADMIN_PANEL_ACCESS: 'admin.panel.access',
-  SYSTEM_PANEL_ACCESS: 'system.panel.access',
+  BUSINESS_PANEL_ACCESS: 'business.panel.access',
 
   // Users
   USERS_READ: 'users.read',
