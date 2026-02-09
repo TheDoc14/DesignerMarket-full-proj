@@ -1,4 +1,4 @@
-// back-end/controllers/system.controller.js
+// back-end/controllers/business.controller.js
 
 const User = require('../models/Users.models');
 const Project = require('../models/Project.model');
@@ -21,11 +21,11 @@ const dashboardMeta = (totalItems = 0) => {
 };
 
 /**
- * 📊 systemGetStats
+ * 📊 businessGetStats
  * read-only סטטיסטיקות כלליות למנהל מערכת/אדמין.
  * מחזיר מבנה עשיר: totals + breakdowns.
  */
-const systemGetStats = async (req, res, next) => {
+const businessGetStats = async (req, res, next) => {
   try {
     const [
       usersTotal,
@@ -100,11 +100,11 @@ const systemGetStats = async (req, res, next) => {
 };
 
 /**
- * 💰 systemGetFinance
+ * 💰 businessGetFinance
  * סיכום פיננסים לפי Orders (read-only).
  * Money received = PAID / PAYOUT_SENT / PAYOUT_FAILED
  */
-const systemGetFinance = async (req, res, next) => {
+const businessGetFinance = async (req, res, next) => {
   try {
     const moneyStatuses = ['PAID', 'PAYOUT_SENT', 'PAYOUT_FAILED'];
 
@@ -170,4 +170,4 @@ const systemGetFinance = async (req, res, next) => {
   }
 };
 
-module.exports = { systemGetStats, systemGetFinance };
+module.exports = { businessGetStats, businessGetFinance };

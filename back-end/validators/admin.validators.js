@@ -20,7 +20,7 @@ const { PERMS } = require('../constants/permissions.constants');
 const userIdParam = mongoIdParam('id', 'Invalid user id');
 const projectIdParam = mongoIdParam('id', 'Invalid project id');
 
-const roleKeySlug = (value) => /^[a-z0-9-]{2,40}$/.test(String(value || '').trim());
+const keySlug = (value) => /^[a-z0-9-]{2,40}$/.test(String(value || '').trim());
 
 const roleKeyExists = async (value) => {
   const key = String(value || '')
@@ -38,7 +38,7 @@ const adminListUsersQuery = [
   ...searchQuery,
   query('role')
     .optional()
-    .custom(roleKeySlug)
+    .custom(keySlug)
     .withMessage('role must be lowercase slug: a-z 0-9 -')
     .bail()
     .custom(roleKeyExists),
@@ -93,7 +93,7 @@ const adminCreateRoleValidators = [
   body('key')
     .notEmpty()
     .withMessage('key is required')
-    .custom((v) => /^[a-z0-9-]{2,40}$/.test(String(v || '').trim()))
+    .custom(keySlug)
     .withMessage('role key must be lowercase slug: a-z 0-9 -'),
 
   body('label').optional().isString().trim().isLength({ max: 60 }).withMessage('label too long'),
@@ -129,7 +129,7 @@ const adminDeleteRoleValidators = [
   param('key')
     .notEmpty()
     .withMessage('key is required')
-    .custom(roleKeySlug)
+    .custom(keySlug)
     .withMessage('invalid role key'),
 ];
 
@@ -137,10 +137,42 @@ const adminAssignUserRoleValidators = [
   body('role')
     .notEmpty()
     .withMessage('role is required')
-    .custom(roleKeySlug)
+    .custom(keySlug)
     .withMessage('role must be lowercase slug: a-z 0-9 -')
     .bail()
     .custom(roleKeyExists),
+];
+
+const listCategoriesQuery = [
+  ...searchQuery, // q
+  ...pageLimitQuery, // page/limit
+];
+
+const createCategoryValidators = [
+  body('key')
+    .notEmpty()
+    .withMessage('key is required')
+    .custom(keySlug)
+    .withMessage('key must be lowercase slug: a-z 0-9 -'),
+  body('label')
+    .notEmpty()
+    .withMessage('label is required')
+    .isString()
+    .trim()
+    .isLength({ max: 60 })
+    .withMessage('label too long'),
+];
+
+const updateCategoryValidators = [
+  body('label').optional().isString().trim().isLength({ max: 60 }).withMessage('label too long'),
+];
+
+const categoryKeyParam = [
+  param('key')
+    .notEmpty()
+    .withMessage('key is required')
+    .custom(keySlug)
+    .withMessage('invalid category key'),
 ];
 
 module.exports = {
@@ -155,4 +187,8 @@ module.exports = {
   adminUpdateRoleValidators,
   adminDeleteRoleValidators,
   adminAssignUserRoleValidators,
+  listCategoriesQuery,
+  createCategoryValidators,
+  updateCategoryValidators,
+  categoryKeyParam,
 };

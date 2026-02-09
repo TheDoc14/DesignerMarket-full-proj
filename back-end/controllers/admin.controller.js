@@ -3,6 +3,7 @@ const User = require('../models/Users.models');
 const Role = require('../models/Role.model');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
+const Category = require('../models/Category.model');
 const {
   pickUserPublic,
   pickProjectPublic,
@@ -27,13 +28,11 @@ const adminListUsers = async (req, res, next) => {
 
     const filter = {};
 
-    if (
-      role &&
-      [ROLES.ADMIN, ROLES.CUSTOMER, ROLES.STUDENT, ROLES.DESIGNER, ROLES.SYSTEM_MANAGER].includes(
-        role
-      )
-    ) {
-      filter.role = role;
+    if (role) {
+      const key = String(role).trim().toLowerCase();
+      const exists = await Role.exists({ key });
+      if (!exists) throw new Error('Role not found');
+      filter.role = key;
     }
 
     if (approved === 'true') filter.isApproved = true;
@@ -408,6 +407,102 @@ const adminAssignUserRole = async (req, res, next) => {
   }
 };
 
+/**
+ * 🗂️ Admin Categories (Dynamic)
+ * מאפשר לאדמין לנהל קטגוריות ללא שינוי קוד.
+ */
+
+const adminListCategories = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    const { page, limit, skip } = getPaging(req.query, 50);
+
+    const filter = {};
+    if (q) {
+      const rx = new RegExp(escapeRegex(q), 'i');
+      filter.$or = [{ key: rx }, { label: rx }];
+    }
+
+    const [total, rows] = await Promise.all([
+      Category.countDocuments(filter),
+      Category.find(filter).sort({ isSystem: -1, key: 1 }).skip(skip).limit(limit).lean(),
+    ]);
+
+    return res.status(200).json({
+      message: 'Categories fetched',
+      meta: buildMeta(total, page, limit),
+      categories: rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const adminCreateCategory = async (req, res, next) => {
+  try {
+    const key = String(req.body.key || '')
+      .trim()
+      .toLowerCase();
+    const label = String(req.body.label || '').trim();
+
+    const exists = await Category.findOne({ key }).lean();
+    if (exists) throw new Error('Category already exists');
+    const category = await Category.create({ key, label, isSystem: false });
+
+    return res.status(201).json({
+      message: 'Category created',
+      category,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const adminUpdateCategory = async (req, res, next) => {
+  try {
+    const key = String(req.params.key || '')
+      .trim()
+      .toLowerCase();
+    const { label } = req.body;
+
+    const category = await Category.findOne({ key });
+    if (!category) throw new Error('Category not found');
+
+    if (category.isSystem) throw new Error('Cannot update system category');
+
+    if (typeof label === 'string') category.label = String(label).trim();
+
+    await category.save();
+
+    return res.status(200).json({
+      message: 'Category updated',
+      category,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const adminDeleteCategory = async (req, res, next) => {
+  try {
+    const key = String(req.params.key || '')
+      .trim()
+      .toLowerCase();
+
+    const category = await Category.findOne({ key });
+    if (!category) throw new Error('Category not found');
+
+    if (category.isSystem) throw new Error('Cannot delete system category');
+    await category.deleteOne();
+
+    return res.status(200).json({
+      message: 'Category deleted',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   adminListUsers,
   adminSetUserApproval,
@@ -420,4 +515,8 @@ module.exports = {
   adminUpdateRole,
   adminDeleteRole,
   adminAssignUserRole,
+  adminListCategories,
+  adminCreateCategory,
+  adminUpdateCategory,
+  adminDeleteCategory,
 };

@@ -64,6 +64,26 @@ function classifyError(err, _req, _res, _next) {
     message = 'Role not found.';
   }
 
+  // ==================================
+  // ==========📚 Categories==========
+  // ==================================
+  else if (msg.includes('Category already exists')) {
+    statusCode = 409;
+    message = 'Category already exists.';
+  } else if (msg.includes('Category not found')) {
+    statusCode = 404;
+    message = 'Category not found.';
+  } else if (msg.includes('Cannot update system category')) {
+    statusCode = 400;
+    message = 'Cannot update system category.';
+  } else if (msg.includes('Cannot delete system category')) {
+    statusCode = 400;
+    message = 'Cannot delete system category.';
+  } else if (msg.includes('Cannot delete category in use')) {
+    statusCode = 409;
+    message = 'Cannot delete category that is used by projects.';
+  }
+
   // =============================================
   // 👥 Users / Authn / Signup / Verify / Profile
   // =============================================
@@ -190,6 +210,12 @@ function classifyError(err, _req, _res, _next) {
   } else if (msg.includes('PayPal capture failed')) {
     statusCode = 502;
     message = 'Payment provider error (capture failed).';
+  } else if (msg.includes('Order already pending for this project')) {
+    statusCode = 409;
+    message = 'You already have a pending order for this project.';
+  } else if (msg.includes('Missing PayPal order id')) {
+    statusCode = 400;
+    message = 'Missing PayPal order id.';
   }
 
   // ==================================
