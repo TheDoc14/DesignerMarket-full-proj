@@ -94,7 +94,7 @@ const createMulter = (baseFolder) => {
     limits: {
       fileSize:
         baseFolder === FILE_FOLDERS.PROJECTS
-          ? 300 * 1024 * 1024 // ✅ עד 500MB לקובצי פרויקט
+          ? 500 * 1024 * 1024 // ✅ עד 500MB לקובצי פרויקט
           : 50 * 1024 * 1024, // עד 50MB לשאר
     },
   });

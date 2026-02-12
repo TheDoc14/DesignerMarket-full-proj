@@ -2,12 +2,18 @@
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
+const crypto = require('crypto'); 
 
 const LOG_DIR = path.join(__dirname, '../logs');
 const LOG_PATH = path.join(LOG_DIR, 'error.log');
 
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+// helper קטן: לוקחים requestId אם קיים, ואם אין - מייצרים (fallback)
+function getRequestId(req) {
+  return req.requestId || req.headers['x-request-id'] || crypto.randomUUID();
 }
 
 /**
@@ -366,14 +372,25 @@ function logError({ statusCode, message }, err, req) {
  */
 const errorHandler = (err, req, res, _next) => {
   const { statusCode, message } = classifyError(err, req);
+  const requestId = getRequestId(req);
   logError({ statusCode, message }, err, req);
 
-  return res.status(statusCode).json({
+  const payload = {
     success: false,
     code: statusCode,
     message,
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+    requestId,
+  };
+
+  // תומך ב-details אם אתה מוסיף בעתיד (ולידציה/AI/quota)
+  if (err?.details) payload.details = err.details;
+
+  // stack רק ב-dev
+  if (process.env.NODE_ENV === 'development' && err?.stack) {
+    payload.stack = err.stack;
+  }
+
+  return res.status(statusCode).json(payload);
 };
 
 module.exports = { errorHandler };
