@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
-const crypto = require('crypto'); 
+const crypto = require('crypto');
 
 const LOG_DIR = path.join(__dirname, '../logs');
 const LOG_PATH = path.join(LOG_DIR, 'error.log');

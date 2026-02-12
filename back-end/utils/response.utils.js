@@ -2,8 +2,8 @@
 
 /**
  * response.utils.js
- * פונקציות עזר ליצירת תגובות אחידות ללקוח. 
-*/
+ * פונקציות עזר ליצירת תגובות אחידות ללקוח.
+ */
 function ok(res, { status = 200, message = 'OK', data = null, meta = undefined } = {}) {
   const payload = { success: true, message };
 

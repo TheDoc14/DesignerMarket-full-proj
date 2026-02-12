@@ -10,10 +10,7 @@ const { AI_LIMITS } = require('../constants/ai.constants');
 
 // POST /api/ai/consult
 const aiConsultValidators = [
-  body('projectId')
-    .optional()
-    .isMongoId()
-    .withMessage('Invalid projectId'),
+  body('projectId').optional().isMongoId().withMessage('Invalid projectId'),
 
   body('question')
     .trim()
