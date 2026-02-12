@@ -30,6 +30,9 @@ const PERMS = Object.freeze({
 
   // Stats
   STATS_READ: 'stats.read',
+
+  // AI
+  AI_CONSULT: 'ai.consult',
 });
 
 module.exports = { PERMS };

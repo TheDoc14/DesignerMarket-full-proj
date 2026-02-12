@@ -15,6 +15,7 @@ const ensureBaseRoles = async () => {
       isSystem: true,
       permissions: [
         PERMS.ADMIN_PANEL_ACCESS,
+        PERMS.BUSINESS_PANEL_ACCESS,
         PERMS.USERS_READ,
         PERMS.USERS_APPROVE,
         PERMS.USERS_ASSIGN_ROLE,
@@ -55,6 +56,7 @@ const ensureBaseRoles = async () => {
         PERMS.PROJECTS_UPDATE,
         PERMS.PROJECTS_DELETE,
         PERMS.FILES_PROJECTS_READ,
+        PERMS.AI_CONSULT,
       ],
     },
     {
@@ -66,6 +68,7 @@ const ensureBaseRoles = async () => {
         PERMS.PROJECTS_UPDATE,
         PERMS.PROJECTS_DELETE,
         PERMS.FILES_PROJECTS_READ,
+        PERMS.AI_CONSULT,
       ],
     },
     {
