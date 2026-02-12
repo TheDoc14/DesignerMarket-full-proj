@@ -416,36 +416,36 @@ RECAPTCHA_HOSTNAME=localhost
 
 ## Roadmap (Planned)
 
-### Phase 2: Public Profile + Wall -- DONE !
-- Public user profile endpoint
-- Public projects wall (published only) with pagination/filtering/meta
+### Phase 2: Public Profile + Wall :tada:
+- [x] Public user profile endpoint
+- [x] Public projects wall (published only) with pagination/filtering/meta
 
-### Phase 3: CAPTCHA -- DONE !
-- CAPTCHA on register/login/forgot/reset flows (MVP)
-- Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
+### Phase 3: CAPTCHA :tada:
+- [x] CAPTCHA on register/login/forgot/reset flows (MVP)
+- [x] Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
 
 ### Phase 4: AI Endpoint
-- MVP mock endpoint first
-- Real AI integration with limits/logging
+- [ ] MVP mock endpoint first
+- [ ] Real AI integration with limits/logging
 
 ### Phase 5: Documentation & Automated Tests
-- Swagger/OpenAPI docs
-- Jest/Supertest test suite
+- [ ] Swagger/OpenAPI docs
+- [ ] Jest/Supertest test suite
 
 ### Optional Enhancements:
-- Favorites/Wishlist
-- Notifications
-- Buyer↔Seller messaging
-- Analytics (views/clicks)
-- Optional 2FA
-- Audit logs + extended admin analytics
+- [ ] Favorites/Wishlist
+- [ ] Notifications
+- [ ] Buyer↔Seller messaging
+- [ ] Analytics (views/clicks)
+- [ ] Optional 2FA
+- [ ] Audit logs + extended admin analytics
 
 ---
 
-## Notes
-- Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.
-- Keep API responses consistent: `message` always included, `meta` for list endpoints.
-- RBAC is permission-based; UI should gate features by `permissions[]`.
+> [!NOTE]
+> Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.
+> Keep API responses consistent: `message` always included, `meta` for list endpoints.
+> RBAC is permission-based; UI should gate features by `permissions[]`.
 ---
 
 
