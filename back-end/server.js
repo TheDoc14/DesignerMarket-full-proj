@@ -25,7 +25,9 @@ const reviewRoutes = require('./routes/review.routes');
 const adminRoutes = require('./routes/admin.routes');
 const orderRoutes = require('./routes/order.routes');
 const businessRoutes = require('./routes/business.routes');
+const aiRoutes = require('./routes/ai.routes');
 const { errorHandler } = require('./middleware/error.middleware');
+const { requestIdMiddleware } = require('./middleware/requestId.middleware');
 const { ensureBaseRoles } = require('./utils/bootstrapRbac.utils');
 const { ensureBaseCategories } = require('./utils/bootstrapCategories.utils');
 
@@ -73,6 +75,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(mongoSanitize({ customSanitizer: (data, _options) => sanitizeMongoKeysOnly(data) }));
+app.use(requestIdMiddleware);
 
 /**
  * ✅ Routes mounting
@@ -87,6 +90,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/business', businessRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/api/test', (req, res) => {
   res.status(200).json({ message: 'API is working fine 🚀' });
