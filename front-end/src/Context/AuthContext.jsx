@@ -12,24 +12,29 @@ export const AuthProvider = ({ children }) => {
    * מכיוון שהכל דינמי, אנחנו מושכים את כל רשימת ה-Roles ומחפשים את ה-permissions
    * של ה-role הספציפי שהגיע מהלוגין.
    */
+
   const fetchDynamicPermissions = async (userRole, token) => {
+    // אם המשתמש הוא מנהל עסקי או אדמין, ננסה למשוך הרשאות מהשרת
+    const isManagerial =
+      userRole === 'admin' || userRole === 'business_manager';
+
+    if (!isManagerial) {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      return storedUser?.permissions || [];
+    }
+
     try {
-      // הנתיב לניהול תפקידים דינמיים
+      // אם כאן את מקבלת 403, סימן שהבקהאנד לא מרשה למנהל עסקי לראות את רשימת התפקידים
       const res = await axios.get('http://localhost:5000/api/admin/roles', {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // המפתח מחזיר מערך תחת roles או ישירות
       const allRoles = res.data.roles || res.data;
-
-      // מציאת הרשומה של התפקיד ב-DB לפי ה-Key שלו
       const foundRole = allRoles.find((r) => r.key === userRole);
-
-      // מחזירים את מערך הסטרינגים מה-DB
       return foundRole ? foundRole.permissions : [];
     } catch (error) {
-      console.warn('RBAC Fetch failed, falling back to empty permissions');
-      return [];
+      console.warn('RBAC Fetch failed for role:', userRole);
+      const storedUser = JSON.parse(localStorage.getItem('user'));
+      return storedUser?.permissions || [];
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom'; // הוספנו את Link
+import { useNavigate, Link } from 'react-router-dom';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import './PublicPages.css';
 import { useAuth } from '../Context/AuthContext';
@@ -11,7 +11,9 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { user, logout } = useAuth();
+
+  // שינוי 1: שליפת פונקציית ה-login מה-AuthContext
+  const { login } = useAuth();
 
   const navigate = useNavigate();
   const { executeRecaptcha } = useGoogleReCaptcha();
@@ -32,14 +34,14 @@ const Login = () => {
     }
 
     try {
-      const token = await executeRecaptcha('login');
+      const gToken = await executeRecaptcha('login');
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
-          captchaToken: token,
+          captchaToken: gToken,
         }),
       });
 
@@ -47,43 +49,32 @@ const Login = () => {
 
       if (!response.ok) {
         const msg = data.message;
-
         const errorTranslations = {
-          // 🛡️ אימות והרשאות
           'Invalid credentials.': 'האימייל או הסיסמה אינם נכונים.',
           'Email verification required.':
             'אנא אמת את כתובת המייל שלך לפני ההתחברות.',
           'Your account is awaiting admin approval.':
             'חשבונך ממתין לאישור מנהל מערכת.',
           'User not found.': 'משתמש זה אינו קיים במערכת.',
-
-          // 🔑 טוקנים וסשן (למקרה של ריפרש או פג תוקף)
-          'Session expired. Please log in again.': 'החיבור פג, אנא התחבר מחדש.',
-          'Invalid or malformed token.': 'חלקה תקלה באבטחה, אנא נסה שוב.',
-
-          // ⚠️ שגיאות מערכת וכלליות
           'Internal Server Error': 'יש לנו תקלה בשרת, אנחנו כבר מטפלים בזה.',
-          'Verification token invalid or expired.':
-            'הקוד לאימות המייל אינו תקין או שפג תוקפו.',
-          'Too many files uploaded.': 'העלית יותר מדי קבצים.', // רלוונטי להרשמה אבל טוב שיהיה
         };
 
         if (msg === 'Your account is awaiting admin approval.') {
           throw new Error('Pending_approval');
         }
-        // אם ההודעה קיימת במפה - נשתמש בתרגום. אם לא - נציג אותה או הודעה גנרית.
         const errorMessage =
           errorTranslations[msg] || msg || 'אירעה שגיאה בכניסה.';
         throw new Error(errorMessage);
       }
 
-      // שמירה ב-LocalStorage ומעבר דף
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // שינוי 2: שימוש בפונקציית ה-login המרכזית
+      // פונקציה זו תפעיל את fetchDynamicPermissions ותעדכן את ההרשאות
+      await login(data.user, data.token);
+
+      // שינוי 3: מעבר דף ללא window.location.reload()
+      // ה-AuthContext כבר מעדכן את ה-State, מה שגורם לרינדור מחדש של ה-Navbar
       navigate('/');
-      window.location.reload();
     } catch (err) {
-      // עדכון הודעת השגיאה ב-State
       if (err.message === 'Pending_approval') {
         setError('חשבונך ממתין לאישור מנהל מערכת.');
       } else {
@@ -95,7 +86,7 @@ const Login = () => {
   };
 
   return (
-    <div className="user-page-container">
+    <div className="user-page-container" dir="rtl">
       <div className="auth-card">
         <h2>כניסה למערכת</h2>
         {error && (
@@ -139,8 +130,7 @@ const Login = () => {
             <br />
             <Link to="/forgot-password">שכחתי סיסמה</Link>
           </div>
-        </form>{' '}
-        {/* סגירה נכונה של הטופס כאן */}
+        </form>
       </div>
     </div>
   );

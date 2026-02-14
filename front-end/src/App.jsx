@@ -33,7 +33,6 @@ import AdminDashboard from './Pages/Admin/AdminDashboard';
 import ManageUsers from './Pages/Admin/ManageUsers';
 import ManageProjects from './Pages/Admin/ManageProjects';
 import UserApproval from './Pages/Admin/UserApproval';
-import CreateAdmin from './Pages/Admin/CreateAdmin';
 import ManageReviews from './Pages/Admin/ManageReviews';
 import ManageRoles from './Pages/Admin/ManageRoles';
 import SystemDashboard from './Pages/systemManager/SystemDashboard';
@@ -102,7 +101,6 @@ function App() {
                 <Route path="manage-users" element={<ManageUsers />} />
                 <Route path="manage-projects" element={<ManageProjects />} />
                 <Route path="user-approval" element={<UserApproval />} />
-                <Route path="create-admin" element={<CreateAdmin />} />
                 <Route path="manage-reviews" element={<ManageReviews />} />
                 <Route path="manage-roles" element={<ManageRoles />} />
                 <Route

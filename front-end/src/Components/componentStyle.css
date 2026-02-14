@@ -451,3 +451,8 @@
   padding: 10px;
   font-family: inherit;
 }
+
+.auth-btn {
+  color: white;
+  align-items: center;
+}

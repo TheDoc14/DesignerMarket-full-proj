@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useAuth } from '../../Context/AuthContext';
-// הוספת Lightbulb לרשימת הייבוא כאן:
+import { usePermission } from '../../Hooks/usePermission.jsx';
 import {
   Tag,
   Plus,
@@ -14,9 +13,9 @@ import {
 import '../PublicPages.css';
 
 const ManageCategories = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { hasPermission, user, loading: permissionLoading } = usePermission(); // מוסיפים את user
   const [categories, setCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState('');
+  const [newCategoryLabel, setNewCategoryLabel] = useState(''); // שם לתצוגה
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
@@ -24,37 +23,54 @@ const ManageCategories = () => {
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
   });
 
-  const fetchCategories = async () => {
+  // שליפת קטגוריות מנתיב האדמין כדי לקבל את האובייקטים המלאים (key, label)
+  const fetchCategories = useCallback(async () => {
+    if (loading === false && categories.length > 0) return;
     try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
       const res = await axios.get(
-        'http://localhost:5000/api/projects/categories'
+        'http://localhost:5000/api/admin/categories',
+        { headers: { Authorization: `Bearer ${token}` } }
       );
+      // ה-Backend מחזיר אובייקט עם שדה categories
       setCategories(res.data.categories || []);
     } catch (err) {
       console.error('Failed to fetch categories', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [categories.length, loading]);
 
   useEffect(() => {
-    if (user) fetchCategories();
-  }, [user]);
+    if (user && hasPermission('categories.manage')) {
+      fetchCategories();
+    }
+  }, [user, hasPermission]); // שימוש ב-user ו-hasPermission כתלויות יציבות
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
-    if (!newCategory.trim()) return;
+    if (!newCategoryLabel.trim()) return;
+
+    // יצירת KEY אוטומטי מה-Label (למשל: "Jewelry" -> "jewelry")
+    const generatedKey = newCategoryLabel
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-');
 
     try {
-      // שליחה לראוט הניהול המיועד להרשאת categories.manage
       await axios.post(
         'http://localhost:5000/api/admin/categories',
-        { name: newCategory },
+        {
+          key: generatedKey, // חובה לפי ה-Backend
+          label: newCategoryLabel.trim(), // חובה לפי ה-Backend
+        },
         getHeaders()
       );
 
       setMessage({ type: 'success', text: 'הקטגוריה נוספה בהצלחה!' });
-      setNewCategory('');
+      setNewCategoryLabel('');
+      await fetchCategories();
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 4000);
     } catch (err) {
@@ -65,49 +81,38 @@ const ManageCategories = () => {
     }
   };
 
-  const handleDeleteCategory = async (catName) => {
-    if (!window.confirm(`האם אתה בטוח שברצונך למחוק את הקטגוריה "${catName}"?`))
-      return;
+  const handleDeleteCategory = async (catKey) => {
+    if (!window.confirm(`האם אתה בטוח שברצונך למחוק קטגוריה זו?`)) return;
 
     try {
       await axios.delete(
-        `http://localhost:5000/api/admin/categories/${catName}`,
+        `http://localhost:5000/api/admin/categories/${catKey}`,
         getHeaders()
       );
+      await fetchCategories();
       fetchCategories();
+
       setMessage({ type: 'success', text: 'הקטגוריה הוסרה' });
     } catch (err) {
-      alert('לא ניתן למחוק קטגוריה המכילה פרויקטים פעילים');
+      alert(err.response?.data?.message || 'לא ניתן למחוק קטגוריה זו');
     }
   };
 
-  if (authLoading) return <div className="loader">טוען...</div>;
-  if (!user) return null;
+  if (permissionLoading) return <div className="loader">בודק הרשאות...</div>;
+  if (!hasPermission('categories.manage')) {
+    return (
+      <div className="admin-container">אין לך הרשאות לניהול קטגוריות.</div>
+    );
+  }
 
   return (
     <div className="admin-container" dir="rtl">
       <header className="dashboard-header">
-        <h1>ניהול קטגוריות ותוויות</h1>
-        <p>הגדרת סיווגים חדשים לפרויקטים במערכת Designer Market</p>
+        <h1>ניהול קטגוריות </h1>
       </header>
 
       {message.text && (
-        <div
-          className={`profile-alert ${message.type}`}
-          style={{
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-          }}
-        >
-          {message.type === 'success' ? (
-            <CheckCircle size={18} />
-          ) : (
-            <Info size={18} />
-          )}
-          {message.text}
-        </div>
+        <div className={`profile-alert ${message.type}`}>{message.text}</div>
       )}
 
       <div
@@ -120,151 +125,63 @@ const ManageCategories = () => {
       >
         {/* טופס הוספה */}
         <div className="admin-card">
-          <div
-            className="card-header"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '20px',
-            }}
-          >
-            <FolderPlus size={24} color="#0984e3" />
-            <h3 style={{ margin: 0 }}>הוספת קטגוריה</h3>
-          </div>
-          <form onSubmit={handleAddCategory} className="admin-vertical-form">
+          <form onSubmit={handleAddCategory}>
             <div className="form-group">
-              <label
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontWeight: 'bold',
-                }}
-              >
-                שם הקטגוריה החדשה
-              </label>
+              <label>שם הקטגוריה</label>
               <input
                 className="form-input"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="למשל: יודאיקה, תכשיטים..."
+                value={newCategoryLabel}
+                onChange={(e) => setNewCategoryLabel(e.target.value)}
+                placeholder="למשל: תכשיטים"
                 required
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  border: '1px solid #dfe6e9',
-                }}
               />
             </div>
             <button
               type="submit"
               className="profile-save-btn"
-              style={{
-                width: '100%',
-                marginTop: '15px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                gap: '8px',
-              }}
+              style={{ width: '100%', marginTop: '10px' }}
             >
               <Plus size={18} /> הוסף קטגוריה
             </button>
           </form>
-
-          <div
-            className="advice-box"
-            style={{
-              marginTop: '25px',
-              padding: '15px',
-              backgroundColor: '#fff9db',
-              borderRadius: '10px',
-              fontSize: '0.9rem',
-              color: '#856404',
-              display: 'flex',
-              gap: '10px',
-              alignItems: 'flex-start',
-            }}
-          >
-            <Lightbulb size={20} style={{ flexShrink: 0 }} />
-            <span>
-              <strong>טיפ למנהל:</strong> הוספת קטגוריות מדויקות עוזרת ללקוחות
-              למצוא פרויקטים מהר יותר ומגדילה את המכירות באתר.
-            </span>
-          </div>
         </div>
 
-        {/* רשימת קטגוריות קיימות */}
+        {/* רשימת קטגוריות */}
         <div className="admin-card">
-          <div
-            className="card-header"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '20px',
-            }}
-          >
-            <Tag size={24} color="#00b894" />
-            <h3 style={{ margin: 0 }}>
-              קטגוריות פעילות במערכת ({categories.length})
-            </h3>
-          </div>
-          <div className="category-list-wrapper" style={{ minHeight: '200px' }}>
-            {categories.length > 0 ? (
-              <div
-                className="tags-container"
-                style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}
-              >
-                {categories.map((cat, index) => (
+          <div className="category-list-wrapper">
+            {loading ? (
+              <p>טוען...</p>
+            ) : (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                {categories.map((cat) => (
                   <div
-                    key={index}
+                    key={cat._id}
                     className="category-tag-item"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '10px',
-                      padding: '10px 18px',
-                      backgroundColor: '#f8f9fa',
+                      padding: '10px',
+                      border: '1px solid #ddd',
                       borderRadius: '50px',
-                      border: '1px solid #e9ecef',
-                      transition: 'all 0.2s ease',
                     }}
                   >
-                    <span style={{ fontWeight: '600', color: '#2d3436' }}>
-                      {cat}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteCategory(cat)}
-                      style={{
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        color: '#fab1a0',
-                        display: 'flex',
-                        padding: '2px',
-                      }}
-                      title="מחק קטגוריה"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <strong>{cat.label}</strong>
+                    {!cat.isSystem && (
+                      <button
+                        onClick={() => handleDeleteCategory(cat.key)}
+                        style={{
+                          color: 'red',
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
-              </div>
-            ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '40px',
-                  color: '#b2bec3',
-                }}
-              >
-                <Info
-                  size={40}
-                  style={{ marginBottom: '10px', opacity: 0.5 }}
-                />
-                <p>טרם הוגדרו קטגוריות. התחל בלהוסיף אחת מימין!</p>
               </div>
             )}
           </div>

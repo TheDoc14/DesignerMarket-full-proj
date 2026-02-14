@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import JSZip from 'jszip'; // ייבוא הספרייה ליצירת ZIP
-import { useAuth } from '../Context/AuthContext';
+import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook החדש
 import defaultUserPic from '../DefaultPics/userDefault.jpg';
+import { useAuth } from '../Context/AuthContext';
 import './PublicPages.css';
 
 const PersonalDashboard = () => {
-  const { user, updateUser, logout } = useAuth();
+  const { user, login, logout } = useAuth();
+  const { hasPermission, loading: permissionLoading } = usePermission();
   const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
@@ -36,8 +38,63 @@ const PersonalDashboard = () => {
     },
     profileImage: null,
   });
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.id) return;
 
-  const allowed = (permission) => user?.permissions?.includes(permission);
+    const token = localStorage.getItem('token');
+    try {
+      setLoading(true);
+      const profileRes = await axios.get(
+        'http://localhost:5000/api/profile/me',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (profileRes.data.user) {
+        const u = profileRes.data.user;
+        setFormData((prev) => ({
+          ...prev,
+          username: u.username || '',
+          firstName: u.firstName || '',
+          lastName: u.lastName || '',
+          phone: u.phone || '',
+          city: u.city || '',
+          country: u.country || '',
+          bio: u.bio || '',
+          paypalEmail: u.paypalEmail || '',
+          birthDate: u.birthDate ? u.birthDate.split('T')[0] : '',
+          social: u.social || prev.social,
+        }));
+        setProfileImagePreview(u.profileImage || defaultUserPic);
+      }
+      setProjects(profileRes.data.projects || []);
+
+      // שליפת פרויקטים שרכשתי (בדיקה אם קיימים קבצים נגישים)
+      const projectsRes = await axios.get(
+        'http://localhost:5000/api/projects',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const allProjects = projectsRes.data.projects || [];
+      setPurchasedProjects(
+        allProjects.filter(
+          (p) => p && Array.isArray(p.files) && p.files.length > 0
+        )
+      );
+    } catch (err) {
+      if (err.response?.status === 401) logout();
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, logout]);
+
+  useEffect(() => {
+    if (!permissionLoading && user?.id) {
+      fetchDashboardData();
+    }
+  }, [user?.id, permissionLoading, fetchDashboardData]);
 
   // פונקציה להורדת כל קבצי הפרויקט + התמונה כקובץ ZIP אחד
   const downloadAllAsZip = async (project) => {
@@ -113,61 +170,6 @@ const PersonalDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      try {
-        setLoading(true);
-        const profileRes = await axios.get(
-          'http://localhost:5000/api/profile/me',
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if (profileRes.data.user) {
-          const u = profileRes.data.user;
-          setFormData((prev) => ({
-            ...prev,
-            username: u.username || '',
-            firstName: u.firstName || '',
-            lastName: u.lastName || '',
-            phone: u.phone || '',
-            city: u.city || '',
-            country: u.country || '',
-            bio: u.bio || '',
-            paypalEmail: u.paypalEmail || '',
-            birthDate: u.birthDate ? u.birthDate.split('T')[0] : '',
-            social: u.social || prev.social,
-          }));
-          setProfileImagePreview(u.profileImage || defaultUserPic);
-        }
-        setProjects(profileRes.data.projects || []);
-
-        const projectsRes = await axios.get(
-          'http://localhost:5000/api/projects',
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        const allProjects = projectsRes.data.projects || [];
-        setPurchasedProjects(
-          allProjects.filter(
-            (p) => p && Array.isArray(p.files) && p.files.length > 0
-          )
-        );
-      } catch (err) {
-        if (err.response?.status === 401) logout();
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDashboardData();
-  }, [logout]);
-
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleSocialChange = (e) =>
@@ -206,7 +208,7 @@ const PersonalDashboard = () => {
           },
         }
       );
-      updateUser(res.data.user);
+      await login(res.data.user, token);
       setMessage({ type: 'success', text: 'הפרופיל עודכן!' });
       window.scrollTo(0, 0);
     } catch (err) {
@@ -215,6 +217,10 @@ const PersonalDashboard = () => {
       setSaving(false);
     }
   };
+  if (permissionLoading)
+    return <div className="loading-state">מאמת הרשאות...</div>;
+  if (!user)
+    return <div className="error-container">עליך להתחבר כדי לצפות בדף זה.</div>;
 
   if (loading) return <div className="loading-state">טוען נתונים...</div>;
 
@@ -245,7 +251,7 @@ const PersonalDashboard = () => {
               className="profile-preview-img"
             />
             <div className="image-overlay">
-              <span>שינוי תמונה</span>
+              <span>החלף תמונה</span>
             </div>
           </div>
           <input
@@ -253,6 +259,7 @@ const PersonalDashboard = () => {
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/*"
+            style={{ display: 'none' }}
           />
         </div>
 
@@ -352,9 +359,9 @@ const PersonalDashboard = () => {
           ))}
         </div>
 
-        {allowed('projects.create') && (
+        {hasPermission('projects.create') && (
           <div className="form-group full-width paypal-highlight">
-            <label>אימייל PayPal</label>
+            <label>אימייל PayPal למשיכת כספים</label>
             <input
               className="form-input"
               name="paypalEmail"
@@ -371,7 +378,7 @@ const PersonalDashboard = () => {
       </form>
 
       <div className="profile-management-grid">
-        {allowed('projects.create') && (
+        {hasPermission('projects.create') && (
           <div className="management-section">
             <h3 className="section-title">
               🚀 הפרויקטים שלי ({projects.length})

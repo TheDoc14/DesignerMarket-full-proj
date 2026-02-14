@@ -3,112 +3,93 @@ import axios from 'axios';
 import Popup from '../Components/Popup';
 import './PublicPages.css';
 import projectDefault from '../DefaultPics/projectDefault.png';
+import { usePermission } from '../Hooks/usePermission.jsx'; // ייבוא ה-Hook החדש
 
 const ProjectLibrary = () => {
+  const { hasPermission, user } = usePermission();
   const [projects, setProjects] = useState([]);
   const [displayList, setDisplayList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeProject, setActiveProject] = useState(null);
+  const [users, setUsers] = useState([]); // State חדש לשמירת המשתמשים
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [usernames, setUsernames] = useState({}); // אובייקט שיחזיק { userId: username }
+  const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const fetchUsernames = useCallback(
-    async (userIds) => {
-      const uniqueIds = [...new Set(userIds)];
-      const newNames = { ...usernames };
-      let changed = false;
-
-      for (const id of uniqueIds) {
-        if (!newNames[id] && id) {
-          try {
-            const res = await axios.get(
-              `http://localhost:5000/api/users/${id}`
-            );
-            newNames[id] = res.data.username;
-            changed = true;
-          } catch (err) {
-            newNames[id] = 'מעצב במערכת';
-            changed = true;
-          }
-        }
-      }
-      if (changed) setUsernames(newNames);
-    },
-    [usernames]
-  );
-
-  const fetchProjects = useCallback(async () => {
+  // הסרנו את ה-state של usernames כי השמות כבר מגיעים בתוך הפרויקט
+  const loadLibraryData = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      const endpoint = 'http://localhost:5000/api/projects?published=true';
+      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const response = await axios.get(endpoint, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      // 1. שליפה מקבילה של פרויקטים ומשתמשים
+      const [projectsRes, usersRes] = await Promise.all([
+        axios.get(
+          `http://localhost:5000/api/projects?published=true&page=${currentPage}&limit=8&search=${searchTerm}`,
+          { headers: authHeader }
+        ),
+        axios
+          .get('http://localhost:5000/api/admin/users', { headers: authHeader })
+          .catch(() => ({ data: { users: [] } })),
+      ]);
+      const allProjects = projectsRes.data.projects || [];
+      const allUsers = usersRes.data.users || [];
+      setMeta(projectsRes.data.meta || { page: 1, totalPages: 1 });
+      // 2. הצלבת ה-ID של היוצר עם שם המשתמש שלו
+      // 2. הצלבת ה-ID של היוצר עם שם המשתמש שלו
+      const projectsWithCreators = allProjects.map((project) => {
+        // חילוץ בטוח של ה-ID של היוצר מתוך הפרויקט
+        const creatorId =
+          typeof project.createdBy === 'object'
+            ? project.createdBy?._id?.toString()
+            : project.createdBy?.toString();
+
+        // חיפוש המשתמש ברשימה הכללית בבטחה
+        let creatorName = 'מעצב במערכת';
+
+        // שימוש ב-allUsers שהגיעו מהשרת באותו רגע
+        if (allUsers && allUsers.length > 0) {
+          const foundUser = allUsers.find((u) => {
+            const userId = u._id?.toString() || u.id?.toString();
+            return userId && creatorId && userId === creatorId;
+          });
+
+          if (foundUser) {
+            creatorName = foundUser.username;
+          }
+        }
+
+        // ✅ תיקון קריטי: חייבים להחזיר את אובייקט הפרויקט!
+        return {
+          ...project,
+          creatorName: creatorName,
+        };
       });
 
-      const data = response.data.projects || [];
-      const onlyPublished = data.filter((p) => p.isPublished === true);
-
-      setProjects(onlyPublished);
-      setDisplayList(onlyPublished);
-
-      // --- כאן השליפה של השמות - בתוך הבלוק שבו data קיים ---
-      const ids = onlyPublished
-        .map((p) => p.createdBy)
-        .filter((id) => typeof id === 'string');
-
-      if (ids.length > 0) {
-        fetchUsernames(ids);
-      }
-      // ----------------------------------------------------
+      setProjects(projectsWithCreators);
+      setDisplayList(projectsWithCreators);
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error('טעינת הנתונים נכשלה:', err);
     } finally {
       setLoading(false);
     }
-  }, [fetchUsernames]); // הוספנו את התלות ב-fetchUsernames
-  // בתוך הקומפוננטה ProjectLibrary
+  }, [currentPage, searchTerm]);
 
-  // 2. קריאה ראשונית בטעינת הדף
+  // הפעלה ראשונית של הטעינה המאוחדת
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
-
-  // 3. עכשיו refreshData יכולה למצוא את הפונקציה
-  const refreshData = async () => {
-    await fetchProjects();
-  };
-
-  const handleImageError = (e) => {
-    e.target.onerror = null;
-    e.target.src = projectDefault;
-  };
-
-  const handleProjectUpdate = (updatedProject) => {
-    // אם הפונקציה נקראת עם פרויקט מעודכן (למשל מעריכה)
-    if (updatedProject && updatedProject._id) {
-      const updateInList = (list) =>
-        list.map((p) => (p._id === updatedProject._id ? updatedProject : p));
-      setProjects((prev) => updateInList(prev));
-      setDisplayList((prev) => updateInList(prev));
-      setActiveProject(updatedProject);
-    } else {
-      // אם הפונקציה נקראת ללא פרמטרים (למשל אחרי הוספת תגובה), נרפרש את הכל
-      refreshData();
-    }
-  };
+    loadLibraryData();
+  }, [loadLibraryData]);
 
   useEffect(() => {
     let result = [...projects];
     if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
       result = result.filter(
         (p) =>
-          p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.createdBy?.username
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase())
+          p.title?.toLowerCase().includes(term) ||
+          p.creatorName?.toLowerCase().includes(term) // חיפוש לפי השם המוצלב
       );
     }
     if (sortBy === 'price-asc') result.sort((a, b) => a.price - b.price);
@@ -119,10 +100,27 @@ const ProjectLibrary = () => {
     setDisplayList(result);
   }, [searchTerm, sortBy, projects]);
 
+  const handleImageError = (e) => {
+    e.target.onerror = null;
+    e.target.src = projectDefault;
+  };
+
   const getImageUrl = (project) => {
+    // בדיקה אם הפרויקט קיים למניעת קריסת ה-TypeError
+    if (!project) return projectDefault;
+
     if (project.mainImageUrl) return project.mainImageUrl;
     if (project.media?.[0]?.url) return project.media[0].url;
     return projectDefault;
+  };
+
+  const handleProjectUpdate = (updatedProject) => {
+    loadLibraryData(); // רענון מלא כדי לוודא שמות עדכניים
+    setActiveProject(null);
+  };
+
+  const refreshData = async () => {
+    await loadLibraryData();
   };
 
   if (loading) return <div className="loader">טוען את ספריית הפרויקטים...</div>;
@@ -155,9 +153,10 @@ const ProjectLibrary = () => {
 
       {displayList.length > 0 ? (
         <main className="projects-grid">
-          {displayList.map((project) => (
+          {displayList.map((project, index) => (
             <article
-              key={project._id}
+              // תיקון: שימוש ב-fallback ל-index כדי למנוע את שגיאת ה-Key בקונסול
+              key={project._id || index}
               className="project-card"
               onClick={() => setActiveProject(project)}
             >
@@ -174,16 +173,49 @@ const ProjectLibrary = () => {
                 <h3>{project.title}</h3>
                 <div className="card-creator">
                   <span>👤</span>
-                  <span>{project.createdBy?.username || 'מעצב במערכת'}</span>
+                  {/* שימוש בשם המעצב שנמצא בתהליך ההתאמה */}
+                  <span>{project.creatorName}</span>{' '}
                 </div>
                 <div className="card-footer">
                   <div className="card-rating">
-                    <span>★</span>
-                    <span>{Number(project.averageRating || 0).toFixed(1)}</span>
+                    <span>
+                      ★ {Number(project.averageRating || 0).toFixed(1)}
+                    </span>
                   </div>
+                  {/* ניתן להוסיף תנאי הרשאה לכפתור "צפה בפרטים" אם נרצה להגביל צפייה */}
                   <span className="view-btn">צפה בפרטים ←</span>
                 </div>
               </div>
+              {/* רכיב פגינציה לקטלוג הכללי */}
+              {meta.totalPages > 1 && (
+                <div className="pagination-container">
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => {
+                      setCurrentPage((prev) => prev - 1);
+                      window.scrollTo(0, 0);
+                    }}
+                    className="pagination-btn"
+                  >
+                    → הקודם
+                  </button>
+
+                  <span className="page-indicator">
+                    דף {meta.page} מתוך {meta.totalPages}
+                  </span>
+
+                  <button
+                    disabled={currentPage === meta.totalPages}
+                    onClick={() => {
+                      setCurrentPage((prev) => prev + 1);
+                      window.scrollTo(0, 0);
+                    }}
+                    className="pagination-btn"
+                  >
+                    הבא ←
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </main>
@@ -205,7 +237,7 @@ const ProjectLibrary = () => {
         <Popup
           project={activeProject}
           onClose={() => setActiveProject(null)}
-          onUpdate={handleProjectUpdate} // משתמש ב-handleProjectUpdate שקורא ל-refreshData
+          onUpdate={handleProjectUpdate}
         />
       )}
     </div>

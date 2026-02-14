@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
+import { usePermission } from '../Hooks/usePermission.jsx';
+import { PERMS } from '../Constants/permissions.jsx';
 import logo from '../DefaultPics/logo.png';
 import {
   LayoutDashboard,
@@ -16,19 +18,18 @@ import {
 import './componentStyle.css';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
+  // שליפת hasPermission והמשתמש. ה-Hook הזה מסתמך על מידע מקומי ולא קורא לשרת
+  const { hasPermission, user } = usePermission();
   const [isOpen, setIsOpen] = useState(false);
 
-  // פונקציית עזר לבדיקת הרשאות דינמית
-  const allowed = (permission) => {
-    if (!user || !user.permissions) return false;
-    return user.permissions.includes(permission);
-  };
   const closeMenu = () => setIsOpen(false);
+
   const handleLogout = () => {
-    setIsOpen(false); // סגירת ה-Sidebar כדי שלא יישאר פתוח "על ריק"
-    logout(); // ביצוע הניתוק ב-AuthContext
+    setIsOpen(false);
+    logout();
   };
+
   return (
     <nav className="navbar" dir="rtl">
       <div className="navbar-fixed-part">
@@ -54,13 +55,33 @@ const Navbar = () => {
           &times;
         </button>
 
+        <div className="sidebar-footer">
+          {user ? (
+            <button onClick={handleLogout} className="logout-btn-sidebar">
+              <LogOut size={18} /> התנתק
+            </button>
+          ) : (
+            <div className="guest-actions">
+              <Link to="/login" onClick={closeMenu} className="auth-btn login">
+                התחברות
+              </Link>
+              <Link
+                to="/register"
+                onClick={closeMenu}
+                className="auth-btn register"
+              >
+                הרשמה
+              </Link>
+            </div>
+          )}
+        </div>
+
         <div className="sidebar-links">
-          {/* קישורים ציבוריים */}
           <Link to="/projects" onClick={closeMenu} className="sidebar-item">
             📦 קטלוג פרויקטים
           </Link>
           <Link to="/about" onClick={closeMenu} className="sidebar-item">
-            ℹ️ אודות
+            👥 אודות
           </Link>
 
           {user && (
@@ -73,21 +94,22 @@ const Navbar = () => {
               >
                 👤 אזור אישי
               </Link>
-              {allowed('projects.create') && (
+              {hasPermission('projects.create') && (
                 <Link
                   to="/add-project"
                   onClick={closeMenu}
                   className="sidebar-item highlight-link"
                 >
-                  + הוסף מוצר חדש
+                  + הוסף מוצר
                 </Link>
               )}
             </>
           )}
 
-          {/* --- חדש: תפריט ניהול עסקי (System Manager) --- */}
-          {/* מציג רק למשתמש עם הרשאת מערכת */}
-          {allowed('system.panel.access') && (
+          {/* --- תפריט ניהול עסקי (Business Manager) --- */}
+          {/* תיקון: שימוש ב-PERM הנכון כפי שמוגדר ב-Constants */}
+          {(hasPermission('business.panel.access') ||
+            hasPermission('stats.read')) && (
             <div className="admin-section-sidebar">
               <p className="section-title">📊 ניהול עסקי</p>
               <Link
@@ -97,23 +119,29 @@ const Navbar = () => {
               >
                 <BarChart3 size={18} /> דשבורד סטטיסטיקות
               </Link>
+            </div>
+          )}
+
+          {(hasPermission(PERMS.BUSINESS_PANEL_ACCESS) ||
+            user?.role === 'business_manager') && (
+            <div className="admin-section-sidebar">
+              <p className="section-title">📊 ניהול עסקי</p>
               <Link
-                to="/admin/manage-categories"
+                to="/admin/system-stats"
                 onClick={closeMenu}
                 className="admin-item"
               >
-                <Tags size={18} /> ניהול קטגוריות
+                <BarChart3 size={18} /> דשבורד סטטיסטיקות
               </Link>
             </div>
           )}
 
           {/* --- תפריט אדמין (Admin) --- */}
-          {/* מציג רק אם המשתמש הוא אדמין ואינו מנהל מערכת עסקי (הפרדה מוחלטת) */}
-          {allowed('admin.panel.access') && !allowed('system.panel.access') && (
+          {hasPermission('admin.panel.access') && (
             <div className="admin-section-sidebar">
               <p className="section-title">🛡️ ניהול אדמין</p>
               <div className="admin-links-list">
-                {allowed('users.approve') && (
+                {hasPermission('users.approve') && (
                   <Link
                     to="/admin/user-approval"
                     onClick={closeMenu}
@@ -122,8 +150,7 @@ const Navbar = () => {
                     <CheckSquare size={16} /> אישור משתמשים
                   </Link>
                 )}
-                <br></br>
-                {allowed('users.read') && (
+                {hasPermission('users.read') && (
                   <Link
                     to="/admin/manage-users"
                     onClick={closeMenu}
@@ -132,8 +159,7 @@ const Navbar = () => {
                     <Users size={16} /> ניהול משתמשים
                   </Link>
                 )}
-                <br></br>
-                {allowed('projects.publish') && (
+                {hasPermission('projects.publish') && (
                   <Link
                     to="/admin/manage-projects"
                     onClick={closeMenu}
@@ -142,8 +168,7 @@ const Navbar = () => {
                     <FileText size={16} /> ניהול פרויקטים
                   </Link>
                 )}
-                <br></br>
-                {allowed('reviews.manage') && (
+                {hasPermission('reviews.manage') && (
                   <Link
                     to="/admin/manage-reviews"
                     onClick={closeMenu}
@@ -152,17 +177,22 @@ const Navbar = () => {
                     <MessageSquare size={16} /> ניהול תגובות
                   </Link>
                 )}
-                <br></br>
-                {allowed('roles.manage') && (
+                <Link
+                  to="/admin/manage-categories"
+                  onClick={closeMenu}
+                  className="admin-item"
+                >
+                  <Tags size={18} /> ניהול קטגוריות
+                </Link>
+                {hasPermission('roles.manage') && (
                   <Link
                     to="/admin/manage-roles"
                     onClick={closeMenu}
                     className="admin-item"
                   >
-                    <Shield size={16} /> ניהול הרשאות
+                    <Shield size={16} /> ניהול תפקידים
                   </Link>
                 )}
-                <br></br>
                 <Link
                   to="/admin/dashboard"
                   onClick={closeMenu}
@@ -173,31 +203,6 @@ const Navbar = () => {
               </div>
             </div>
           )}
-
-          <div className="sidebar-footer">
-            {user ? (
-              <button onClick={handleLogout} className="logout-btn-sidebar">
-                <LogOut size={18} /> התנתק מהמערכת
-              </button>
-            ) : (
-              <div className="guest-actions">
-                <Link
-                  to="/login"
-                  onClick={closeMenu}
-                  className="auth-btn login"
-                >
-                  התחברות
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={closeMenu}
-                  className="auth-btn register"
-                >
-                  הרשמה
-                </Link>
-              </div>
-            )}
-          </div>
         </div>
       </div>
       {isOpen && <div className="overlay" onClick={closeMenu}></div>}

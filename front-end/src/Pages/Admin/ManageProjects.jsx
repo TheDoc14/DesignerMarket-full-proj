@@ -1,20 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useAuth } from '../../Context/AuthContext';
+import { usePermission } from '../../Hooks/usePermission.jsx';
 import Popup from '../../Components/Popup';
-import {
-  Trash2,
-  Edit3,
-  CheckCircle,
-  Clock,
-  XCircle,
-  Search,
-  Filter,
-} from 'lucide-react'; // הוספת אייקונים לבהירות
+import { Trash2, Edit3, CheckCircle, Clock, XCircle } from 'lucide-react';
 import '../../App.css';
 
+// 1. הגדרה מחוץ לקומפוננטה למניעת יצירה מחדש בכל רינדור (מונע הבהוב)
+const getAuthHeader = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+});
+
 const ManageProjects = () => {
-  const { user: currentUser } = useAuth();
+  const {
+    hasPermission,
+    user: currentUser,
+    loading: permissionLoading,
+  } = usePermission();
+
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeProject, setActiveProject] = useState(null);
@@ -32,11 +34,11 @@ const ManageProjects = () => {
     page: 1,
   });
 
-  const getAuthHeader = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-  });
-
+  // 2. פונקציית שליפה יציבה - תלויה רק בערכי הפילטרים וב-ID של המשתמש
   const fetchProjects = useCallback(async () => {
+    // בדיקה בסיסית - אם אין משתמש, אל תנסה לפנות לשרת
+    if (!currentUser?.id) return;
+
     try {
       setLoading(true);
       const queryParams = { limit: 50, page: filters.page };
@@ -54,20 +56,31 @@ const ManageProjects = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+    // הערה: הסרנו את hasPermission מהתלויות כדי למנוע את ההבהוב
+  }, [filters.page, filters.q, filters.published, currentUser?.id]);
 
+  // 3. Effect שרץ רק כשנתוני המשתמש או הפילטרים משתנים באמת
   useEffect(() => {
-    if (currentUser?.role === 'admin') fetchProjects();
-  }, [currentUser, fetchProjects]);
+    if (!permissionLoading && currentUser?.id && hasPermission('users.read')) {
+      fetchProjects();
+    }
+  }, [
+    currentUser?.id,
+    permissionLoading,
+    filters.page,
+    filters.q,
+    filters.published,
+    fetchProjects,
+  ]);
 
-  // פונקציית מחיקה חדשה
   const handleDeleteProject = async (e, projectId) => {
     e.stopPropagation();
-    if (
-      !window.confirm(
-        'האם אתה בטוח שברצונך למחוק פרויקט זה לצמיתות? פעולה זו תמחק גם את כל הקבצים והביקורות הקשורים.'
-      )
-    )
+    if (!hasPermission('projects.delete')) {
+      alert('אין לך הרשאה למחוק פרויקטים');
+      return;
+    }
+
+    if (!window.confirm('האם אתה בטוח שברצונך למחוק פרויקט זה לצמיתות?'))
       return;
 
     try {
@@ -82,32 +95,50 @@ const ManageProjects = () => {
     }
   };
 
-  const togglePublish = async (e, projectId, currentStatus) => {
-    e.stopPropagation();
+  const togglePublish = async (project) => {
+    // חילוץ ה-ID הנכון: MongoDB משתמש ב-_id
+    const projectId = project._id || project.id;
+
+    if (!projectId) {
+      console.error('Missing Project ID!', project);
+      return;
+    }
+
     try {
+      const token = localStorage.getItem('token');
+      // שליחת הבקשה לנתיב הניהול המוגן
       await axios.put(
         `http://localhost:5000/api/admin/projects/${projectId}/publish`,
-        { isPublished: !currentStatus },
-        getAuthHeader()
+        { isPublished: !project.isPublished },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      fetchProjects();
+
+      // עדכון מקומי של הרשימה
+      setProjects((prev) =>
+        prev.map((p) =>
+          p._id === projectId || p.id === projectId
+            ? { ...p, isPublished: !p.isPublished }
+            : p
+        )
+      );
     } catch (err) {
-      alert('עדכון סטטוס נכשל');
+      console.error('Update failed', err);
+      alert('העדכון נכשל: ' + (err.response?.data?.message || 'שגיאת שרת'));
     }
   };
 
   const handleEditClick = (e, project) => {
     e.stopPropagation();
-    setEditData({
-      title: project.title || '',
-      description: project.description || '',
-      category: project.category || '',
-    });
+    // אנחנו רק מגדירים את הפרויקט הפעיל. ה-Popup כבר יזהה שאת אדמין ויציע כפתור עריכה
     setActiveProject(project);
-    setIsEditing(true);
+    setIsEditing(false); // סוגרים את המודאל הישן אם הוא פתוח
   };
 
   const handleSaveEdit = async () => {
+    if (!hasPermission('projects.update')) {
+      alert('אין לך הרשאה לערוך פרויקטים');
+      return;
+    }
     try {
       const id = activeProject._id || activeProject.id;
       await axios.put(
@@ -124,8 +155,11 @@ const ManageProjects = () => {
     }
   };
 
-  if (!currentUser || currentUser.role !== 'admin')
-    return <div className="container">אין הרשאות ניהול למשתמש זה.</div>;
+  if (permissionLoading) return <div className="loader">בודק הרשאות...</div>;
+
+  if (!hasPermission('admin.panel.access')) {
+    return <div className="container">אין לך הרשאה לגשת לפאנל הניהול.</div>;
+  }
 
   return (
     <div className="admin-container">
@@ -134,30 +168,25 @@ const ManageProjects = () => {
         <p>צפייה, אישור, עריכה או הסרה של תכנים מהפלטפורמה</p>
       </header>
 
-      {/* סרגל כלים משופר */}
       <div className="admin-toolbar">
-        <div>
-          <input
-            placeholder="חפש לפי כותרת או תיאור..."
-            value={filters.q}
-            onChange={(e) =>
-              setFilters({ ...filters, q: e.target.value, page: 1 })
-            }
-            className="admin-input"
-          />
-        </div>
-        <div>
-          <select
-            value={filters.published}
-            onChange={(e) =>
-              setFilters({ ...filters, published: e.target.value, page: 1 })
-            }
-          >
-            <option value="">כל הסטטוסים</option>
-            <option value="true">מפורסמים בלבד</option>
-            <option value="false">ממתינים לאישור</option>
-          </select>
-        </div>
+        <input
+          placeholder="חפש לפי כותרת או תיאור..."
+          value={filters.q}
+          onChange={(e) =>
+            setFilters({ ...filters, q: e.target.value, page: 1 })
+          }
+          className="admin-input"
+        />
+        <select
+          value={filters.published}
+          onChange={(e) =>
+            setFilters({ ...filters, published: e.target.value, page: 1 })
+          }
+        >
+          <option value="">כל הסטטוסים</option>
+          <option value="true">מפורסמים בלבד</option>
+          <option value="false">ממתינים לאישור</option>
+        </select>
       </div>
 
       {loading ? (
@@ -167,131 +196,92 @@ const ManageProjects = () => {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>פרטי הפרויקט</th>
+                <th>שם הפרויקט</th>
+                <th>קטגוריה</th>
                 <th>יוצר</th>
                 <th>סטטוס</th>
                 <th>ניהול</th>
               </tr>
             </thead>
             <tbody>
-              {projects.length > 0 ? (
-                projects.map((p) => {
-                  const id = p._id || p.id;
-                  return (
-                    <tr
-                      key={id}
-                      onClick={() => setActiveProject(p)}
-                      className="clickable-row"
-                    >
-                      <td>
-                        <div>{p.title}</div>
-                        <div>{p.category}</div>
-                      </td>
-                      <td>{p.createdBy?.username || 'משתמש מערכת'}</td>
-                      <td>
-                        <span
-                          className={`status-tag ${p.isPublished ? 'approved' : 'pending'}`}
-                        >
-                          {p.isPublished ? (
-                            <CheckCircle size={14} />
-                          ) : (
-                            <Clock size={14} />
-                          )}
-                          {p.isPublished ? 'מפורסם' : 'ממתין'}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="admin-actions-cell">
+              {projects.map(
+                (
+                  p // המשתנה כאן הוא 'p'
+                ) => (
+                  <tr
+                    key={p._id || p.id}
+                    onClick={() => setActiveProject(p)}
+                    className="clickable-row"
+                  >
+                    <td>{p.title}</td>
+                    <td>{p.category}</td>
+                    <td>{p.createdBy?.username || 'משתמש מערכת'}</td>
+                    <td>
+                      <span
+                        className={`status-tag ${p.isPublished ? 'approved' : 'pending'}`}
+                      >
+                        {p.isPublished ? (
+                          <CheckCircle size={14} />
+                        ) : (
+                          <Clock size={14} />
+                        )}
+                        {p.isPublished ? 'מפורסם' : 'ממתין'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="admin-actions-cell">
+                        {hasPermission('projects.update') && (
                           <button
                             onClick={(e) => handleEditClick(e, p)}
                             className="btn-icon"
-                            title="ערוך"
                           >
                             <Edit3 size={18} color="#0984e3" />
                           </button>
+                        )}
+
+                        {hasPermission('projects.publish') && (
                           <button
-                            onClick={(e) => togglePublish(e, id, p.isPublished)}
-                            className="btn-icon"
-                            title={p.isPublished ? 'הסר פרסום' : 'אשר פרסום'}
+                            /* תיקון: שימוש ב-p.isPublished במקום project.isPublished */
+                            className={`btn-publish ${p.isPublished ? 'unpublish' : 'publish'}`}
+                            onClick={(e) => {
+                              // מניעת פתיחת הפופאפ של השורה
+                              e.stopPropagation();
+                              // תיקון: קריאה לשם הפונקציה הנכון togglePublish ושימוש ב-p
+                              togglePublish(p);
+                            }}
                           >
-                            {p.isPublished ? (
-                              <XCircle size={18} color="#d63031" />
-                            ) : (
-                              <CheckCircle size={18} color="#00b894" />
-                            )}
+                            {p.isPublished ? 'הסר פרסום' : 'אשר פרסום'}
                           </button>
+                        )}
+
+                        {hasPermission('projects.delete') && (
                           <button
-                            onClick={(e) => handleDeleteProject(e, id)}
+                            onClick={(e) =>
+                              handleDeleteProject(e, p._id || p.id)
+                            }
                             className="btn-icon"
-                            title="מחק"
                           >
                             <Trash2 size={18} color="#e17055" />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="4">לא נמצאו פרויקטים התואמים לחיפוש.</td>
-                </tr>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
               )}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* מודאל עריכה (נשאר דומה עם שיפור עיצובי קל) */}
-      {isEditing && (
-        <div className="modal-overlay" onClick={() => setIsEditing(false)}>
-          <div
-            className="modal-content admin-edit-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="profile-main-title">✏️ עריכת פרטי פרויקט</h2>
-            <div className="admin-vertical-form">
-              <div className="form-group">
-                <label className="form-label">כותרת הפרויקט</label>
-                <input
-                  className="form-input"
-                  value={editData.title}
-                  onChange={(e) =>
-                    setEditData({ ...editData, title: e.target.value })
-                  }
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">תיאור</label>
-                <textarea
-                  className="form-textarea"
-                  value={editData.description}
-                  onChange={(e) =>
-                    setEditData({ ...editData, description: e.target.value })
-                  }
-                />
-              </div>
-              <div className="modal-footer-btns">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="cancel-btn"
-                >
-                  ביטול
-                </button>
-                <button onClick={handleSaveEdit} className="profile-save-btn">
-                  שמור שינויים
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeProject && !isEditing && (
+      {activeProject && (
         <Popup
           project={activeProject}
           onClose={() => setActiveProject(null)}
-          onUpdate={() => fetchProjects()}
+          onUpdate={() => {
+            fetchProjects(); // מרענן את הטבלה אחרי עריכה בתוך הפופאפ
+            setActiveProject(null); // סוגר את הפופאפ לאחר עדכון (אופציונלי)
+          }}
         />
       )}
     </div>

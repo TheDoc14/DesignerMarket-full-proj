@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   BarChart,
@@ -28,6 +28,7 @@ import {
   Briefcase,
 } from 'lucide-react';
 import { useAuth } from '../../Context/AuthContext';
+import { usePermission } from '../../Hooks/usePermission.jsx'; // שינוי 1: ייבוא usePermission
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -35,7 +36,11 @@ import html2canvas from 'html2canvas';
 import '../PublicPages.css';
 
 const SystemDashboard = () => {
-  const { user, loading: authLoading } = useAuth();
+  const {
+    hasPermission,
+    user: currentUser,
+    loading: permissionLoading,
+  } = usePermission();
   const [stats, setStats] = useState(null);
   const [finance, setFinance] = useState(null);
   const [adminStats, setAdminStats] = useState(null);
@@ -43,31 +48,44 @@ const SystemDashboard = () => {
   const dashboardRef = useRef(null);
 
   const COLORS = ['#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7'];
+  const fetchData = useCallback(async () => {
+    if (!hasPermission('stats.read')) return;
+
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [statsRes, financeRes, adminStatsRes] = await Promise.all([
+        axios.get('http://localhost:5000/api/system/stats', { headers }),
+        axios.get('http://localhost:5000/api/system/finance', { headers }),
+        axios.get('http://localhost:5000/api/admin/stats', { headers }),
+      ]);
+
+      setStats(statsRes.data.stats);
+      setFinance(financeRes.data.finance);
+      setAdminStats(adminStatsRes.data.stats);
+    } catch (err) {
+      console.error('Managerial data load failed', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [hasPermission]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const headers = { Authorization: `Bearer ${token}` };
-        const [statsRes, financeRes, adminStatsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/system/stats', { headers }),
-          axios.get('http://localhost:5000/api/system/finance', { headers }),
-          axios.get('http://localhost:5000/api/admin/stats', { headers }),
-        ]);
-        setStats(statsRes.data.stats);
-        setFinance(financeRes.data.finance);
-        setAdminStats(adminStatsRes.data.stats);
-      } catch (err) {
-        console.error('Managerial data load failed', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (user) fetchData();
-  }, [user]);
-
-  if (authLoading) return <div className="loader">מאמת הרשאות ניהול...</div>;
-  if (!user) return null;
+    if (!permissionLoading && currentUser?.id && hasPermission('stats.read')) {
+      fetchData();
+    }
+  }, [currentUser?.id, permissionLoading, hasPermission, fetchData]);
+  if (permissionLoading)
+    return <div className="loader">מאמת הרשאות ניהול...</div>;
+  if (!hasPermission('admin.panel.access')) {
+    return (
+      <div className="admin-container">
+        אין לך הרשאה לצפות בנתונים אסטרטגיים.
+      </div>
+    );
+  }
 
   // חישובי בינה עסקית (BI)
   const grossTotal = finance?.totals?.grossRevenue || 0;

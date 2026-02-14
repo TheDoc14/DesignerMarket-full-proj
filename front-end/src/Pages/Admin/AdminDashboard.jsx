@@ -3,9 +3,10 @@ import axios from 'axios';
 import { useAuth } from '../../Context/AuthContext';
 import { Link } from 'react-router-dom';
 import './AdminDesign.css';
+import { usePermission } from '../../Hooks/usePermission.jsx'; // ייבוא ה-Hook החדש
 
 const AdminDashboard = () => {
-  const { user: currentUser } = useAuth();
+  const { hasPermission, user: currentUser } = usePermission(); // שימוש ב-hasPermission
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +26,17 @@ const AdminDashboard = () => {
       }
     };
     // וידוא שהמשתמש הוא אדמין לפני השליפה
-    if (currentUser?.role === 'admin') fetchStats();
-  }, [currentUser]);
+    if (hasPermission('stats.read')) {
+      fetchStats();
+    } else {
+      setLoading(false); // אם אין הרשאה, נפסיק את הטעינה
+    }
+  }, [hasPermission]); // ה-useEffect תלוי ב-hasPermission
+
+  // אם אין הרשאה כללית לפאנל האדמין, נחסום את הגישה מיד
+  if (!hasPermission('admin.panel.access')) {
+    return <div className="alert alert-error">אין לך הרשאות לצפות בדף זה.</div>;
+  }
 
   if (loading) return <div className="loader">טוען נתונים...</div>;
   if (!stats)
@@ -41,23 +51,28 @@ const AdminDashboard = () => {
 
       {/* שורת פעולות דחופות - אישורים ממתינים */}
       <div className="action-cards">
-        <Link to="/admin/user-approval" className="stat-card">
-          <div className="stat-icon">🔔</div>
-          <div className="stat-content">
-            <h4>אישורי משתמשים</h4>
-            <p>{stats.usersPendingApproval}</p>
-            <span>ממתינים לבדיקה</span>
-          </div>
-        </Link>
+        {/* הצגת כרטיס אישורי משתמשים רק למי שמורשה לאשר משתמשים */}
+        {hasPermission('users.approve') && (
+          <Link to="/admin/user-approval" className="stat-card">
+            <div className="stat-icon">🔔</div>
+            <div className="stat-content">
+              <h4>אישורי משתמשים</h4>
+              <p>{stats.usersPendingApproval}</p>
+              <span>ממתינים לבדיקה</span>
+            </div>
+          </Link>
+        )}
 
-        <Link to="/admin/manage-projects" className="stat-card">
-          <div className="stat-icon">🚀</div>
-          <div className="stat-content">
-            <h4>פרויקטים חדשים</h4>
-            <p>{stats.projectsPendingPublish}</p>
-            <span>ממתינים לפרסום</span>
-          </div>
-        </Link>
+        {hasPermission('projects.publish') && (
+          <Link to="/admin/manage-projects" className="stat-card">
+            <div className="stat-icon">🚀</div>
+            <div className="stat-content">
+              <h4>פרויקטים חדשים</h4>
+              <p>{stats.projectsPendingPublish}</p>
+              <span>ממתינים לפרסום</span>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* נתונים כלליים */}

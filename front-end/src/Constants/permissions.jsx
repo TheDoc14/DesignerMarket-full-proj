@@ -9,3 +9,22 @@ export const PERMISSION_LABELS = {
   'reviews.manage': 'ניהול ומחיקת תגובות',
   'stats.read': 'צפייה בסטטיסטיקות מערכת',
 };
+
+export const PERMS = {
+  ADMIN_PANEL_ACCESS: 'admin.panel.access',
+  BUSINESS_PANEL_ACCESS: 'business.panel.access',
+  USERS_READ: 'users.read',
+  USERS_APPROVE: 'users.approve',
+  USERS_ASSIGN_ROLE: 'users.assignRole',
+  ROLES_MANAGE: 'roles.manage',
+  CATEGORIES_MANAGE: 'categories.manage',
+  PROJECTS_CREATE: 'projects.create',
+  PROJECTS_UPDATE: 'projects.update',
+  PROJECTS_DELETE: 'projects.delete',
+  PROJECTS_PUBLISH: 'projects.publish',
+  REVIEWS_MANAGE: 'reviews.manage',
+  FILES_PROJECTS_READ: 'files.projects.read',
+  FILES_APPROVALDOCS_READ: 'files.approvalDocs.read',
+  STATS_READ: 'stats.read',
+  AI_CONSULT: 'ai.consult',
+};

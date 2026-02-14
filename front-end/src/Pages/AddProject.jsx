@@ -1,97 +1,103 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useAuth } from '../Context/AuthContext';
+import { usePermission } from '../Hooks/usePermission.jsx';
 import projectDefault from '../DefaultPics/projectDefault.png';
-
+// הוסיפי את Plus ו-Star לתוך הרשימה
+import { Image, FileText, X, Star, Plus } from 'lucide-react';
 const AddProject = () => {
-  const { user } = useAuth();
+  const { hasPermission, user, loading: permissionLoading } = usePermission();
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     price: '',
-    category: 'architecture',
+    category: '', // מתחיל ריק ומתעדכן מהשרת
     paypalEmail: '',
     tags: '',
   });
 
+  const [categories, setCategories] = useState([]); // רשימת קטגוריות דינמית
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // בדיקת הרשאות דינמית מה-AuthContext
-  const canCreate = user?.permissions?.includes('projects.create');
+  // 1. שליפת קטגוריות דינמית מהשרת
+  // 1. עדכון הנתיב ל-api/admin/categories
+  const fetchCategories = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // הוספת /admin לנתיב ושימוש ב-Token כי הראוט מוגן
+      const res = await axios.get(
+        'http://localhost:5000/api/admin/categories',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // השרת מחזיר אובייקט עם שדה categories
+      const categoriesData = res.data.categories || [];
+      setCategories(categoriesData);
+
+      // בחירת קטגוריה ראשונה כברירת מחדל
+      if (categoriesData.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          category: categoriesData[0].key, // השרת משתמש ב-key ולא ב-slug
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to load categories', err);
+    }
+  }, []);
 
   useEffect(() => {
+    fetchCategories();
     if (user?.paypalEmail) {
       setFormData((prev) => ({ ...prev, paypalEmail: user.paypalEmail }));
     }
-  }, [user]);
+  }, [user?.id, fetchCategories]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // פונקציית הטיפול בשגיאות תמונה שביקשת
-  const handleImageError = (e) => {
-    e.target.onerror = null;
-    e.target.src = projectDefault;
-  };
-
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    const MAX_FILE_SIZE = 5 * 1024 * 1024;
-    const MAX_TOTAL_SIZE = 25 * 1024 * 1024;
-
-    let currentTotalSize = files.reduce((sum, file) => sum + file.size, 0);
     const validNewFiles = [];
-    const errors = [];
 
     selectedFiles.forEach((file) => {
-      if (file.size > MAX_FILE_SIZE) {
-        errors.push(`הקובץ "${file.name}" חורג מ-5MB.`);
-      } else if (currentTotalSize + file.size > MAX_TOTAL_SIZE) {
-        errors.push(`חריגה מהנפח הכולל (25MB).`);
-      } else {
+      if (file.size <= 5 * 1024 * 1024) {
         validNewFiles.push(file);
-        currentTotalSize += file.size;
       }
     });
 
-    if (errors.length > 0) {
-      setError(errors.join(' | '));
-      return;
-    }
-
     setFiles((prev) => [...prev, ...validNewFiles]);
     const newPreviews = validNewFiles.map((file) =>
-      file.type.startsWith('image/')
-        ? URL.createObjectURL(file)
-        : 'document-icon'
+      file.type.startsWith('image/') ? URL.createObjectURL(file) : 'document'
     );
     setPreviews((prev) => [...prev, ...newPreviews]);
-    setError(null);
   };
 
   const removeFile = (indexToRemove) => {
-    setFiles(files.filter((_, index) => index !== indexToRemove));
-    setPreviews(previews.filter((_, index) => index !== indexToRemove));
+    setFiles(files.filter((_, i) => i !== indexToRemove));
+    setPreviews(previews.filter((_, i) => i !== indexToRemove));
     if (mainImageIndex === indexToRemove) setMainImageIndex(0);
-    else if (mainImageIndex > indexToRemove)
-      setMainImageIndex(mainImageIndex - 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!canCreate) {
-      setError('אין לך הרשאות להעלאת פרויקט.');
+    // בדיקה שהקובץ הראשי הוא אכן תמונה (למניעת שגיאת "Main file must be an image")
+    if (
+      files[mainImageIndex] &&
+      !files[mainImageIndex].type.startsWith('image/')
+    ) {
+      setError('הקובץ הראשי חייב להיות תמונה!');
       return;
     }
 
     setLoading(true);
-    setError(null);
-
     try {
       const token = localStorage.getItem('token');
       const data = new FormData();
@@ -105,9 +111,7 @@ const AddProject = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-
       alert('הפרויקט הועלה בהצלחה!');
-      resetForm();
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בהעלאה.');
     } finally {
@@ -115,125 +119,109 @@ const AddProject = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      description: '',
-      price: '',
-      category: 'architecture',
-      paypalEmail: user?.paypalEmail || '',
-      tags: '',
-    });
-    setFiles([]);
-    setPreviews([]);
-    setMainImageIndex(0);
-  };
-
-  if (!user) return <div>עליך להתחבר כדי להעלות פרויקט.</div>;
+  if (permissionLoading) return <div className="loader">בודק הרשאות...</div>;
+  if (!hasPermission('projects.create'))
+    return <div className="admin-container">אין הרשאה.</div>;
 
   return (
-    <div className="add-project-container">
-      <form onSubmit={handleSubmit} className="add-project-form">
+    <div className="add-project-container" dir="rtl">
+      <form onSubmit={handleSubmit} className="add-project-form card-shadow">
         <h2 className="add-project-title">העלאת פרויקט חדש</h2>
 
-        <input
-          className="form-input"
-          name="title"
-          placeholder="שם הפרויקט"
-          value={formData.title}
-          onChange={handleChange}
-          required
-        />
-        <textarea
-          className="form-textarea"
-          name="description"
-          placeholder="תיאור"
-          value={formData.description}
-          onChange={handleChange}
-          required
-        />
+        <div className="form-section">
+          <input
+            className="form-input"
+            name="title"
+            placeholder="שם הפרויקט"
+            value={formData.title}
+            onChange={handleChange}
+            required
+          />
+          <textarea
+            className="form-textarea"
+            name="description"
+            placeholder="תיאור הפרויקט..."
+            value={formData.description}
+            onChange={handleChange}
+            required
+          />
+        </div>
 
         <div className="form-row">
-          <input
-            name="price"
-            type="number"
-            placeholder="מחיר"
-            value={formData.price}
-            onChange={handleChange}
-            required
-          />
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-          >
-            <option value="architecture">ארכיטקטורה</option>
-            <option value="graphic">גרפיקה</option>
-            <option value="product">מוצר</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="paypal-highlight">PayPal למשיכת כספים:</label>
-          <input
-            name="paypalEmail"
-            type="email"
-            value={formData.paypalEmail}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="file-upload-zone">
-            <strong>+ הוסף קבצים (עד 10)</strong>
-            <input type="file" multiple onChange={handleFileChange} />
-          </label>
-        </div>
-
-        {previews.length > 0 && (
-          <div>
-            <div className="previews-grid">
-              {previews.map((src, index) => (
-                <div key={index}>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(index)}
-                    className="remove-file-btn"
-                  >
-                    ×
-                  </button>
-                  <div onClick={() => setMainImageIndex(index)}>
-                    {src !== 'document-icon' ? (
-                      <img
-                        src={src}
-                        alt="preview"
-                        onError={handleImageError} // הטמעת התיקון שביקשת כאן
-                      />
-                    ) : (
-                      <div className="doc-icon">
-                        📄
-                        <br />
-                        <small>{files[index]?.name}</small>
-                      </div>
-                    )}
-                    {mainImageIndex === index && (
-                      <div className="second-badge">תמונה ראשית</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="input-group">
+            <label>מחיר (₪)</label>
+            <input
+              name="price"
+              type="number"
+              value={formData.price}
+              onChange={handleChange}
+              required
+            />
           </div>
-        )}
+          <div className="input-group">
+            <label>קטגוריה</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={handleChange}
+            >
+              {categories.map((cat) => (
+                <option key={cat._id} value={cat.key}>
+                  {cat.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
-        {error && <div className="error-message">{error}</div>}
+        <div className="file-upload-section">
+          <label className="upload-dropzone">
+            <Plus size={24} />
+            <span>לחץ להוספת תמונות וקבצים (עד 10)</span>
+            <input type="file" multiple onChange={handleFileChange} hidden />
+          </label>
 
-        <button
-          type="submit"
-          className="submit-project-btn"
-          disabled={loading || !canCreate}
-        >
+          {/* גריד קבצים מתוקן - מונע פריצה של העיצוב */}
+          <div className="files-preview-wrapper">
+            {previews.map((src, index) => (
+              <div
+                key={index}
+                className={`file-card ${mainImageIndex === index ? 'is-main' : ''}`}
+              >
+                <button
+                  type="button"
+                  className="delete-file"
+                  onClick={() => removeFile(index)}
+                >
+                  <X size={14} />
+                </button>
+
+                <div
+                  className="file-content"
+                  onClick={() => setMainImageIndex(index)}
+                >
+                  {src !== 'document' ? (
+                    <img src={src} alt="preview" className="img-fit" />
+                  ) : (
+                    <div className="doc-placeholder">
+                      <FileText size={32} />
+                      <span>{files[index]?.name}</span>
+                    </div>
+                  )}
+                </div>
+
+                {mainImageIndex === index && (
+                  <div className="main-label">
+                    <Star size={10} /> תמונה ראשית
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {error && <div className="error-banner">{error}</div>}
+        <button type="submit" className="submit-btn" disabled={loading}>
           {loading ? 'מעלה...' : 'פרסם פרויקט'}
         </button>
       </form>

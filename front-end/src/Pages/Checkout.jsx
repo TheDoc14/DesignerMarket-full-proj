@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { useAuth } from '../Context/AuthContext';
+import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook ההרשאות המרכזי
 
 const Checkout = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+
+  const { hasPermission, user, loading: permissionLoading } = usePermission();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -30,25 +31,34 @@ const Checkout = () => {
       'העסקה נדחתה על ידי ספק התשלום.',
   };
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(
-          `http://localhost:3000/api/projects/${projectId}`
-        );
-        setProject(response.data.project);
-      } catch (err) {
-        setError('שגיאה בטעינת פרטי הפרויקט.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (projectId) fetchProject();
+  const fetchProject = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `http://localhost:5000/api/projects/${projectId}`
+      );
+      setProject(response.data.project);
+    } catch (err) {
+      setError('שגיאה בטעינת פרטי הפרויקט.');
+    } finally {
+      setLoading(false);
+    }
   }, [projectId]);
+
+  useEffect(() => {
+    if (!permissionLoading && user && projectId) {
+      fetchProject();
+    }
+  }, [projectId, user, permissionLoading, fetchProject]);
 
   const handlePayment = async (e) => {
     if (e) e.preventDefault();
+
+    // 3. הגנה נוספת ברמת הפונקציה: בדיקת הרשאת יצירת הזמנה
+    if (!hasPermission('orders.create')) {
+      setError('אין לך הרשאה לבצע רכישות במערכת.');
+      return;
+    }
     setIsProcessing(true);
     setError(null);
 
@@ -123,8 +133,30 @@ const Checkout = () => {
       setIsProcessing(false);
     }
   };
+  if (permissionLoading)
+    return <div className="loader">בודק הרשאות רכישה...</div>;
 
   if (loading) return <div>מכין את דף התשלום...</div>;
+
+  if (!user) {
+    return (
+      <div className="admin-container">
+        <h2>עליך להתחבר</h2>
+        <p>כדי לרכוש פרויקטים, עליך להיות מחובר למערכת.</p>
+        <button onClick={() => navigate('/login')}>מעבר להתחברות</button>
+      </div>
+    );
+  }
+
+  // בדיקה אם למשתמש יש הרשאה לבצע הזמנות
+  if (!hasPermission('orders.create')) {
+    return (
+      <div className="admin-container">
+        <h2>גישה חסומה</h2>
+        <p>חשבונך אינו מורשה לבצע רכישות. אנא פנה לתמיכה במידה ומדובר בטעות.</p>
+      </div>
+    );
+  }
 
   return (
     <div>

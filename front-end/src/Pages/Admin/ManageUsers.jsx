@@ -3,9 +3,17 @@ import axios from 'axios';
 import { useAuth } from '../../Context/AuthContext';
 import { UserCog, Trash2, ShieldCheck, Search } from 'lucide-react';
 import './AdminDesign.css';
+import { usePermission } from '../../Hooks/usePermission.jsx'; // שינוי 1: ייבוא usePermission
 
+const getAuthHeader = () => ({
+  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+});
 const ManageUsers = () => {
-  const { user: currentUser } = useAuth();
+  const {
+    hasPermission,
+    user: currentUser,
+    loading: permissionLoading,
+  } = usePermission();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -17,16 +25,16 @@ const ManageUsers = () => {
   });
 
   const fetchUsers = useCallback(async () => {
+    if (!hasPermission('users.read')) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       const params = new URLSearchParams(
         Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
       ).toString();
 
       const res = await axios.get(
         `http://localhost:5000/api/admin/users?${params}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        getAuthHeader()
       );
       setUsers(res.data.users || res.data || []);
     } catch (err) {
@@ -34,16 +42,21 @@ const ManageUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, hasPermission]);
 
   useEffect(() => {
-    if (currentUser?.role === 'admin') {
+    // ריצה רק אם למשתמש יש הרשאת קריאה בסיסית
+    if (hasPermission('users.read')) {
       const delayDebounceFn = setTimeout(() => fetchUsers(), 500);
       return () => clearTimeout(delayDebounceFn);
     }
-  }, [fetchUsers, currentUser]);
+  }, [fetchUsers, hasPermission]);
 
   const handleRoleUpdate = async (userId, newRole) => {
+    if (!hasPermission('users.assignRole')) {
+      alert('אין לך הרשאה לשנות תפקידי משתמשים');
+      return;
+    }
     if (!window.confirm(`האם לשנות את תפקיד המשתמש ל-${newRole}?`)) return;
 
     try {
@@ -52,7 +65,7 @@ const ManageUsers = () => {
       await axios.put(
         `http://localhost:5000/api/admin/users/${userId}/role`,
         { role: newRole },
-        { headers: { Authorization: `Bearer ${token}` } }
+        getAuthHeader()
       );
 
       setUsers((prev) =>
@@ -67,6 +80,10 @@ const ManageUsers = () => {
   };
 
   const handleDelete = async (userId) => {
+    if (!hasPermission('admin.panel.access')) {
+      alert('אין לך הרשאות למחיקת משתמשים');
+      return;
+    }
     if (!window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) return;
     try {
       const token = localStorage.getItem('token');
@@ -84,10 +101,11 @@ const ManageUsers = () => {
     setFilters((prev) => ({ ...prev, [name]: value, page: 1 }));
   };
 
-  if (!currentUser) return <div className="loader">טוען...</div>;
-  if (currentUser.role !== 'admin')
-    return <div className="error-container">אין הרשאות גישה.</div>;
+  if (permissionLoading) return <div className="loader">בודק הרשאות...</div>;
 
+  if (!hasPermission('admin.panel.access')) {
+    return <div className="error-container">אין לך הרשאות גישה לדף זה.</div>;
+  }
   return (
     <div className="admin-container" dir="rtl">
       <header className="dashboard-header">
@@ -154,19 +172,24 @@ const ManageUsers = () => {
                   <span className={`role-badge ${u.role}`}>{u.role}</span>
                 </td>
                 <td>
-                  <select
-                    className="role-selector-inline"
-                    value={u.role}
-                    onChange={(e) =>
-                      handleRoleUpdate(u._id || u.id, e.target.value)
-                    }
-                  >
-                    <option value="customer">לקוח</option>
-                    <option value="student">סטודנט</option>
-                    <option value="designer">מעצב</option>
-                    <option value="systemmanager">מנהל מערכת</option>
-                    <option value="admin">אדמין</option>
-                  </select>
+                  {/* שינוי 7: הצגת בחירת תפקיד רק למי שמורשה לשנות */}
+                  {hasPermission('users.assignRole') ? (
+                    <select
+                      className="role-selector-inline"
+                      value={u.role}
+                      onChange={(e) =>
+                        handleRoleUpdate(u._id || u.id, e.target.value)
+                      }
+                    >
+                      <option value="customer">לקוח</option>
+                      <option value="student">סטודנט</option>
+                      <option value="designer">מעצב</option>
+                      <option value="businessmanager">מנהל עסקי</option>
+                      <option value="admin">אדמין</option>
+                    </select>
+                  ) : (
+                    <span>{u.role} (אין הרשאת שינוי)</span>
+                  )}
                 </td>
                 <td>
                   <span
@@ -176,13 +199,15 @@ const ManageUsers = () => {
                   </span>
                 </td>
                 <td className="actions-cell">
-                  <button
-                    onClick={() => handleDelete(u._id || u.id)}
-                    className="btn-icon-delete"
-                    title="מחק משתמש"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  {hasPermission('admin.panel.access') && (
+                    <button
+                      onClick={() => handleDelete(u._id || u.id)}
+                      className="btn-icon-delete"
+                      title="מחק משתמש"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

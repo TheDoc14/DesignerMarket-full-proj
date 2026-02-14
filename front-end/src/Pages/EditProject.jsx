@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook החדש
 
 const EditProject = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { hasPermission, user, loading: permissionLoading } = usePermission();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
+  const [categories, setCategories] = useState([]); // קטגוריות דינמיות
   // נתונים קיימים מהשרת
   const [existingFiles, setExistingFiles] = useState([]);
   const [currentMainImageId, setCurrentMainImageId] = useState('');
@@ -24,8 +26,24 @@ const EditProject = () => {
   const [newFiles, setNewFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
 
+  const fetchCategories = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(
+        'http://localhost:5000/api/admin/categories',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      setCategories(res.data.categories || []);
+    } catch (err) {
+      console.error('Failed to load categories');
+    }
+  }, []);
+
   useEffect(() => {
     const fetchProject = async () => {
+      if (!id) return;
       try {
         const token = localStorage.getItem('token');
         const res = await axios.get(
@@ -45,9 +63,8 @@ const EditProject = () => {
           paypalEmail: p.paypalEmail || '',
         });
 
-        // שמירת הקבצים הקיימים לצורך בחירת תמונה ראשית
-        setExistingFiles(p.media || []); // media מכיל תמונות/וידאו לפי הסריאלייזר
-        setCurrentMainImageId(p.mainImageId); // מזהה התמונה הנוכחית מהשרת
+        setExistingFiles(p.media || []);
+        setCurrentMainImageId(p.mainImageId);
       } catch (err) {
         alert('שגיאה בטעינת נתוני הפרויקט');
         navigate('/dashboard');
@@ -55,8 +72,13 @@ const EditProject = () => {
         setLoading(false);
       }
     };
-    fetchProject();
-  }, [id, navigate]);
+
+    // הרצה רק אם ההרשאות נטענו והמשתמש מחובר
+    if (!permissionLoading && user) {
+      fetchProject();
+      fetchCategories();
+    }
+  }, [id, navigate, user, permissionLoading, fetchCategories]);
 
   const handleNewFilesChange = (e) => {
     const selected = Array.from(e.target.files);
@@ -67,8 +89,15 @@ const EditProject = () => {
     setPreviews(newPreviews);
   };
 
+  const canUpdate = hasPermission('projects.update');
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canUpdate) {
+      alert('אין לך הרשאה לערוך פרויקטים');
+      return;
+    }
+
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
@@ -78,7 +107,7 @@ const EditProject = () => {
       data.append('description', formData.description);
       data.append('category', formData.category);
       data.append('price', formData.price);
-      data.append('mainImageId', currentMainImageId); // שליחת ה-ID של התמונה שנבחרה כראשית
+      data.append('mainImageId', currentMainImageId);
 
       const tagsArray = formData.tags
         .split(',')
@@ -106,6 +135,9 @@ const EditProject = () => {
     }
   };
 
+  if (permissionLoading) return <div className="loader">בודק הרשאות...</div>;
+  if (!user || !canUpdate)
+    return <div className="container">אין לך הרשאה לערוך דף זה.</div>;
   if (loading) return <div>טוען נתונים...</div>;
 
   return (
