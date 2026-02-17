@@ -12,9 +12,9 @@ if (!fs.existsSync(LOG_DIR)) {
 }
 
 // helper קטן: לוקחים requestId אם קיים, ואם אין - מייצרים (fallback)
-function getRequestId(req) {
+const getRequestId = (req) => {
   return req.requestId || req.headers['x-request-id'] || crypto.randomUUID();
-}
+};
 
 /**
  * classifyError
@@ -25,7 +25,7 @@ function getRequestId(req) {
  * - אל "תמציא" 500 לשגיאות בקשה – עדיף 400/401/403/404/409/413 לפי המקרה.
  * - בפרודקשן לא חושפים הודעות פנימיות ב-5xx (אבטחה).
  */
-function classifyError(err, _req, _res, _next) {
+const classifyError = (err, _req, _res, _next) => {
   // ברירת מחדל
   let statusCode = 500;
   let message = 'Internal Server Error';
@@ -177,6 +177,38 @@ function classifyError(err, _req, _res, _next) {
     message = 'Rating is required.';
   }
 
+  // ===================================
+  // =========== 🤖 AI / OpenAI =========
+  // ===================================
+  else if (msg.includes('Daily AI limit reached')) {
+    statusCode = 429;
+    message = 'Daily AI limit reached.';
+  } else if (msg.includes('Too many AI requests')) {
+    statusCode = 429;
+    message = 'Too many AI requests. Please try again soon.';
+  } else if (msg.includes('OPENAI_API_KEY is missing')) {
+    statusCode = 500;
+    message = 'AI service is not configured.';
+  } else if (msg.includes('AI request timed out')) {
+    statusCode = 504;
+    message = 'AI request timed out.';
+  } else if (msg.includes('AI returned empty response')) {
+    statusCode = 502;
+    message = 'AI returned empty response.';
+  } else if (
+    msg.includes('You exceeded your current quota') ||
+    msg.includes('insufficient_quota')
+  ) {
+    statusCode = 429;
+    message = 'AI provider quota exceeded. Please check billing.';
+  } else if (msg.includes('AI request failed')) {
+    statusCode = 502;
+    message = 'AI request failed.';
+  } else if (msg.includes('Chat not found')) {
+    statusCode = 404;
+    message = 'Chat not found.';
+  }
+
   // =================================
   // =======💳 Orders / PayPal=======
   // =================================
@@ -216,9 +248,6 @@ function classifyError(err, _req, _res, _next) {
   } else if (msg.includes('PayPal capture failed')) {
     statusCode = 502;
     message = 'Payment provider error (capture failed).';
-  } else if (msg.includes('Order already pending for this project')) {
-    statusCode = 409;
-    message = 'You already have a pending order for this project.';
   } else if (msg.includes('Missing PayPal order id')) {
     statusCode = 400;
     message = 'Missing PayPal order id.';
@@ -338,14 +367,14 @@ function classifyError(err, _req, _res, _next) {
   }
 
   return { statusCode, message };
-}
+};
 
 /**
  * logError
  * כותב שורה קצרה למסך + קובץ לוג עם stack.
  * best-effort: לא מפיל את האפליקציה אם כתיבת הלוג נכשלת.
  */
-function logError({ statusCode, message }, err, req) {
+const logError = ({ statusCode, message }, err, req) => {
   const line = `[${new Date().toISOString()}] [${statusCode}] ${message} | ${req.method} ${req.originalUrl}`;
 
   // למסך
@@ -363,7 +392,7 @@ function logError({ statusCode, message }, err, req) {
   } catch (_err) {
     // לא מפילים את האפליקציה בגלל לוג
   }
-}
+};
 
 /**
  * errorHandler
@@ -372,8 +401,9 @@ function logError({ statusCode, message }, err, req) {
  */
 const errorHandler = (err, req, res, _next) => {
   const { statusCode, message } = classifyError(err, req);
-  const requestId = getRequestId(req);
   logError({ statusCode, message }, err, req);
+  const requestId = getRequestId(req);
+  const isDev = process.env.NODE_ENV === 'development';
 
   const payload = {
     success: false,
@@ -382,13 +412,11 @@ const errorHandler = (err, req, res, _next) => {
     requestId,
   };
 
-  // תומך ב-details אם אתה מוסיף בעתיד (ולידציה/AI/quota)
-  if (err?.details) payload.details = err.details;
+  // details – רק אם סופק (ובד"כ רק לדיבאג/או אם תרצה לחשוף)
+  if (isDev && err?.details) payload.details = err.details;
 
-  // stack רק ב-dev
-  if (process.env.NODE_ENV === 'development' && err?.stack) {
-    payload.stack = err.stack;
-  }
+  // stack רק בדב
+  if (isDev && err?.stack) payload.stack = err.stack;
 
   return res.status(statusCode).json(payload);
 };
