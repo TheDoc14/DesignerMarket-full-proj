@@ -52,6 +52,8 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - **Environment**: `dotenv`
 - **Utilities**: `crypto`, `path`
 - **Code style**: `reusable utils` (`meta`/`query`/`serializers`)
+- **AI (OpenAI)**: `openai` SDK (Responses API)
+- **AI context parsing**: `pdf-parse`, `mammoth`, `mime-types`
 - **PayPal** (Sandbox/Live ready)
 
 
@@ -129,7 +131,14 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - Read-only dashboards (stats/finance) via permission-based endpoints  
   (Access is granted by permissions, not hardcoded roles)
 
-#### Orders / Purchases (PayPal)
+### AI Chats (OpenAI)
+- Create AI chat per project (stored in MongoDB)
+- Continue conversations (messages history)
+- AI context builder sends **project description + reviews + extracted file text + up to 3 image URLs**
+- Guardrails: RBAC permission (`AI_CONSULT`) + rate limiting + daily quota (`AI_DAILY_LIMIT`)
+- Usage logging (`AiUsageLog`) for stats/auditing (tokens/latency/outcome)
+
+### Orders / Purchases (PayPal)
 - Create PayPal order → returns approve link
 - Capture payment → persists order status in DB
 - Seller payout handling
@@ -285,6 +294,12 @@ RECAPTCHA_MIN_SCORE=0.5
 RECAPTCHA_ENABLED=true
 RECAPTCHA_HOSTNAME=localhost
 
+# OpenAI
+OPENAI_API_KEY=replace_me
+OPENAI_MODEL=gpt-4.1-mini
+AI_DAILY_LIMIT=20
+OPENAI_TIMEOUT_MS=20000
+
 ```
 ---
 
@@ -359,6 +374,13 @@ RECAPTCHA_HOSTNAME=localhost
 - `GET /orders/paypal/cancel`
 - `POST /orders/:id/cancel`
 
+### AI (OpenAI)
+- `POST /ai-chats`
+- `GET /api/ai-chats` (includes paginated projects + meta)
+- `POST /api/ai-chats/:chatId/messages`
+- `GET /api/ai-chats/:chatId/messages` (includes paginated projects + meta)
+- `DELETE /api/ai-chats/:chatId` (soft delete)
+
 ---
 
 ## File Access & Security Model
@@ -408,6 +430,14 @@ RECAPTCHA_HOSTNAME=localhost
 - Before purchase: protected files are hidden/blocked
 - After purchase: buyer gains access to protected project files
 
+### AI Chats (Phase 4)
+- Create chat (`POST /api/ai-chats`)
+- List my chats (`GET /api/ai-chats`) with pagination/sorting
+- List messages (`GET /api/ai-chats/:chatId/messages`) with pagination/sorting
+- Soft delete chat (`DELETE /api/ai-chats/:chatId`) (sets `deletedAt`)
+- Add message + real AI response (`POST /api/ai-chats/:chatId/messages`)
+- Verified error handling (401/403/400/404) + quota (429) + rate limit (429)
+
 ### Categories
 - CRUD 
 - base categories ensured 
@@ -425,8 +455,14 @@ RECAPTCHA_HOSTNAME=localhost
 - [x] Used Google reCAPTCHA v3 on register/login/forgot/reset/resend verification
 
 ### Phase 4: AI Endpoint
-- [ ] MVP mock endpoint first
-- [ ] Real AI integration with limits/logging
+- [x] Create AI chat per project (`POST /api/ai-chats`)
+- [x] Add message + real AI response (`POST /api/ai-chats/:chatId/messages`)
+- [x] Daily quota (`AI_DAILY_LIMIT`) + rate limiting for AI calls
+- [x] Usage logging (`AiUsageLog`) for stats and auditing
+- [x] List my chats (`GET /api/ai-chats`) + pagination/sorting
+- [x] List chat messages (`GET /api/ai-chats/:chatId/messages`) + pagination/sorting
+- [x] Soft delete chat (`DELETE /api/ai-chats/:chatId`) (sets `deletedAt`)
+- [x] Project context builder (files text extraction + images URLs)
 
 ### Phase 5: Documentation & Automated Tests
 - [ ] Swagger/OpenAPI docs
@@ -442,10 +478,10 @@ RECAPTCHA_HOSTNAME=localhost
 
 ---
 
-> [!NOTE]
-> Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.
-> Keep API responses consistent: `message` always included, `meta` for list endpoints.
-> RBAC is permission-based; UI should gate features by `permissions[]`.
+- [!NOTE]
+- Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.
+- Keep API responses consistent: `message` always included, `meta` for list endpoints.
+- RBAC is permission-based; UI should gate features by `permissions[]`.
 ---
 
 
