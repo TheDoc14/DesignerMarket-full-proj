@@ -478,10 +478,10 @@ OPENAI_TIMEOUT_MS=20000
 
 ---
 
-- [!NOTE]
-- Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.
-- Keep API responses consistent: `message` always included, `meta` for list endpoints.
-- RBAC is permission-based; UI should gate features by `permissions[]`.
+> [!NOTE]
+> Never commit `.env` or uploaded files. Commit `.env.example` and use `.gitignore`.\
+> Keep API responses consistent: `message` always included, `meta` for list endpoints.\
+> RBAC is permission-based; UI should gate features by `permissions[]`.
 ---
 
 
