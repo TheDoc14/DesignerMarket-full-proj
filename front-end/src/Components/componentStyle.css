@@ -298,12 +298,13 @@
   color: var(--teal-dark);
 }
 
+
 /* כפתורי מערכת בצבעי הטורקיז של ה-Navbar */
 .submit-review-btn,
 .edit-trigger-btn,
 .save-btn {
   background: var(--teal-gradient) !important;
-  color: white !important;
+  color: white;
   border: none;
   padding: 12px 25px;
   border-radius: 12px;
@@ -387,9 +388,11 @@
 }
 
 .submit-review-btn {
-  color: #006D77 !important;
+  color: #ffffff !important;
   background-color: #83C5BE;
-  margin-right: 20px;
+  align-self: flex-end;
+  margin-right: 10px;
+  margin-bottom: 30px;
 }
 
 .edit-trigger-btn {
@@ -455,4 +458,59 @@
 .auth-btn {
   color: white;
   align-items: center;
+}
+
+
+/* המכולה הלבנה של הפופ-אפ */
+.project-modal-content {
+  background: white;
+  width: 95%;
+  max-width: 900px;
+  max-height: 90vh;
+  /* מגביל את הגובה ל-90% מהמסך */
+  border-radius: 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  /* מסדר את התוכן מלמעלה למטה */
+  overflow: hidden;
+  /* מונע מהפינות המעוגלות להישבר */
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* האזור שאחראי על הגלילה */
+.popup-scroll-container {
+  flex: 1;
+  /* לוקח את כל השטח הנותר בין ההדר לפוטר */
+  overflow-y: auto;
+  /* מאפשר גלילה אנכית רק כאן */
+  padding: 20px;
+  /* מראה פס גלילה נקי בדפדפנים מודרניים */
+  scrollbar-width: thin;
+  scrollbar-color: #008080 #f0f0f0;
+}
+
+/* עיצוב פס הגלילה ל-Chrome/Safari */
+.popup-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.popup-scroll-container::-webkit-scrollbar-thumb {
+  background-color: #008080;
+  border-radius: 10px;
+}
+
+/* תיקון למובייל - חשוב מאוד */
+@media (max-width: 768px) {
+  .project-modal-content {
+    max-height: 95vh;
+    width: 100%;
+    border-radius: 20px 20px 0 0;
+    /* נראה טוב יותר בנייד כשהוא צמוד למטה */
+  }
+
+  .popup-main-layout {
+    flex-direction: column;
+    /* הופך את התמונה והטקסט לאחד מתחת לשני */
+  }
 }

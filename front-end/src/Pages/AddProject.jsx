@@ -3,7 +3,7 @@ import axios from 'axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
 import projectDefault from '../DefaultPics/projectDefault.png';
 // הוסיפי את Plus ו-Star לתוך הרשימה
-import { Image, FileText, X, Star, Plus } from 'lucide-react';
+import { Image, FileText, X, Star, Plus, Tag } from 'lucide-react';
 const AddProject = () => {
   const { hasPermission, user, loading: permissionLoading } = usePermission();
 
@@ -13,9 +13,10 @@ const AddProject = () => {
     price: '',
     category: '', // מתחיל ריק ומתעדכן מהשרת
     paypalEmail: '',
-    tags: '',
   });
 
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
   const [categories, setCategories] = useState([]); // רשימת קטגוריות דינמית
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
@@ -86,9 +87,22 @@ const AddProject = () => {
     if (mainImageIndex === indexToRemove) setMainImageIndex(0);
   };
 
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const value = tagInput.trim().replace(',', '');
+
+      if (value && !tags.includes(value)) {
+        setTags([...tags, value]);
+        setTagInput('');
+      }
+    }
+  };
+  const removeTag = (indexToRemove) => {
+    setTags(tags.filter((_, i) => i !== indexToRemove));
+  };
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // בדיקה שהקובץ הראשי הוא אכן תמונה (למניעת שגיאת "Main file must be an image")
     if (
       files[mainImageIndex] &&
       !files[mainImageIndex].type.startsWith('image/')
@@ -101,7 +115,14 @@ const AddProject = () => {
     try {
       const token = localStorage.getItem('token');
       const data = new FormData();
+
+      // 1. הוספת השדות הרגילים
       Object.keys(formData).forEach((key) => data.append(key, formData[key]));
+
+      // 2. התיקון: הוספת התגיות (הן היו חסרות כאן!)
+      // אנחנו הופכים את המערך למחרוזת מופרדת בפסיקים
+      data.append('tags', tags.join(','));
+
       data.append('mainImageIndex', mainImageIndex);
       files.forEach((file) => data.append('files', file));
 
@@ -112,6 +133,7 @@ const AddProject = () => {
         },
       });
       alert('הפרויקט הועלה בהצלחה!');
+      // אופציונלי: איפוס הטופס או ניווט דף
     } catch (err) {
       setError(err.response?.data?.message || 'שגיאה בהעלאה.');
     } finally {
@@ -171,6 +193,34 @@ const AddProject = () => {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+        <div className="tags-section">
+          <label>תגיות (לחץ Enter להוספה)</label>
+          <div className="tags-input-wrapper">
+            <Tag size={18} className="tag-icon" />
+            <div className="tags-list">
+              {tags.map((tag, index) => (
+                <span key={index} className="tag-chip">
+                  {tag}
+                  <X
+                    size={12}
+                    onClick={() => removeTag(index)}
+                    className="remove-tag"
+                  />
+                </span>
+              ))}
+              <input
+                type="text"
+                className="tag-bare-input"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder={
+                  tags.length === 0 ? 'למשל: לוגו, React, מיתוג...' : ''
+                }
+              />
+            </div>
           </div>
         </div>
 

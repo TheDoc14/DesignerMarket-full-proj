@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
+import { getFriendlyError } from '../../Constants/errorMessages';
 import {
   Tag,
   Plus,
@@ -24,23 +25,27 @@ const ManageCategories = () => {
   });
 
   // שליפת קטגוריות מנתיב האדמין כדי לקבל את האובייקטים המלאים (key, label)
-  const fetchCategories = useCallback(async () => {
-    if (loading === false && categories.length > 0) return;
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await axios.get(
-        'http://localhost:5000/api/admin/categories',
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // ה-Backend מחזיר אובייקט עם שדה categories
-      setCategories(res.data.categories || []);
-    } catch (err) {
-      console.error('Failed to fetch categories', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [categories.length, loading]);
+  const fetchCategories = useCallback(
+    async (isManualRefresh = false) => {
+      if (!isManualRefresh && loading === false && categories.length > 0)
+        return;
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('token');
+        const res = await axios.get(
+          'http://localhost:5000/api/admin/categories',
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        // ה-Backend מחזיר אובייקט עם שדה categories
+        setCategories(res.data.categories || []);
+      } catch (err) {
+        console.error('Failed to fetch categories', err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [categories.length, loading]
+  );
 
   useEffect(() => {
     if (user && hasPermission('categories.manage')) {
@@ -67,16 +72,17 @@ const ManageCategories = () => {
         },
         getHeaders()
       );
-
+      await fetchCategories(true); // זה יעקוף את ה-if ויביא נתונים חדשים
       setMessage({ type: 'success', text: 'הקטגוריה נוספה בהצלחה!' });
       setNewCategoryLabel('');
       await fetchCategories();
       fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 4000);
     } catch (err) {
+      const serverMsg = err.response?.data?.message;
       setMessage({
         type: 'error',
-        text: err.response?.data?.message || 'שגיאה בהוספת קטגוריה',
+        text: getFriendlyError(serverMsg),
       });
     }
   };
@@ -89,12 +95,13 @@ const ManageCategories = () => {
         `http://localhost:5000/api/admin/categories/${catKey}`,
         getHeaders()
       );
-      await fetchCategories();
+      await fetchCategories(true); // זה יעקוף את ה-if ויביא נתונים חדשים
       fetchCategories();
 
-      setMessage({ type: 'success', text: 'הקטגוריה הוסרה' });
+      setMessage({ type: 'success', text: 'הקטגוריה הוסרה בהצלחה' });
     } catch (err) {
-      alert(err.response?.data?.message || 'לא ניתן למחוק קטגוריה זו');
+      const serverMsg = err.response?.data?.message;
+      alert(getFriendlyError(serverMsg));
     }
   };
 
@@ -115,16 +122,9 @@ const ManageCategories = () => {
         <div className={`profile-alert ${message.type}`}>{message.text}</div>
       )}
 
-      <div
-        className="category-management-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1.5fr',
-          gap: '30px',
-        }}
-      >
+      <div className="category-management-grid">
         {/* טופס הוספה */}
-        <div className="admin-card">
+        <div className="admin-card add-category-section">
           <form onSubmit={handleAddCategory}>
             <div className="form-group">
               <label>שם הקטגוריה</label>
@@ -132,14 +132,13 @@ const ManageCategories = () => {
                 className="form-input"
                 value={newCategoryLabel}
                 onChange={(e) => setNewCategoryLabel(e.target.value)}
-                placeholder="למשל: תכשיטים"
+                placeholder="למשל: Jewlery"
                 required
               />
             </div>
             <button
               type="submit"
-              className="profile-save-btn"
-              style={{ width: '100%', marginTop: '10px' }}
+              className="profile-save-btn submit-category-btn"
             >
               <Plus size={18} /> הוסף קטגוריה
             </button>
@@ -147,35 +146,19 @@ const ManageCategories = () => {
         </div>
 
         {/* רשימת קטגוריות */}
-        <div className="admin-card">
+        <div className="admin-card list-category-section">
           <div className="category-list-wrapper">
             {loading ? (
-              <p>טוען...</p>
+              <p className="loading-spinner">טוען...</p>
             ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+              <div className="category-tags-flex">
                 {categories.map((cat) => (
-                  <div
-                    key={cat._id}
-                    className="category-tag-item"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '50px',
-                    }}
-                  >
+                  <div key={cat._id} className="category-tag-item">
                     <strong>{cat.label}</strong>
                     {!cat.isSystem && (
                       <button
                         onClick={() => handleDeleteCategory(cat.key)}
-                        style={{
-                          color: 'red',
-                          border: 'none',
-                          background: 'none',
-                          cursor: 'pointer',
-                        }}
+                        className="delete-category-inline"
                       >
                         <Trash2 size={16} />
                       </button>

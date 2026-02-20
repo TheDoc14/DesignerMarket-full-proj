@@ -1,13 +1,22 @@
 export const PERMISSION_LABELS = {
   'admin.panel.access': 'גישה לפאנל ניהול',
+  'business.panel.access': 'צפייה בדשבורד ניהול עסקי',
   'users.read': 'צפייה ברשימת משתמשים',
   'users.approve': 'אישור/דחיית משתמשים',
   'users.assignRole': 'שינוי תפקיד למשתמש',
+
   'roles.manage': 'ניהול תפקידים והרשאות',
+  'categories.manage': 'ניהול קטגוריות',
   'projects.create': 'יצירת פרויקט חדש',
+  'projects.update': 'עדכון פרויקט',
+  'projects.delete': 'מחיקת פרויקטים',
+
   'projects.publish': 'אישור פרסום פרויקטים',
   'reviews.manage': 'ניהול ומחיקת תגובות',
+  'files.projects.read': 'צפייה בקבצי פרויקט',
+  'files.approvalDocs.read': 'צפייה במסמכי אישור משתמש סטודנט ומעצב',
   'stats.read': 'צפייה בסטטיסטיקות מערכת',
+  'ai.consult': 'ייעוץ בינה מלאכותית',
 };
 
 export const PERMS = {

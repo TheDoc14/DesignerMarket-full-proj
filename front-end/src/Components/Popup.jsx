@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../Context/AuthContext';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import projectDefault from '../DefaultPics/projectDefault.png';
 import './componentStyle.css';
 import { usePermission } from '../Hooks/usePermission.jsx';
+import { Tag, X } from 'lucide-react';
 
-const Popup = ({ project, onClose, onUpdate }) => {
+const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const { hasPermission, user: currentUser } = usePermission();
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
@@ -15,6 +16,9 @@ const Popup = ({ project, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', msg: null });
   const navigate = useNavigate();
+
+  const [tags, setTags] = useState(project?.tags || []);
+  const [tagInput, setTagInput] = useState('');
 
   const [editData, setEditData] = useState({
     title: project?.title || '',
@@ -68,12 +72,39 @@ const Popup = ({ project, onClose, onUpdate }) => {
     }
   }, [projectId]);
 
+  const handleTagKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const value = tagInput.trim().replace(',', '');
+      if (value && !tags.includes(value)) {
+        setTags([...tags, value]);
+        setTagInput('');
+      }
+    }
+  };
+  const removeTag = (indexToRemove) => {
+    setTags(tags.filter((_, i) => i !== indexToRemove));
+  };
+
   // --- תיקון ה-useEffect: הסרת בדיקת ההזמנות שגרמה ל-404 ---
   useEffect(() => {
     if (project) {
       fetchReviews();
     }
   }, [project, fetchReviews]);
+
+  // עדכון ה-State כשהפרויקט משתנה
+  useEffect(() => {
+    if (project) {
+      setEditData({
+        title: project.title,
+        description: project.description,
+        category: project.category,
+        price: project.price,
+      });
+      setTags(project.tags || []);
+    }
+  }, [project]);
 
   // --- לוגיקת PayPal ---
   const createOrder = async () => {
@@ -153,6 +184,7 @@ const Popup = ({ project, onClose, onUpdate }) => {
       data.append('title', editData.title);
       data.append('description', editData.description);
       data.append('price', editData.price);
+      data.append('tags', tags.join(',')); // הוספת התגיות המעודכנות
       if (selectedImage) data.append('image', selectedImage);
       const response = await axios.put(
         `http://localhost:5000/api/projects/${projectId}`,
@@ -177,8 +209,11 @@ const Popup = ({ project, onClose, onUpdate }) => {
   if (!project) return null;
 
   return (
-    <div className="popup-overlay" onClick={onClose}>
-      <div className="popup-content" onClick={(e) => e.stopPropagation()}>
+    <div className="project-modal-overlay" onClick={onClose}>
+      <div
+        className="project-modal-content"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
@@ -253,6 +288,22 @@ const Popup = ({ project, onClose, onUpdate }) => {
                         })
                       }
                     />
+                    <label>תגיות</label>
+                    <div className="tags-edit-container">
+                      <div className="tags-wrapper">
+                        {tags.map((tag, idx) => (
+                          <span key={idx} className="tag-pill">
+                            {tag} <X size={12} onClick={() => removeTag(idx)} />
+                          </span>
+                        ))}
+                        <input
+                          value={tagInput}
+                          onChange={(e) => setTagInput(e.target.value)}
+                          onKeyDown={handleTagKeyDown}
+                          placeholder="הוסף..."
+                        />
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <div className="view-mode">
@@ -260,26 +311,47 @@ const Popup = ({ project, onClose, onUpdate }) => {
                       <span className="label">מחיר:</span>{' '}
                       <span className="value">₪{project.price}</span>
                     </p>
-                    {isCreatorMissing ? (
-                      <div className="unavailable-notice">
-                        ⚠️ המוכר אינו פעיל
+                    <p className="desc-text">{project.description}</p>
+
+                    {tags.length > 0 && (
+                      <div className="popup-tags-display">
+                        <Tag size={14} />
+                        {tags.map((tag, i) => (
+                          <span key={i} className="tag-item">
+                            #{tag}
+                          </span>
+                        ))}
                       </div>
-                    ) : (
-                      <>
-                        <p className="desc-text">{project.description}</p>
-                        {currentUser && !isOwner && (
+                    )}
+
+                    <div className="purchase-area">
+                      {isCreatorMissing ? (
+                        <div className="unavailable-notice">
+                          ⚠️ המוכר אינו פעיל
+                        </div>
+                      ) : !isLoggedIn ? (
+                        <div className="auth-prompt-section">
+                          <p>כדי לרכוש עליך להיות מחובר</p>
+                          <Link
+                            to="/login"
+                            onClick={onClose}
+                            className="auth-btn login-btn"
+                          >
+                            התחברות
+                          </Link>
+                        </div>
+                      ) : (
+                        currentUser &&
+                        !isOwner && (
                           <div className="purchase-section">
                             <PayPalButtons
                               createOrder={createOrder}
                               onApprove={onApprove}
-                              onError={() =>
-                                showFeedback('error', 'שגיאת PayPal.')
-                              }
                             />
                           </div>
-                        )}
-                      </>
-                    )}
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -287,7 +359,7 @@ const Popup = ({ project, onClose, onUpdate }) => {
 
             <hr className="divider" />
 
-            {/* --- כאן התיקון של ה-MAP של התגובות --- */}
+            {/* רשימת תגובות */}
             <div className="reviews-list">
               {reviewsLoading ? (
                 <p>טוען תגובות...</p>
@@ -295,12 +367,7 @@ const Popup = ({ project, onClose, onUpdate }) => {
                 reviews.map((rev) => (
                   <div key={rev._id || rev.id} className="review-item">
                     <div className="review-header">
-                      <strong>
-                        {rev.userId?.username ||
-                          rev.user?.username ||
-                          rev.username ||
-                          'משתמש מערכת'}
-                      </strong>{' '}
+                      <strong>{rev.userId?.username || 'משתמש מערכת'}</strong>
                       <span>{'⭐'.repeat(rev.rating)}</span>
                     </div>
                     <p>{rev.text}</p>
@@ -311,7 +378,8 @@ const Popup = ({ project, onClose, onUpdate }) => {
               )}
             </div>
 
-            {currentUser && !isOwner && !isEditing && (
+            {/* הוספת תגובה - רק למחוברים שאינם הבעלים */}
+            {isLoggedIn && currentUser && !isOwner && !isEditing && (
               <form className="add-review-form" onSubmit={handleAddReview}>
                 <h4>הוסף חוות דעת</h4>
                 <div className="rating-select">
@@ -340,6 +408,7 @@ const Popup = ({ project, onClose, onUpdate }) => {
           </div>
         </div>
 
+        {/* פוטר - כפתורי עריכה */}
         <div className="popup-footer">
           {canEdit && (
             <div className="footer-actions">

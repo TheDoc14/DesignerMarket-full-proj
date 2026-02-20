@@ -4,6 +4,7 @@ import JSZip from 'jszip'; // ייבוא הספרייה ליצירת ZIP
 import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook החדש
 import defaultUserPic from '../DefaultPics/userDefault.jpg';
 import { useAuth } from '../Context/AuthContext';
+import Popup from '../Components/Popup';
 import './PublicPages.css';
 
 const PersonalDashboard = () => {
@@ -17,6 +18,7 @@ const PersonalDashboard = () => {
   const [projects, setProjects] = useState([]);
   const [purchasedProjects, setPurchasedProjects] = useState([]);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -40,56 +42,48 @@ const PersonalDashboard = () => {
   });
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
-
     const token = localStorage.getItem('token');
+
     try {
       setLoading(true);
+
+      // 1. שליפת הפרופיל והפרויקטים שהמשתמש יצר
       const profileRes = await axios.get(
         'http://localhost:5000/api/profile/me',
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
-      if (profileRes.data.user) {
-        const u = profileRes.data.user;
-        setFormData((prev) => ({
-          ...prev,
-          username: u.username || '',
-          firstName: u.firstName || '',
-          lastName: u.lastName || '',
-          phone: u.phone || '',
-          city: u.city || '',
-          country: u.country || '',
-          bio: u.bio || '',
-          paypalEmail: u.paypalEmail || '',
-          birthDate: u.birthDate ? u.birthDate.split('T')[0] : '',
-          social: u.social || prev.social,
-        }));
-        setProfileImagePreview(u.profileImage || defaultUserPic);
-      }
       setProjects(profileRes.data.projects || []);
 
-      // שליפת פרויקטים שרכשתי (בדיקה אם קיימים קבצים נגישים)
+      // 2. שליפת כל הפרויקטים (ה-API שלך כבר מסנן קבצים לפי הרשאה/רכישה)
       const projectsRes = await axios.get(
         'http://localhost:5000/api/projects',
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
+
       const allProjects = projectsRes.data.projects || [];
-      setPurchasedProjects(
-        allProjects.filter(
-          (p) => p && Array.isArray(p.files) && p.files.length > 0
-        )
-      );
+
+      // 3. סינון פרויקטים שרכשתי:
+      // פרויקט שרכשתי הוא כזה ש:
+      // א. הוא לא שלי (creatorId != user.id)
+      // ב. יש לו קבצים (השרת שלח files רק כי הקנייה הושלמה)
+      const purchased = allProjects.filter((p) => {
+        const isOwner = p.createdBy === user.id || p.createdBy?._id === user.id;
+        return !isOwner && Array.isArray(p.files) && p.files.length > 0;
+      });
+
+      setPurchasedProjects(purchased);
+
+      // ... שאר הלוגיקה של הפרופיל ...
     } catch (err) {
-      if (err.response?.status === 401) logout();
+      console.error(err);
     } finally {
       setLoading(false);
     }
   }, [user?.id, logout]);
-
   useEffect(() => {
     if (!permissionLoading && user?.id) {
       fetchDashboardData();
@@ -394,22 +388,36 @@ const PersonalDashboard = () => {
         <div className="management-section">
           <h3 className="section-title">📦 פרויקטים שרכשתי</h3>
           {purchasedProjects.map((p) => (
-            <div key={p.id} className="management-item purchased-card">
-              <div className="item-info">
-                <span className="item-title">{p.title}</span>
+            <div key={p._id} className="management-item purchased-card">
+              <div
+                className="item-info"
+                onClick={() => setSelectedProject(p)}
+                style={{ cursor: 'pointer' }}
+              >
+                <span className="item-title">{p.title} 🔍</span>
               </div>
-              <div className="zip-download-area">
-                <button
-                  onClick={() => downloadAllAsZip(p)}
-                  className="btn-download-action"
-                  disabled={saving}
-                >
-                  {saving ? 'מכין ZIP...' : 'להורדת קבצי הפרויקט לחץ כאן'}
-                </button>
-              </div>
+              <button
+                onClick={() => downloadAllAsZip(p)}
+                className="btn-download-action"
+              >
+                הורד ZIP
+              </button>
             </div>
           ))}
         </div>
+
+        {/* הוספת הפופאפ בסוף ה-Return */}
+        {selectedProject && (
+          <Popup
+            project={selectedProject}
+            onClose={() => setSelectedProject(null)}
+            isLoggedIn={true}
+          />
+        )}
+      </div>
+      <div className="my-ai-chats">
+        <h3 className="section-title">💬 הצ'אטים שלי עם ה-AI</h3>
+        <p>כאן יוצגו הצ'אטים שלך עם ה-AI (פיתוח עתידי)</p>
       </div>
 
       {user?.role !== 'admin' && (

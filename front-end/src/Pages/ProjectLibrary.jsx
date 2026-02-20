@@ -75,7 +75,7 @@ const ProjectLibrary = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm]);
+  }, [currentPage]);
 
   // הפעלה ראשונית של הטעינה המאוחדת
   useEffect(() => {
@@ -233,11 +233,13 @@ const ProjectLibrary = () => {
         </div>
       )}
 
+      {/* חפשי את החלק הזה בסוף הקומפוננטה ProjectLibrary */}
       {activeProject && (
         <Popup
           project={activeProject}
           onClose={() => setActiveProject(null)}
           onUpdate={handleProjectUpdate}
+          isLoggedIn={!!user} // שליחת בוליאן: אמת אם המשתמש מחובר
         />
       )}
     </div>

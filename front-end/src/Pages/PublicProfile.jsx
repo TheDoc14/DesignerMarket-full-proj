@@ -1,202 +1,234 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { usePermission } from '../Hooks/usePermission.jsx'; // החלת ההרשאות החדשה
-import { MapPin, Calendar, ExternalLink, Package } from 'lucide-react';
+import { usePermission } from '../Hooks/usePermission.jsx';
+import { PayPalButtons } from '@paypal/react-paypal-js';
+import ReactDOM from 'react-dom';
+import {
+  MapPin,
+  Calendar,
+  Package,
+  X,
+  Star,
+  ChevronLeft,
+  ExternalLink,
+} from 'lucide-react';
 import './PublicPages.css';
 
 const PublicProfile = () => {
   const { userId } = useParams();
-  // 1. הגנת הרשאות: בודקים אם למשתמש המחובר יש הרשאת קריאת פרופילים
   const { hasPermission, loading: permissionLoading } = usePermission();
 
   const [profile, setProfile] = useState(null);
   const [userProjects, setUserProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedProject, setSelectedProject] = useState(null);
 
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
-      // שליחת פרמטר page לשרת
       const res = await axios.get(
-        `http://localhost:5000/api/profile/${userId}?page=${currentPage}&limit=6`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
+        `http://localhost:5000/api/profile/${userId}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
-
       setProfile(res.data.user);
       setUserProjects(res.data.projects || []);
-      // שמירת נתוני הפגינציה מהשרת
-      setMeta(res.data.meta || { page: 1, totalPages: 1 });
     } catch (err) {
-      setError('שגיאה בטעינת הפרופיל');
+      setError('לא ניתן היה לטעון את הפרופיל.');
     } finally {
       setLoading(false);
     }
-  }, [userId, currentPage]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!permissionLoading) {
-      fetchUserData();
-    }
+    if (!permissionLoading) fetchUserData();
   }, [userId, permissionLoading, fetchUserData]);
 
+  const openProjectModal = (project) => {
+    setSelectedProject(project);
+    document.body.style.overflow = 'hidden';
+  };
+
+  const closeModal = () => {
+    setSelectedProject(null);
+    document.body.style.overflow = 'auto';
+  };
+
   if (permissionLoading || loading)
-    return <div className="loader">טוען פרופיל...</div>;
-  if (error || !profile)
-    return <div className="error-message">{error || 'משתמש לא נמצא.'}</div>;
+    return (
+      <div className="loader-container">
+        <div className="spinner"></div>
+      </div>
+    );
 
   return (
-    <div className="public-profile-container" dir="rtl">
-      {/* 2. כותרת פרופיל (Hero Section) עשירה במידע */}
-      <header className="profile-hero card-shadow">
-        <div className="hero-content">
-          <div className="avatar-wrapper">
-            <img
-              src={profile.profileImage || '/default-avatar.png'}
-              alt={profile.username}
-              className="public-profile-avatar"
-            />
-            {/* תג סטטוס בהתאם לתפקיד */}
-            <span className={`role-tag ${profile.role}`}>{profile.role}</span>
-          </div>
+    <div className="profile-page-wrapper" dir="rtl">
+      {/* באנר עליון */}
+      <div className="profile-top-banner"></div>
 
-          <div className="profile-text-info">
-            <h1>{profile.username}</h1>
-            <p className="full-name">
-              {profile.firstName} {profile.lastName}
-            </p>
-
-            <div className="profile-meta-grid">
-              {(profile.city || profile.country) && (
-                <span className="meta-item">
-                  <MapPin size={16} /> {profile.city}
-                  {profile.country ? `, ${profile.country}` : ''}
-                </span>
-              )}
-              {profile.createdAt && (
-                <span className="meta-item">
-                  <Calendar size={16} /> הצטרף ב:{' '}
-                  {new Date(profile.createdAt).toLocaleDateString('he-IL')}
-                </span>
-              )}
-              <span className="meta-item">
-                <Package size={16} /> {userProjects.length} פרויקטים שפורסמו
+      <div className="profile-main-content">
+        <header className="profile-header-card">
+          <div className="header-flex-container">
+            <div className="profile-avatar-area">
+              <img
+                src={profile?.profileImage || '/default-avatar.png'}
+                alt={profile?.username}
+                className="profile-img-main"
+              />
+              <span className={`role-badge-floating ${profile?.role}`}>
+                {profile?.role}
               </span>
             </div>
 
-            <p className="public-bio">
-              {profile.bio || 'המעצב טרם הוסיף ביוגרפיה.'}
-            </p>
-
-            <div className="public-social-links">
-              {profile.social &&
-                Object.entries(profile.social).map(
-                  ([platform, url]) =>
-                    url && (
-                      <a
-                        key={platform}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="social-btn"
-                      >
-                        <ExternalLink size={14} /> {platform}
-                      </a>
-                    )
-                )}
+            <div className="profile-details-area">
+              <h1 className="profile-title-name">{profile?.username}</h1>
+              <div className="profile-sub-stats">
+                <span>
+                  <MapPin size={14} /> {profile?.city || 'ישראל'}
+                </span>
+                <span>
+                  <Package size={14} /> {userProjects.length} פרויקטים
+                </span>
+                <span>
+                  <Calendar size={14} /> הצטרף ב-
+                  {new Date(profile?.createdAt).getFullYear()}
+                </span>
+              </div>
+              <p className="profile-bio-summary">
+                {profile?.bio || 'המעצב טרם הוסיף תיאור אישי.'}
+              </p>
+              <div className="public-social-links">
+                {profile?.social &&
+                  Object.entries(profile.social).map(
+                    ([platform, url]) =>
+                      url && (
+                        <a
+                          key={platform}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="social-btn-premium"
+                          title={platform}
+                        >
+                          <ExternalLink size={14} />
+                          <span>{platform}</span>
+                        </a>
+                      )
+                  )}
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* 3. גריד הפרויקטים של המשתמש */}
-      {/* 3. גריד הפרויקטים של המשתמש */}
-      <section className="profile-portfolio">
-        <h2 className="section-title">תיק עבודות</h2>
-        {userProjects.length > 0 ? (
-          <>
-            {' '}
-            {/* 👈 הוספת Fragment כדי לעטוף שני אלמנטים */}
-            <div className="projects-grid">
-              {userProjects.map((project) => (
-                <article
-                  key={project.id || project._id}
-                  className="project-card"
+        <section className="portfolio-grid-section">
+          <h2 className="portfolio-grid-title">תיק עבודות</h2>
+          <div className="projects-display-grid">
+            {userProjects.map((project) => (
+              <div key={project._id} className="minimal-project-card">
+                <div
+                  className="card-visual-part"
+                  onClick={() => openProjectModal(project)}
                 >
-                  <div className="card-img-box">
-                    <img
-                      src={project.mainImageUrl || '/project-default.png'}
-                      alt={project.title}
-                    />
-                    <div className="price-tag">₪{project.price}</div>
+                  <img src={project.mainImageUrl} alt={project.title} />
+                  <div className="card-price-tag-fixed">₪{project.price}</div>
+                </div>
+
+                <div className="card-info-part">
+                  <h3>{project.title}</h3>
+                  <div className="card-meta-row">
+                    <div className="rating-pill">
+                      <Star size={12} fill="#ffc107" color="#ffc107" />
+                      <span>0.0</span>
+                    </div>
+                    <button
+                      onClick={() => openProjectModal(project)}
+                      className="details-text-link"
+                    >
+                      צפה בפרטים <ChevronLeft size={16} />
+                    </button>
                   </div>
-                  <div className="card-body">
-                    <h3>{project.title}</h3>
-                    <div className="card-actions">
-                      <Link
-                        to={`/project/${project.id || project._id}`}
-                        className="view-details-btn"
-                      >
-                        צפה בפרטים
-                      </Link>
-                      {hasPermission('projects.update') && (
-                        <Link
-                          to={`/edit-project/${project.id || project._id}`}
-                          className="quick-edit-link"
-                        >
-                          ערוך פרויקט
-                        </Link>
-                      )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* שימוש ב-Portal להצגת המודאל מחוץ להיררכיה הרגילה */}
+      {selectedProject &&
+        ReactDOM.createPortal(
+          <div className="project-modal-overlay" onClick={closeModal}>
+            <div
+              className="project-modal-content"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="modal-close-btn" onClick={closeModal}>
+                <X size={24} />
+              </button>
+
+              <div className="modal-body-grid">
+                <div className="modal-image-side">
+                  <img
+                    src={selectedProject.mainImageUrl || '/project-default.png'}
+                    alt={selectedProject.title}
+                  />
+                </div>
+
+                <div className="modal-info-side">
+                  <header className="modal-header-info">
+                    {/* שליפת הקטגוריה באופן דינמי מהפרויקט הנבחר */}
+                    <span className="modal-category-tag">
+                      {selectedProject.category?.name ||
+                        selectedProject.category ||
+                        'כללי'}
+                    </span>
+                    <h2>{selectedProject.title}</h2>
+                    <div className="modal-price-display">
+                      ₪{selectedProject.price}
+                    </div>
+                  </header>
+
+                  <div className="modal-description-area">
+                    <p>
+                      {selectedProject.description ||
+                        'אין תיאור זמין לפרויקט זה.'}
+                    </p>
+                  </div>
+
+                  <div className="modal-footer-actions">
+                    <div className="payment-container">
+                      <p className="payment-label">רכישה מאובטחת:</p>
+                      <PayPalButtons
+                        style={{
+                          layout: 'vertical',
+                          shape: 'rect',
+                          height: 45,
+                        }}
+                        createOrder={(data, actions) => {
+                          return actions.order.create({
+                            purchase_units: [
+                              {
+                                amount: {
+                                  value: selectedProject.price.toString(),
+                                },
+                                description: selectedProject.title,
+                              },
+                            ],
+                          });
+                        }}
+                      />
                     </div>
                   </div>
-                </article>
-              ))}
-            </div>
-            {/* רכיב הניווט כחלק מאותו ענף בתנאי */}
-            {meta.totalPages > 1 && (
-              <div className="pagination-container">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => {
-                    setCurrentPage((prev) => prev - 1);
-                    window.scrollTo(0, 400);
-                  }}
-                  className="pagination-btn"
-                >
-                  → הקודם
-                </button>
-
-                <span className="page-indicator">
-                  דף {meta.page} מתוך {meta.totalPages}
-                </span>
-
-                <button
-                  disabled={currentPage === meta.totalPages}
-                  onClick={() => {
-                    setCurrentPage((prev) => prev + 1);
-                    window.scrollTo(0, 400);
-                  }}
-                  className="pagination-btn"
-                >
-                  הבא ←
-                </button>
+                </div>
               </div>
-            )}
-          </> // 👈 סגירת ה-Fragment
-        ) : (
-          <div className="empty-portfolio">
-            אין פרויקטים ציבוריים להצגה בשלב זה.
-          </div>
+            </div>
+          </div>,
+          document.body
         )}
-      </section>
-    </div>
-  );
-};
+    </div> // סגירת ה-div של ה-profile-page-wrapper
+  ); // סגירת ה-return
+}; // סגירת הקומפוננטה
 
 export default PublicProfile;

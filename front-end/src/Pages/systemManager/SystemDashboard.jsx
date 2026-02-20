@@ -48,23 +48,31 @@ const SystemDashboard = () => {
   const dashboardRef = useRef(null);
 
   const COLORS = ['#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7'];
+
   const fetchData = useCallback(async () => {
     if (!hasPermission('stats.read')) return;
-
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
+      const requests = [
+        axios.get('http://localhost:5000/api/business/stats', { headers }),
+        axios.get('http://localhost:5000/api/business/finance', { headers }),
+      ];
+      // רק אם המשתמש הוא אדמין ממש, נוסיף את הקריאה ל-admin/stats
+      if (hasPermission('admin.panel.access')) {
+        requests.push(
+          axios.get('http://localhost:5000/api/admin/stats', { headers })
+        );
+      }
+      const responses = await Promise.all(requests);
 
-      const [statsRes, financeRes, adminStatsRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/system/stats', { headers }),
-        axios.get('http://localhost:5000/api/system/finance', { headers }),
-        axios.get('http://localhost:5000/api/admin/stats', { headers }),
-      ]);
-
-      setStats(statsRes.data.stats);
-      setFinance(financeRes.data.finance);
-      setAdminStats(adminStatsRes.data.stats);
+      setStats(responses[0].data.stats);
+      setFinance(responses[1].data.finance);
+      // אם חזר אובייקט שלישי (של האדמין)
+      if (responses[2]) {
+        setAdminStats(responses[2].data.stats);
+      }
     } catch (err) {
       console.error('Managerial data load failed', err);
     } finally {
@@ -73,13 +81,17 @@ const SystemDashboard = () => {
   }, [hasPermission]);
 
   useEffect(() => {
+    // נריץ את fetchData רק כשטעינת ההרשאות הסתיימה ויש משתמש תקין
     if (!permissionLoading && currentUser?.id && hasPermission('stats.read')) {
       fetchData();
     }
-  }, [currentUser?.id, permissionLoading, hasPermission, fetchData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.id, permissionLoading]);
+  // הוצאנו את fetchData ו-hasPermission מהמערך כדי למנוע לולאה
+
   if (permissionLoading)
     return <div className="loader">מאמת הרשאות ניהול...</div>;
-  if (!hasPermission('admin.panel.access')) {
+  if (!hasPermission('stats.read')) {
     return (
       <div className="admin-container">
         אין לך הרשאה לצפות בנתונים אסטרטגיים.
@@ -174,25 +186,13 @@ const SystemDashboard = () => {
   if (loading) return <div className="loader">מנתח ביצועים עסקיים...</div>;
 
   return (
-    <div className="admin-container" dir="rtl">
-      <header
-        className="dashboard-header"
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          marginBottom: '30px',
-        }}
-      >
+    <div className="admin-container dashboard-strategic-root" dir="rtl">
+      <header className="dashboard-header strategic-header">
         <div>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: '800' }}>
-            לוח בקרה אסטרטגי
-          </h1>
-          <p style={{ fontSize: '1.1rem', color: '#636e72' }}>
-            ניתוח נתונים להגדלת הפעילות העסקית ב-Designer Market
-          </p>
+          <h1>לוח בקרה אסטרטגי</h1>
+          <p>ניתוח נתונים להגדלת הפעילות העסקית ב-Designer Market</p>
         </div>
-        <div className="export-btns" style={{ display: 'flex', gap: '12px' }}>
+        <div className="export-btns">
           <button onClick={handleExcelExport} className="btn-export excel">
             <FileSpreadsheet size={18} /> אקסל ניהולי
           </button>
@@ -202,84 +202,42 @@ const SystemDashboard = () => {
         </div>
       </header>
 
-      <div
-        ref={dashboardRef}
-        style={{
-          backgroundColor: '#fff',
-          padding: '25px',
-          borderRadius: '20px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
-        }}
-      >
+      <div ref={dashboardRef} className="dashboard-content-wrapper">
         {/* שלושת הרובריקות אחת ליד השנייה */}
-        <div
-          className="manager-kpi-row"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '25px',
-            marginBottom: '40px',
-          }}
-        >
-          <div
-            className="stat-card manager-style"
-            style={{
-              background: 'linear-gradient(135deg, #6c5ce7, #a29bfe)',
-              color: 'white',
-            }}
-          >
+        <div className="manager-kpi-grid">
+          <div className="stat-card manager-style primary-gradient">
             <div className="manager-icon">
               <DollarSign size={28} />
             </div>
             <div className="stat-info">
-              <span>מחזור מכירות כולל</span>
+              <span>מחזור מכירות כולל : </span>
               <strong>₪{grossTotal.toLocaleString()}</strong>
             </div>
           </div>
-          <div
-            className="stat-card manager-style"
-            style={{ border: '2px solid #fdcb6e' }}
-          >
-            <div className="manager-icon" style={{ color: '#fdcb6e' }}>
+          <div className="stat-card manager-style border-yellow">
+            <div className="manager-icon">
               <Target size={28} />
             </div>
             <div className="stat-info">
-              <span>ערך הזמנה (AOV)</span>
-              <strong style={{ color: '#2d3436' }}>₪{aov}</strong>
+              <span>ערך הזמנה (AOV) : </span>
+              <strong>₪{aov}</strong>
             </div>
           </div>
-          <div
-            className="stat-card manager-style"
-            style={{ border: '2px solid #00b894' }}
-          >
-            <div className="manager-icon" style={{ color: '#00b894' }}>
+          <div className="stat-card manager-style border-green">
+            <div className="manager-icon">
               <TrendingUp size={28} />
             </div>
             <div className="stat-info">
-              <span>רווחיות פלטפורמה</span>
-              <strong style={{ color: '#2d3436' }}>{profitMargin}%</strong>
+              <span>רווחיות פלטפורמה : </span>
+              <strong>{profitMargin}%</strong>
             </div>
           </div>
         </div>
 
-        <div
-          className="charts-main-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.5fr 1fr',
-            gap: '25px',
-          }}
-        >
+        <div className="charts-main-layout">
           {/* גרף מגמת הכנסות */}
-          <div className="chart-container" style={{ padding: '20px' }}>
-            <h3
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '20px',
-              }}
-            >
+          <div className="chart-container-card">
+            <h3>
               <History size={20} /> מגמת הכנסות אחרונה
             </h3>
             <ResponsiveContainer width="100%" height={280}>
@@ -291,32 +249,20 @@ const SystemDashboard = () => {
                 />
                 <XAxis dataKey="time" axisLine={false} tickLine={false} />
                 <YAxis axisLine={false} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: '10px',
-                    border: 'none',
-                    boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-                  }}
-                />
+                <Tooltip />
                 <Line
-                  type="monotone"
+                  ype="monotone"
                   dataKey="val"
                   stroke="#6c5ce7"
                   strokeWidth={4}
-                  dot={{
-                    r: 6,
-                    fill: '#6c5ce7',
-                    strokeWidth: 2,
-                    stroke: '#fff',
-                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
           {/* גרף ביקוש לפי קטגוריות - מתוקן עם ערכים בצירים */}
-          <div className="chart-container" style={{ padding: '20px' }}>
-            <h3 style={{ marginBottom: '20px' }}>📊 ביקוש לפי קטגוריות</h3>
+          <div className="chart-container-card">
+            <h3>📊 ביקוש לפי קטגוריות</h3>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={stats?.breakdowns?.projectsByCategory}>
                 <CartesianGrid
@@ -344,20 +290,12 @@ const SystemDashboard = () => {
         </div>
       </div>
 
-      <div
-        className="business-intelligence-panel"
-        style={{
-          marginTop: '30px',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '25px',
-        }}
-      >
+      <div className="bi-strategic-grid">
         <div className="bi-card">
           <div className="bi-header">
             <Award size={22} color="#fdcb6e" /> <h3>הנכסים המובילים שלך</h3>
           </div>
-          <div className="bi-content">
+          <div className="bi-card">
             <p>
               הפרויקט המדורג ביותר:{' '}
               <strong>{adminStats?.topRated[0]?.title}</strong>

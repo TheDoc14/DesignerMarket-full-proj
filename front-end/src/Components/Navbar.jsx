@@ -22,7 +22,12 @@ const Navbar = () => {
   // שליפת hasPermission והמשתמש. ה-Hook הזה מסתמך על מידע מקומי ולא קורא לשרת
   const { hasPermission, user } = usePermission();
   const [isOpen, setIsOpen] = useState(false);
-
+  console.log('--- DEBUG NAVBAR ---');
+  console.log('Full User Object:', user);
+  console.log('User Role:', user?.role);
+  console.log('Has Business Perm:', hasPermission(PERMS.BUSINESS_PANEL_ACCESS));
+  console.log('Has stats.read Perm:', hasPermission('stats.read'));
+  console.log('--------------------');
   const closeMenu = () => setIsOpen(false);
 
   const handleLogout = () => {
@@ -105,24 +110,9 @@ const Navbar = () => {
               )}
             </>
           )}
-
           {/* --- תפריט ניהול עסקי (Business Manager) --- */}
-          {/* תיקון: שימוש ב-PERM הנכון כפי שמוגדר ב-Constants */}
-          {(hasPermission('business.panel.access') ||
-            hasPermission('stats.read')) && (
-            <div className="admin-section-sidebar">
-              <p className="section-title">📊 ניהול עסקי</p>
-              <Link
-                to="/admin/system-stats"
-                onClick={closeMenu}
-                className="admin-item"
-              >
-                <BarChart3 size={18} /> דשבורד סטטיסטיקות
-              </Link>
-            </div>
-          )}
-
           {(hasPermission(PERMS.BUSINESS_PANEL_ACCESS) ||
+            hasPermission('stats.read') ||
             user?.role === 'business_manager') && (
             <div className="admin-section-sidebar">
               <p className="section-title">📊 ניהול עסקי</p>
@@ -135,7 +125,6 @@ const Navbar = () => {
               </Link>
             </div>
           )}
-
           {/* --- תפריט אדמין (Admin) --- */}
           {hasPermission('admin.panel.access') && (
             <div className="admin-section-sidebar">
