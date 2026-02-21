@@ -1,3 +1,4 @@
+//back-end/server.js
 /**
  * server.js
  * נקודת הכניסה של השרת: middlewares כלליים, חיבור למסד, רישום ראוטים, וטיפול שגיאות אחיד.
@@ -8,6 +9,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const app = express();
+const helmet = require('helmet');
+const mongoSanitize = require('@exortek/express-mongo-sanitize');
+const isProd = process.env.NODE_ENV === 'production';
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', 1);
+}
 
 // ✅ ייבוא ראוטים
 const authRoutes = require('./routes/auth.routes');
@@ -16,12 +23,60 @@ const projectRoutes = require('./routes/project.routes');
 const fileRoutes = require('./routes/file.routes');
 const reviewRoutes = require('./routes/review.routes');
 const adminRoutes = require('./routes/admin.routes');
+const orderRoutes = require('./routes/order.routes');
+const businessRoutes = require('./routes/business.routes');
+const aiRoutes = require('./routes/ai.routes');
+const aiChatsRoutes = require('./routes/aiChats.routes');
 const { errorHandler } = require('./middleware/error.middleware');
+const { requestIdMiddleware } = require('./middleware/requestId.middleware');
+const { ensureBaseRoles } = require('./utils/bootstrapRbac.utils');
+const { ensureBaseCategories } = require('./utils/bootstrapCategories.utils');
 
 // ✅ מידלוורים כלליים
+
+// ✅ sanitize ONLY mongo keys ($ and .) to prevent NoSQL injection
+// ⚠️ IMPORTANT: do NOT touch string values (we store permissions like "admin.panel.access")
+const sanitizeMongoKeysOnly = (data) => {
+  if (Array.isArray(data)) return data.map(sanitizeMongoKeysOnly);
+
+  if (data && typeof data === 'object' && data.constructor === Object) {
+    const out = {};
+    for (const [k, v] of Object.entries(data)) {
+      const safeKey = String(k).replace(/\$/g, '').replace(/\./g, '');
+      out[safeKey] = sanitizeMongoKeysOnly(v);
+    }
+    return out;
+  }
+
+  return data; // keep primitives (strings) as-is
+};
+
+/**
+ * 🛡️ Security headers (Helmet)
+ * מוסיף HTTP Security Headers בסיסיים (Best Practice ל-Express).
+ *
+ * התאמות אצלנו:
+ * - API מחזיר JSON (לא מגישים HTML) → לא מסתבכים עם CSP בשלב הזה.
+ * - יש לנו /api/files לתמונות/קבצים שעשויים להיטען מהפרונט (Cross-Origin) → מאפשרים cross-origin resources.
+ * - מבטלים COEP כדי למנוע חסימות בפיתוח/טעינת משאבים.
+ * - HSTS רק בפרודקשן ורק אם עובדים עם HTTPS (אחרת זה עלול “להכריח” https).
+ */
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    strictTransportSecurity: isProd ? undefined : false,
+  })
+);
+
+// 🔒 לא לחשוף טכנולוגיה (בנוסף למה ש-helmet עושה)
+app.disable('x-powered-by');
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(mongoSanitize({ customSanitizer: (data, _options) => sanitizeMongoKeysOnly(data) }));
+app.use(requestIdMiddleware);
 
 /**
  * ✅ Routes mounting
@@ -34,9 +89,13 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/business', businessRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/ai-chats', aiChatsRoutes);
 
 app.get('/api/test', (req, res) => {
-  res.json({ msg: 'API is working fine 🚀' });
+  res.status(200).json({ message: 'API is working fine 🚀' });
 });
 
 /**
@@ -58,6 +117,12 @@ async function startServer() {
   try {
     await mongoose.connect(process.env.DB_URI);
     console.log('✅ MongoDB connected successfully');
+
+    await ensureBaseRoles();
+    console.log('✅ RBAC base roles ensured');
+
+    await ensureBaseCategories();
+    console.log('✅ Base categories ensured');
 
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

@@ -1,8 +1,9 @@
 // back-end/controllers/admin.controller.js
-const mongoose = require('mongoose');
 const User = require('../models/Users.models');
+const Role = require('../models/Role.model');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
+const Category = require('../models/Category.model');
 const {
   pickUserPublic,
   pickProjectPublic,
@@ -10,9 +11,9 @@ const {
   pickProjectStats,
 } = require('../utils/serializers.utils');
 const { getBaseUrl } = require('../utils/url.utils');
-const { toInt, escapeRegex, toSort } = require('../utils/query.utils');
+const { getPaging, escapeRegex, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
-
+const { ROLES } = require('../constants/roles.constants');
 /**
  * 👥 adminListUsers
  * מחזיר רשימת משתמשים לאדמין עם פילטרים (q/role/approved) ופגינציה.
@@ -23,14 +24,15 @@ const adminListUsers = async (req, res, next) => {
   try {
     const { q, role, approved } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const filter = {};
 
-    if (role && ['admin', 'customer', 'student', 'designer'].includes(role)) {
-      filter.role = role;
+    if (role) {
+      const key = String(role).trim().toLowerCase();
+      const exists = await Role.exists({ key });
+      if (!exists) throw new Error('Role not found');
+      filter.role = key;
     }
 
     if (approved === 'true') filter.isApproved = true;
@@ -67,20 +69,13 @@ const adminListUsers = async (req, res, next) => {
  */
 const adminSetUserApproval = async (req, res, next) => {
   try {
-    const { isApproved } = req.body;
-
-    let val = isApproved;
-    if (typeof val === 'string') {
-      if (val === 'true') val = true;
-      else if (val === 'false') val = false;
-    }
-
-    if (typeof val !== 'boolean') throw new Error('Invalid request');
+    let val = req.body.isApproved;
+    if (typeof val === 'string') val = val === 'true';
 
     const user = await User.findById(req.params.id);
     if (!user) throw new Error('User not found');
 
-    if (user.role !== 'student' && user.role !== 'designer') {
+    if (user.role !== ROLES.STUDENT && user.role !== ROLES.DESIGNER) {
       throw new Error('Invalid request');
     }
 
@@ -106,9 +101,7 @@ const adminListProjects = async (req, res, next) => {
   try {
     const { q, category, published } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const filter = {};
 
@@ -152,14 +145,8 @@ const adminListProjects = async (req, res, next) => {
  */
 const adminSetProjectPublish = async (req, res, next) => {
   try {
-    let { isPublished } = req.body;
-
-    if (typeof isPublished === 'string') {
-      if (isPublished === 'true') isPublished = true;
-      else if (isPublished === 'false') isPublished = false;
-    }
-
-    if (typeof isPublished !== 'boolean') throw new Error('Invalid request');
+    let isPublished = req.body.isPublished;
+    if (typeof isPublished === 'string') isPublished = isPublished === 'true';
 
     const project = await Project.findByIdAndUpdate(
       req.params.id,
@@ -188,15 +175,10 @@ const adminListReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 20);
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = getPaging(req.query, 20);
 
     const filter = {};
-    if (projectId) {
-      if (!mongoose.Types.ObjectId.isValid(projectId)) throw new Error('Invalid request');
-      filter.projectId = projectId;
-    }
+    if (projectId) filter.projectId = projectId;
 
     const sort = toSort(req.query.sortBy, req.query.order, ['createdAt', 'rating'], 'createdAt');
 
@@ -242,7 +224,7 @@ const adminGetStats = async (req, res, next) => {
     const [usersTotal, usersPendingApproval, projectsTotal, projectsPendingPublish, reviewsTotal] =
       await Promise.all([
         User.countDocuments({}),
-        User.countDocuments({ role: { $in: ['student', 'designer'] }, isApproved: false }),
+        User.countDocuments({ role: { $in: [ROLES.STUDENT, ROLES.DESIGNER] }, isApproved: false }),
         Project.countDocuments({}),
         Project.countDocuments({ isPublished: false }),
         Review.countDocuments({}),
@@ -275,6 +257,252 @@ const adminGetStats = async (req, res, next) => {
   }
 };
 
+// ==============================
+// Roles (Dynamic RBAC) - Admin
+// ==============================
+
+/**
+ * 🧩 adminListRoles
+ * מחזיר רשימת Roles (כולל system roles) עם פגינציה ומטא אחיד.
+ * מיועד למסך ניהול Roles בפאנל.
+ */
+const adminListRoles = async (req, res, next) => {
+  try {
+    const { page, limit, skip } = getPaging(req.query, 50);
+
+    const [total, roles] = await Promise.all([
+      Role.countDocuments({}),
+      Role.find({}).sort({ isSystem: -1, key: 1 }).skip(skip).limit(limit).lean(),
+    ]);
+
+    return res.status(200).json({
+      message: 'Roles fetched',
+      meta: buildMeta(total, page, limit),
+      roles,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * ➕ adminCreateRole
+ * יוצר Role חדש (לא system).
+ */
+const adminCreateRole = async (req, res, next) => {
+  try {
+    const { key, label = '', permissions = [] } = req.body;
+
+    const normalizedKey = String(key).trim().toLowerCase();
+
+    const exists = await Role.findOne({ key: normalizedKey }).lean();
+    if (exists) throw new Error('Role already exists');
+
+    const role = await Role.create({
+      key: normalizedKey,
+      label,
+      permissions,
+      isSystem: false,
+    });
+
+    return res.status(201).json({
+      message: 'Role created',
+      role,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * ✏️ adminUpdateRole
+ * מעדכן label/permissions ל-Role לפי key.
+ * (לפי החלטה שלך – מאפשר גם system roles, אבל לא שינוי key)
+ */
+const adminUpdateRole = async (req, res, next) => {
+  try {
+    const normalizedKey = String(req.params.key).trim().toLowerCase();
+    const { label, permissions } = req.body;
+
+    const role = await Role.findOne({ key: normalizedKey });
+    if (!role) throw new Error('Role not found');
+    if (typeof label === 'string') role.label = label;
+    if (Array.isArray(permissions)) role.permissions = permissions;
+
+    await role.save();
+
+    return res.status(200).json({
+      message: 'Role updated',
+      role,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * 🗑️ adminDeleteRole
+ * מוחק Role שאינו system ושאינו בשימוש.
+ */
+const adminDeleteRole = async (req, res, next) => {
+  try {
+    const normalizedKey = String(req.params.key).trim().toLowerCase();
+
+    const role = await Role.findOne({ key: normalizedKey });
+    if (!role) throw new Error('Role not found');
+    if (role.isSystem) throw new Error('Cannot delete system role');
+
+    const used = await User.exists({ role: role.key });
+    if (used) throw new Error('Cannot delete role that is assigned to users');
+
+    await role.deleteOne();
+
+    return res.status(200).json({
+      message: 'Role deleted',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ==============================
+// Assign role to user - Admin
+// ==============================
+
+/**
+ * 👤 adminAssignUserRole
+ * משייך Role למשתמש לפי key דינמי.
+ * מחזיר user מסוריאלייז כמו שאר הפאנל (pickUserPublic).
+ */
+const adminAssignUserRole = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { role: roleKey } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) throw new Error('User not found');
+
+    const normalizedKey = String(roleKey).trim().toLowerCase();
+    const role = await Role.findOne({ key: normalizedKey }).lean();
+    if (!role) throw new Error('Role does not exist');
+
+    user.role = role.key;
+
+    // לא חובה, אבל מונע מצב ש-role חדש תקוע "לא מאושר"
+    if (user.role !== ROLES.STUDENT && user.role !== ROLES.DESIGNER) {
+      user.isApproved = true;
+    }
+
+    await user.save();
+
+    const baseUrl = getBaseUrl(req);
+    const safe = pickUserPublic(user, { forRole: 'admin', baseUrl });
+
+    return res.status(200).json({
+      message: 'User role updated',
+      user: safe,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * 🗂️ Admin Categories (Dynamic)
+ * מאפשר לאדמין לנהל קטגוריות ללא שינוי קוד.
+ */
+
+const adminListCategories = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    const { page, limit, skip } = getPaging(req.query, 50);
+
+    const filter = {};
+    if (q) {
+      const rx = new RegExp(escapeRegex(q), 'i');
+      filter.$or = [{ key: rx }, { label: rx }];
+    }
+
+    const [total, rows] = await Promise.all([
+      Category.countDocuments(filter),
+      Category.find(filter).sort({ isSystem: -1, key: 1 }).skip(skip).limit(limit).lean(),
+    ]);
+
+    return res.status(200).json({
+      message: 'Categories fetched',
+      meta: buildMeta(total, page, limit),
+      categories: rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const adminCreateCategory = async (req, res, next) => {
+  try {
+    const key = String(req.body.key || '')
+      .trim()
+      .toLowerCase();
+    const label = String(req.body.label || '').trim();
+
+    const exists = await Category.findOne({ key }).lean();
+    if (exists) throw new Error('Category already exists');
+    const category = await Category.create({ key, label, isSystem: false });
+
+    return res.status(201).json({
+      message: 'Category created',
+      category,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const adminUpdateCategory = async (req, res, next) => {
+  try {
+    const key = String(req.params.key || '')
+      .trim()
+      .toLowerCase();
+    const { label } = req.body;
+
+    const category = await Category.findOne({ key });
+    if (!category) throw new Error('Category not found');
+
+    if (category.isSystem) throw new Error('Cannot update system category');
+
+    if (typeof label === 'string') category.label = String(label).trim();
+
+    await category.save();
+
+    return res.status(200).json({
+      message: 'Category updated',
+      category,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const adminDeleteCategory = async (req, res, next) => {
+  try {
+    const key = String(req.params.key || '')
+      .trim()
+      .toLowerCase();
+
+    const category = await Category.findOne({ key });
+    if (!category) throw new Error('Category not found');
+
+    if (category.isSystem) throw new Error('Cannot delete system category');
+    await category.deleteOne();
+
+    return res.status(200).json({
+      message: 'Category deleted',
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   adminListUsers,
   adminSetUserApproval,
@@ -282,4 +510,13 @@ module.exports = {
   adminSetProjectPublish,
   adminListReviews,
   adminGetStats,
+  adminListRoles,
+  adminCreateRole,
+  adminUpdateRole,
+  adminDeleteRole,
+  adminAssignUserRole,
+  adminListCategories,
+  adminCreateCategory,
+  adminUpdateCategory,
+  adminDeleteCategory,
 };

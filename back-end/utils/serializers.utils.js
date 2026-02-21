@@ -4,6 +4,8 @@
  * מסננת שדות רגישים, בונה URLs, ושולטת בחשיפת קבצים לפי הרשאות viewer.
  */
 const { buildFileUrl } = require('../utils/url.utils');
+const { ROLES } = require('../constants/roles.constants');
+const { FILE_FOLDERS } = require('../constants/files.constants');
 
 /**
  * Utilities
@@ -54,6 +56,7 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
     country: safeStr(u.country),
     birthDate: u.birthDate ? new Date(u.birthDate) : null,
     phone: safeStr(u.phone),
+    paypalEmail: safeStr(u.paypalEmail),
     social: {
       website: safeStr(u?.social?.website),
       instagram: safeStr(u?.social?.instagram),
@@ -68,9 +71,9 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
   };
 
   // הרחבות לאדמין בלבד
-  if (forRole === 'admin') {
+  if (forRole === ROLES.ADMIN) {
     userBase.flags = {
-      pendingApproval: !(u.role === 'customer') && !safeBool(u.isApproved),
+      pendingApproval: !(u.role === ROLES.CUSTOMER) && !safeBool(u.isApproved),
     };
 
     // URL למסמך אישור (לא נתיב דיסק)
@@ -85,13 +88,17 @@ const pickUserPublic = (userDoc, { forRole, baseUrl } = {}) => {
 /**
  * pickProjectPublic
  * מחזיר פרויקט בפורמט אחיד:
- * media תמיד חשוף, files רגישים נחשפים רק לבעלים/אדמין לפי viewer.
+ * media תמיד חשוף, files רגישים נחשפים רק לבעלים/אדמין/קונה ששילם לפי viewer.
  */
 const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
   const p = toPlain(projectDoc) || {};
 
-  const isAdmin = viewer?.role === 'admin';
+  const isAdmin = viewer?.role === ROLES.ADMIN;
   const isOwner = viewer?.id && String(viewer.id) === String(p.createdBy?._id || p.createdBy);
+
+  // ✅ חדש: גם קונה ששילם יכול לראות files רגישים
+  // ברירת מחדל: אם לא העבירו canAccessFiles, נשאר owner/admin בלבד
+  const canAccessFiles = isOwner || isAdmin || viewer?.canAccessFiles === true;
 
   // מדיה ציבורית (תמיד)
   const media = safeArr(p.files)
@@ -100,7 +107,10 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
       const filename = safeStr(f.filename);
       const savedUrl = safeStr(f.path); // URL תקין שנשמר בזמן יצירה
       const url =
-        savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectImages'], filename) : '');
+        savedUrl ||
+        (filename
+          ? buildFileUrl(req, [FILE_FOLDERS.PROJECTS, FILE_FOLDERS.PROJECT_IMAGES], filename)
+          : '');
       return {
         id: String(f._id || ''),
         filename,
@@ -114,30 +124,36 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
   const mainImageUrl = mainImage
     ? safeStr(mainImage.path) ||
       (safeStr(mainImage.filename)
-        ? buildFileUrl(req, ['projects', 'projectImages'], safeStr(mainImage.filename))
+        ? buildFileUrl(
+            req,
+            [FILE_FOLDERS.PROJECTS, FILE_FOLDERS.PROJECT_IMAGES],
+            safeStr(mainImage.filename)
+          )
         : '')
     : '';
 
-  // קבצים רגישים (Owner/Admin בלבד)
+  // קבצים רגישים
   const documentsRaw = safeArr(p.files).filter(
     (f) => !(f.fileType === 'image' || f.fileType === 'video')
   );
 
-  const files =
-    isOwner || isAdmin
-      ? documentsRaw.map((f) => {
-          const filename = safeStr(f.filename);
-          const savedUrl = safeStr(f.path);
-          const url =
-            savedUrl || (filename ? buildFileUrl(req, ['projects', 'projectFiles'], filename) : '');
-          return {
-            id: String(f._id || ''),
-            filename,
-            fileType: safeStr(f.fileType),
-            url,
-          };
-        })
-      : undefined;
+  const files = canAccessFiles
+    ? documentsRaw.map((f) => {
+        const filename = safeStr(f.filename);
+        const savedUrl = safeStr(f.path);
+        const url =
+          savedUrl ||
+          (filename
+            ? buildFileUrl(req, [FILE_FOLDERS.PROJECTS, FILE_FOLDERS.PROJECT_FILES], filename)
+            : '');
+        return {
+          id: String(f._id || ''),
+          filename,
+          fileType: safeStr(f.fileType),
+          url,
+        };
+      })
+    : undefined;
 
   return {
     id: String(p._id || ''),
@@ -146,16 +162,18 @@ const pickProjectPublic = (projectDoc, { req, viewer } = {}) => {
     category: safeStr(p.category),
     price: safeNum(p.price),
     createdBy: p.createdBy ? String(p.createdBy._id || p.createdBy) : undefined,
+    tags: safeArr(p.tags).map(safeStr).filter(Boolean),
+    isSold: safeBool(p.isSold),
 
-    // חדש: מצב פרסום — רק לאדמין/בעלים
+    // מצב פרסום — רק לאדמין/בעלים
     isPublished: isAdmin || isOwner ? safeBool(p.isPublished) : undefined,
 
     mainImageId: p.mainImageId ? String(p.mainImageId) : undefined,
-    mainImageUrl, // חדש
+    mainImageUrl,
 
     media, // תמיד חשוף
     hasFiles: documentsRaw.length > 0,
-    files, // Owner/Admin בלבד
+    files, // ✅ Owner/Admin/PAID buyer
 
     averageRating: safeNum(p.averageRating) ?? 0,
     reviewsCount: safeNum(p.reviewsCount) ?? 0,
@@ -178,7 +196,7 @@ const pickReviewPublic = (reviewDoc, { viewer } = {}) => {
   const viewerRole = viewer?.role;
 
   const canEdit = viewerId && viewerId === authorId; // רק יוצר יכול לערוך
-  const canDelete = canEdit || viewerRole === 'admin'; // יוצר או אדמין
+  const canDelete = canEdit || viewerRole === ROLES.ADMIN; // יוצר או אדמין
 
   return {
     id: String(r._id || ''),
@@ -211,4 +229,39 @@ const pickProjectStats = (projectDoc) => {
   };
 };
 
-module.exports = { pickUserPublic, pickProjectPublic, pickReviewPublic, pickProjectStats };
+const pickUserProfilePublic = (user, { baseUrl } = {}) => {
+  if (!user) return null;
+
+  const u = user.toObject ? user.toObject() : user;
+
+  return {
+    id: String(u._id || ''),
+    username: safeStr(u.username),
+    bio: safeStr(u.bio),
+    profileImage: buildAbsoluteUrl(u.profileImage, baseUrl),
+
+    firstName: safeStr(u.firstName),
+    lastName: safeStr(u.lastName),
+    city: safeStr(u.city),
+    country: safeStr(u.country),
+    birthDate: u.birthDate ? new Date(u.birthDate) : null,
+    social: {
+      website: safeStr(u?.social?.website),
+      instagram: safeStr(u?.social?.instagram),
+      dribbble: safeStr(u?.social?.dribbble),
+      behance: safeStr(u?.social?.behance),
+      linkedin: safeStr(u?.social?.linkedin),
+      github: safeStr(u?.social?.github),
+    },
+
+    createdAt: u.createdAt || undefined,
+  };
+};
+
+module.exports = {
+  pickUserPublic,
+  pickProjectPublic,
+  pickReviewPublic,
+  pickProjectStats,
+  pickUserProfilePublic,
+};

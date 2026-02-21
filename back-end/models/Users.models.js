@@ -44,7 +44,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'designer', 'customer', 'admin'],
+      trim: true,
+      lowercase: true,
       default: 'customer',
     },
     // מאושר ע"י אדמין (לקוחות – אוטומטי)
@@ -100,6 +101,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    paypalEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: '',
+      match: [/\S+@\S+\.\S+/, 'PayPal email is invalid'],
+    },
     bio: {
       type: String,
       maxlength: 500,
@@ -117,6 +125,9 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // reset password
+    resetPasswordTokenHash: { type: String, default: '' },
+    resetPasswordExpiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

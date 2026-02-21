@@ -58,8 +58,10 @@ const projectSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['product', 'graphic', 'architecture', 'fashion', 'other'],
+      trim: true,
+      lowercase: true,
       default: 'other',
+      index: true,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -77,6 +79,11 @@ const projectSchema = new mongoose.Schema(
     isSold: {
       type: Boolean,
       default: false,
+    },
+    tags: {
+      type: [String],
+      default: [],
+      index: true,
     },
     isPublished: {
       type: Boolean,

@@ -2,7 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth.middleware');
-const { permit } = require('../middleware/role.middleware');
+const { validate } = require('../middleware/validate.middleware');
+const { permitPerm } = require('../middleware/rbac.middleware');
+const { PERMS } = require('../constants/permissions.constants');
 const {
   adminListUsers,
   adminSetUserApproval,
@@ -10,7 +12,33 @@ const {
   adminSetProjectPublish,
   adminListReviews,
   adminGetStats,
+  adminListRoles,
+  adminCreateRole,
+  adminUpdateRole,
+  adminDeleteRole,
+  adminAssignUserRole,
+  adminListCategories,
+  adminUpdateCategory,
+  adminCreateCategory,
+  adminDeleteCategory,
 } = require('../controllers/admin.controller');
+const {
+  userIdParam,
+  projectIdParam,
+  adminListUsersQuery,
+  adminSetUserApprovalBody,
+  adminListProjectsQuery,
+  adminSetProjectPublishBody,
+  adminListReviewsQuery,
+  adminCreateRoleValidators,
+  adminUpdateRoleValidators,
+  adminDeleteRoleValidators,
+  adminAssignUserRoleValidators,
+  listCategoriesQuery,
+  createCategoryValidators,
+  updateCategoryValidators,
+  categoryKeyParam,
+} = require('../validators/admin.validators');
 
 /**
  * 🛠️ Admin Routes
@@ -18,30 +46,157 @@ const {
  *
  * כלל־על: כל הראוטים כאן מוגנים ב־JWT + permit('admin') ברמת הראוטר.
  */
-router.use(authMiddleware, permit('admin'));
+router.use(authMiddleware, permitPerm(PERMS.ADMIN_PANEL_ACCESS));
+
+// Users //
 
 // GET /api/admin/users?q=&role=&approved=&page=&limit=
-// רשימת משתמשים (כולל pending approvals לסטודנטים/מעצבים)
-router.get('/users', adminListUsers);
+// רשימת משתמשים עם סינון/חיפוש (כולל לא מאושרים)
+router.get('/users', permitPerm(PERMS.USERS_READ), adminListUsersQuery, validate, adminListUsers);
 
 // PUT /api/admin/users/:id/approval
-// עדכון isApproved לסטודנט/מעצב בלבד
-router.put('/users/:id/approval', adminSetUserApproval);
+// אישור/דחיית משתמש (isApproved)
+router.put(
+  '/users/:id/approval',
+  permitPerm(PERMS.USERS_APPROVE),
+  userIdParam,
+  validate,
+  adminSetUserApprovalBody,
+  validate,
+  adminSetUserApproval
+);
+
+// PUT /api/admin/users/:id/role
+// הקצאת תפקיד למשתמש
+router.put(
+  '/users/:id/role',
+  permitPerm(PERMS.USERS_ASSIGN_ROLE),
+  userIdParam,
+  validate,
+  adminAssignUserRoleValidators,
+  validate,
+  adminAssignUserRole
+);
+
+// Projects //
 
 // GET /api/admin/projects?published=&q=&category=&page=&limit=
-// רשימת פרויקטים (כולל pending publish)
-router.get('/projects', adminListProjects);
+// רשימת פרויקטים עם סינון/חיפוש (כולל לא מפורסמים)
+router.get(
+  '/projects',
+  permitPerm(PERMS.USERS_READ),
+  adminListProjectsQuery,
+  validate,
+  adminListProjects
+);
 
 // PUT /api/admin/projects/:id/publish
-// עדכון isPublished לפרויקט
-router.put('/projects/:id/publish', adminSetProjectPublish);
+// פרסום/הסרת פרסום של פרויקט
+router.put(
+  '/projects/:id/publish',
+  permitPerm(PERMS.PROJECTS_PUBLISH),
+  projectIdParam,
+  validate,
+  adminSetProjectPublishBody,
+  validate,
+  adminSetProjectPublish
+);
 
-// GET /api/admin/reviews?projectId=&page=&limit=&sortBy=&order=
-// רשימת תגובות מערכתית (לאדמין)
-router.get('/reviews', adminListReviews);
+// Reviews //
+
+// GET /api/admin/reviews?q=&projectId=&userId=&page=&limit=
+// רשימת ביקורות עם סינון/חיפוש (כולל לפי פרויקט/משתמש)
+router.get(
+  '/reviews',
+  permitPerm(PERMS.REVIEWS_MANAGE),
+  adminListReviewsQuery,
+  validate,
+  adminListReviews
+);
+
+// Stats //
 
 // GET /api/admin/stats
-// סטטיסטיקות מערכת (MVP)
-router.get('/stats', adminGetStats);
+// סטטיסטיקות כלליות (מספר משתמשים/פרויקטים/ביקורות וכו׳)
+router.get('/stats', permitPerm(PERMS.STATS_READ), adminGetStats);
+
+// Roles CRUD //
+
+// GET /api/admin/roles
+// רשימת תפקידים קיימים
+router.get('/roles', permitPerm(PERMS.ROLES_MANAGE), adminListRoles);
+
+// POST /api/admin/roles
+// יצירת תפקיד חדש
+router.post(
+  '/roles',
+  permitPerm(PERMS.ROLES_MANAGE),
+  adminCreateRoleValidators,
+  validate,
+  adminCreateRole
+);
+
+// PUT /api/admin/roles/:key
+// עדכון תפקיד קיים (למשל שינוי permissions)
+router.put(
+  '/roles/:key',
+  permitPerm(PERMS.ROLES_MANAGE),
+  adminUpdateRoleValidators,
+  validate,
+  adminUpdateRole
+);
+
+// DELETE /api/admin/roles/:key
+// מחיקת תפקיד (רק אם לא משויך למשתמשים)
+router.delete(
+  '/roles/:key',
+  permitPerm(PERMS.ROLES_MANAGE),
+  adminDeleteRoleValidators,
+  validate,
+  adminDeleteRole
+);
+
+// Categories CRUD //
+
+// GET /api/admin/categories?q=&page=&limit=
+// רשימת קטגוריות עם חיפוש/סינון
+router.get(
+  '/categories',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  listCategoriesQuery,
+  validate,
+  adminListCategories
+);
+
+// POST /api/admin/categories
+// יצירת קטגוריה חדשה
+router.post(
+  '/categories',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  createCategoryValidators,
+  validate,
+  adminCreateCategory
+);
+
+// PUT /api/admin/categories/:key
+// עדכון קטגוריה קיימת
+router.put(
+  '/categories/:key',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  categoryKeyParam,
+  updateCategoryValidators,
+  validate,
+  adminUpdateCategory
+);
+
+// DELETE /api/admin/categories/:key
+// מחיקת קטגוריה (רק אם לא משויכת לפרויקטים)
+router.delete(
+  '/categories/:key',
+  permitPerm(PERMS.CATEGORIES_MANAGE),
+  categoryKeyParam,
+  validate,
+  adminDeleteCategory
+);
 
 module.exports = router;

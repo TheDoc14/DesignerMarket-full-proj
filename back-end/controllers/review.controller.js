@@ -4,9 +4,9 @@ const Review = require('../models/Review.model');
 const Project = require('../models/Project.model');
 const { recalcProjectRatings } = require('../utils/reviews.utils');
 const { pickReviewPublic } = require('../utils/serializers.utils');
-const { toInt, toSort } = require('../utils/query.utils');
+const { getPaging, toSort } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
-
+const { ROLES } = require('../constants/roles.constants');
 /**
  * ➕ createReview
  * יוצר תגובה חדשה לפרויקט עבור המשתמש המחובר (תגובה ייחודית per user+project).
@@ -16,8 +16,6 @@ const { buildMeta } = require('../utils/meta.utils');
 const createReview = async (req, res, next) => {
   try {
     const { projectId, rating, text } = req.body;
-    if (!projectId) throw new Error('Project ID is required');
-    if (!rating) throw new Error('Rating is required');
 
     // וידוא פרויקט קיים
     const proj = await Project.findById(projectId).select('_id');
@@ -53,10 +51,9 @@ const createReview = async (req, res, next) => {
 const listReviews = async (req, res, next) => {
   try {
     const { projectId } = req.query;
-    if (!projectId) throw new Error('Project ID is required');
 
-    const page = toInt(req.query.page, 1);
-    const limit = toInt(req.query.limit, 10);
+    const { page, limit, skip } = getPaging(req.query, 20);
+
     const sort = toSort(req.query.sortBy, req.query.order, ['createdAt', 'rating'], 'createdAt');
 
     const filter = { projectId: new mongoose.Types.ObjectId(projectId) };
@@ -65,7 +62,7 @@ const listReviews = async (req, res, next) => {
       Review.find(filter)
         .populate('userId', 'username profileImage')
         .sort(sort)
-        .skip((page - 1) * limit)
+        .skip(skip)
         .limit(limit),
       Review.countDocuments(filter),
     ]);
@@ -134,7 +131,7 @@ const deleteReview = async (req, res, next) => {
     if (!review) throw new Error('Review not found');
 
     const isOwner = String(review.userId) === String(req.user.id);
-    const isAdmin = req.user.role === 'admin';
+    const isAdmin = req.user.role === ROLES.ADMIN;
     if (!isOwner && !isAdmin) throw new Error('Access denied');
 
     await Review.findByIdAndDelete(id);
