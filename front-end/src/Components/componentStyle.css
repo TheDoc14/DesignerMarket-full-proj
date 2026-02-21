@@ -1,5 +1,3 @@
-/* componentStyle.css - Turquoise Premium Fix */
-
 :root {
   --teal-bg: #006D77;
   /* הטורקיז שאהבת */
@@ -55,6 +53,8 @@
   background: rgba(255, 255, 255, 0.2);
   color: #006D77;
 }
+
+
 
 /* --- שיפור הטקסט והאייקונים --- */
 .sidebar-item {
@@ -211,8 +211,8 @@
 }
 
 /* =========================================
-   POPUP PREMIUM RE-DESIGN (Teal/Turquoise)
-   ========================================= */
+   POPUP PREMIUM RE-DESIGN (Teal/Turquoise)
+   ========================================= */
 
 .popup-overlay {
   position: fixed;
@@ -513,4 +513,140 @@
     flex-direction: column;
     /* הופך את התמונה והטקסט לאחד מתחת לשני */
   }
+}
+
+/* המכולה הראשית - חייבת להיות Flex */
+.popup-main-container {
+  display: flex;
+  flex-direction: row-reverse;
+  /* כדי שהסיידבר יהיה מימין לפופאפ בעברית */
+  align-items: stretch;
+  max-width: 1200px;
+  /* הגדלת הרוחב המקסימלי כדי שיהיה מקום לשניהם */
+  width: 95%;
+  margin: auto;
+  height: 90vh;
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  /* מונע מהתוכן לברוח */
+}
+
+/* התאמת הפופאפ המקורי */
+.project-modal-content {
+  flex: 2;
+  /* הפופאפ יתפוס 2/3 מהרוחב */
+  overflow-y: auto;
+  /* מאפשר גלילה של נתוני הפרויקט והתגובות */
+  height: 100%;
+  padding: 20px;
+  position: relative;
+}
+
+/* התאמת הסיידבר */
+.ai-sidebar {
+  flex: 1;
+  /* הסיידבר יתפוס 1/3 מהרוחב */
+  min-width: 320px;
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ביטול השפעות של ה-Overlay הישן שעלולות להפריע */
+.project-modal-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* המכולה שעוטפת את שניהם */
+.popup-main-container {
+  display: flex;
+  flex-direction: row-reverse;
+  /* AI מימין, פרויקט משמאל */
+  width: 95%;
+  max-width: 1300px;
+  /* הגדלנו מעט כדי שיהיה נוח */
+  height: 85vh;
+  margin: auto;
+  background: white;
+  border-radius: 20px;
+  overflow: hidden;
+  /* מבטיח שהפינות המעוגלות יעבדו */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* התוכן של הפרויקט */
+.project-modal-content {
+  flex: 1.5;
+  /* תופס יותר מקום מהסיידבר */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: white;
+  padding: 0;
+  /* ננהל פדינג בתוך הקונטיינר הפנימי */
+  min-width: 0;
+  /* קריטי לעבודה עם Flex */
+}
+
+/* הסיידבר של ה-AI */
+.ai-sidebar {
+  flex: 1;
+  /* תופס פחות מקום */
+  min-width: 350px;
+  max-width: 400px;
+  background: #fdfaff;
+  border-right: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* הקונטיינר של הגלילה בתוך הפופאפ - כאן נמצאות התגובות */
+.popup-scroll-container {
+  flex: 1;
+  overflow-y: auto;
+  /* זה יחזיר את הגלילה לתגובות */
+  padding: 25px;
+}
+
+/* תיקון לתמונה כדי שלא תתפרס מדי */
+.main-popup-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.ai-content-area {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  /* ודאי שיש גובה מוגדר לסיידבר */
+  max-height: 500px;
+  overflow: hidden;
+}
+
+.ai-chat-messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  /* מאפשר גלילה רק בתוך ההודעות */
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-bubble.assistant {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  align-self: flex-start;
+  max-width: 90%;
+  white-space: pre-wrap;
+  /* שומר על ירידות שורה של ה-AI */
+  font-size: 0.9rem;
+  line-height: 1.6;
 }

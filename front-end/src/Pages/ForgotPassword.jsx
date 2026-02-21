@@ -28,7 +28,7 @@ const ForgotPassword = () => {
 
   return (
     <div>
-      <div>
+      <div className="forgot-password-container">
         <h2>שכחת סיסמה?</h2>
         <p>הכנס אימייל ונשלח לך לינק לאיפוס.</p>
         <form onSubmit={handleSubmit}>

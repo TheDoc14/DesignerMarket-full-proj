@@ -1,17 +1,26 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import JSZip from 'jszip'; // ייבוא הספרייה ליצירת ZIP
-import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook החדש
+import JSZip from 'jszip';
+import { usePermission } from '../Hooks/usePermission.jsx';
 import defaultUserPic from '../DefaultPics/userDefault.jpg';
 import { useAuth } from '../Context/AuthContext';
 import Popup from '../Components/Popup';
 import './PublicPages.css';
 
 const PersonalDashboard = () => {
+  // --- Hooks & Auth ---
   const { user, login, logout } = useAuth();
-  const { hasPermission, loading: permissionLoading } = usePermission();
+  const {
+    hasPermission,
+    loading: permissionLoading,
+    user: currentUser,
+  } = usePermission();
+  const navigate = useNavigate();
+  const { userId } = useParams();
   const fileInputRef = useRef(null);
 
+  // --- States ---
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -19,6 +28,9 @@ const PersonalDashboard = () => {
   const [purchasedProjects, setPurchasedProjects] = useState([]);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [aiHistory, setAiHistory] = useState([]);
+  const [aiQuota, setAiQuota] = useState({ used: 0, limit: 20, remaining: 20 });
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -40,14 +52,49 @@ const PersonalDashboard = () => {
     },
     profileImage: null,
   });
+
+  // --- Logic Helpers ---
+  const isOwnProfile =
+    !userId || String(userId) === String(currentUser?.id || user?.id);
+
+  // --- API Functions ---
+
+  // שליפת היסטוריית AI ומכסה מתוך ה-meta
+  const fetchMyAiHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const token = localStorage.getItem('token');
+      const res = await axios.get('http://localhost:5000/api/ai-chats', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // עדכון היסטוריית הצ'אטים
+      setAiHistory(res.data.data || []);
+
+      // שליפת המכסה מתוך ה-meta של התגובה
+      const quota = res.data.meta?.quota || res.data.meta?.dailyQuota;
+      if (quota) {
+        setAiQuota({
+          used: Number(quota.used) || 0,
+          limit: Number(quota.limit) || 20,
+          remaining: Number(quota.remaining) || 0,
+        });
+      }
+      console.log(res.data.data);
+    } catch (err) {
+      console.error('Failed to fetch AI history', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
     const token = localStorage.getItem('token');
 
     try {
       setLoading(true);
-
-      // 1. שליפת הפרופיל והפרויקטים שהמשתמש יצר
+      // 1. שליפת פרופיל אישי
       const profileRes = await axios.get(
         'http://localhost:5000/api/profile/me',
         {
@@ -56,7 +103,23 @@ const PersonalDashboard = () => {
       );
       setProjects(profileRes.data.projects || []);
 
-      // 2. שליפת כל הפרויקטים (ה-API שלך כבר מסנן קבצים לפי הרשאה/רכישה)
+      // עדכון ה-formData עם נתוני המשתמש שחזרו
+      if (profileRes.data.user) {
+        const u = profileRes.data.user;
+        setFormData((prev) => ({
+          ...prev,
+          username: u.username || '',
+          firstName: u.firstName || '',
+          lastName: u.lastName || '',
+          bio: u.bio || '',
+          city: u.city || '',
+          country: u.country || '',
+          paypalEmail: u.paypalEmail || '',
+          social: u.social || prev.social,
+        }));
+      }
+
+      // 2. שליפת פרויקטים לרכישות
       const projectsRes = await axios.get(
         'http://localhost:5000/api/projects',
         {
@@ -65,107 +128,37 @@ const PersonalDashboard = () => {
       );
 
       const allProjects = projectsRes.data.projects || [];
-
-      // 3. סינון פרויקטים שרכשתי:
-      // פרויקט שרכשתי הוא כזה ש:
-      // א. הוא לא שלי (creatorId != user.id)
-      // ב. יש לו קבצים (השרת שלח files רק כי הקנייה הושלמה)
       const purchased = allProjects.filter((p) => {
         const isOwner = p.createdBy === user.id || p.createdBy?._id === user.id;
         return !isOwner && Array.isArray(p.files) && p.files.length > 0;
       });
-
       setPurchasedProjects(purchased);
-
-      // ... שאר הלוגיקה של הפרופיל ...
     } catch (err) {
-      console.error(err);
+      console.error('Dashboard data fetch failed', err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id, logout]);
+  }, [user?.id]);
+
+  // --- Effects ---
+
   useEffect(() => {
     if (!permissionLoading && user?.id) {
       fetchDashboardData();
     }
   }, [user?.id, permissionLoading, fetchDashboardData]);
 
-  // פונקציה להורדת כל קבצי הפרויקט + התמונה כקובץ ZIP אחד
-  const downloadAllAsZip = async (project) => {
-    const zip = new JSZip();
-    const token = localStorage.getItem('token');
-    const folder = zip.folder(project.title); // יצירת תיקייה בתוך ה-ZIP
-
-    try {
-      setSaving(true);
-
-      // 1. הוספת תמונת הפרויקט ל-ZIP
-      if (project.image) {
-        try {
-          const imgRes = await fetch(project.image);
-          const imgBlob = await imgRes.blob();
-          folder.file('project-image.png', imgBlob);
-        } catch (e) {
-          console.error('Could not add image to ZIP', e);
-        }
-      }
-
-      // 2. הוספת כל קבצי הפרויקט (וורד וכו') ל-ZIP
-      const filePromises = project.files.map(async (file) => {
-        try {
-          const res = await fetch(file.url, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const blob = await res.blob();
-            folder.file(file.filename, blob);
-          }
-        } catch (e) {
-          console.error(`Error adding file ${file.filename}`, e);
-        }
-      });
-
-      await Promise.all(filePromises);
-
-      // 3. יצירת והורדת ה-ZIP למחשב
-      const content = await zip.generateAsync({ type: 'blob' });
-      const url = window.URL.createObjectURL(content);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${project.title}.zip`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('ZIP Generation failed', error);
-      alert('שגיאה ביצירת קובץ ה-ZIP.');
-    } finally {
-      setSaving(false);
+  useEffect(() => {
+    if (isOwnProfile && user?.id) {
+      fetchMyAiHistory();
     }
-  };
+  }, [isOwnProfile, user?.id, fetchMyAiHistory]);
 
-  const handleDeleteAccount = async () => {
-    if (
-      !window.confirm('האם את בטוחה? כל הפרויקטים והמידע שלך יימחקו לצמיתות!')
-    )
-      return;
-    try {
-      setSaving(true);
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/profile/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      alert('החשבון נמחק בהצלחה.');
-      logout();
-    } catch (err) {
-      alert(err.response?.data?.message || 'שגיאה בתהליך המחיקה');
-    } finally {
-      setSaving(false);
-    }
-  };
+  // --- Handlers ---
 
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
+
   const handleSocialChange = (e) =>
     setFormData({
       ...formData,
@@ -177,6 +170,45 @@ const PersonalDashboard = () => {
     if (file) {
       setFormData({ ...formData, profileImage: file });
       setProfileImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const downloadAllAsZip = async (project) => {
+    const zip = new JSZip();
+    const token = localStorage.getItem('token');
+    const folder = zip.folder(project.title);
+
+    try {
+      setSaving(true);
+      if (project.mainImageUrl) {
+        const imgRes = await fetch(project.mainImageUrl);
+        const imgBlob = await imgRes.blob();
+        folder.file('project-main-image.png', imgBlob);
+      }
+
+      const filePromises = (project.files || []).map(async (file) => {
+        const res = await fetch(file.url, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          folder.file(file.filename, blob);
+        }
+      });
+
+      await Promise.all(filePromises);
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(content);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${project.title}.zip`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      alert('שגיאה ביצירת קובץ ה-ZIP');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -192,6 +224,7 @@ const PersonalDashboard = () => {
           data.append(key, formData[key]);
         else if (formData[key] !== null) data.append(key, formData[key]);
       });
+
       const res = await axios.put(
         'http://localhost:5000/api/profile/me',
         data,
@@ -203,36 +236,65 @@ const PersonalDashboard = () => {
         }
       );
       await login(res.data.user, token);
-      setMessage({ type: 'success', text: 'הפרופיל עודכן!' });
+      setMessage({ type: 'success', text: 'הפרופיל עודכן בהצלחה!' });
       window.scrollTo(0, 0);
     } catch (err) {
-      setMessage({ type: 'error', text: 'שגיאה בעדכון.' });
+      setMessage({ type: 'error', text: 'עדכון הפרופיל נכשל' });
     } finally {
       setSaving(false);
     }
   };
-  if (permissionLoading)
-    return <div className="loading-state">מאמת הרשאות...</div>;
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('אזהרה: מחיקת החשבון היא סופית! האם להמשיך?')) return;
+    try {
+      setSaving(true);
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/profile/${user.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      logout();
+    } catch (err) {
+      alert('מחיקת החשבון נכשלה');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // --- Render ---
+  if (permissionLoading || loading)
+    return <div className="loading-state">טוען נתונים...</div>;
   if (!user)
     return <div className="error-container">עליך להתחבר כדי לצפות בדף זה.</div>;
 
-  if (loading) return <div className="loading-state">טוען נתונים...</div>;
-
   return (
-    <div className="profile-container">
+    <div className="profile-container" dir="rtl">
       <h1 className="profile-header">הגדרות פרופיל</h1>
+
+      {/* תקציר מכסה AI בראש הדף */}
+      <div className="ai-quota-summary-banner">
+        <div className="quota-info">
+          <strong>סטטוס מנטור AI:</strong>
+          <span>
+            {' '}
+            {aiQuota.used} / {aiQuota.limit} שאילתות נוצלו
+          </span>
+          <span className="remaining-tag">
+            ({aiQuota.remaining} נותרו להיום)
+          </span>
+        </div>
+        <div className="quota-progress-bg">
+          <div
+            className="quota-progress-fill"
+            style={{ width: `${(aiQuota.used / aiQuota.limit) * 100}%` }}
+          ></div>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="profile-card-form">
         {message.text && (
           <div className={`profile-alert ${message.type}`}>{message.text}</div>
         )}
-
-        <div className="profile-info-banner">
-          <div className="banner-item">
-            <strong>סוג חשבון:</strong>{' '}
-            <span className={`role-badge ${user.role}`}>{user.role}</span>
-          </div>
-        </div>
 
         <div className="profile-image-section">
           <div
@@ -287,46 +349,6 @@ const PersonalDashboard = () => {
           </div>
         </div>
 
-        <div className="form-grid-3">
-          <div className="form-group">
-            <label>תאריך לידה</label>
-            <input
-              className="form-input"
-              type="date"
-              name="birthDate"
-              value={formData.birthDate}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label>עיר</label>
-            <input
-              className="form-input"
-              name="city"
-              value={formData.city}
-              onChange={handleChange}
-            />
-          </div>
-          <div className="form-group">
-            <label>מדינה</label>
-            <input
-              className="form-input"
-              name="country"
-              value={formData.country}
-              onChange={handleChange}
-            />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label>אימייל (לקריאה בלבד)</label>
-          <input
-            className="form-input readonly-input"
-            value={user.email}
-            readOnly
-          />
-        </div>
-
         <div className="form-group full-width">
           <label>ביוגרפיה</label>
           <textarea
@@ -353,72 +375,121 @@ const PersonalDashboard = () => {
           ))}
         </div>
 
-        {hasPermission('projects.create') && (
-          <div className="form-group full-width paypal-highlight">
-            <label>אימייל PayPal למשיכת כספים</label>
-            <input
-              className="form-input"
-              name="paypalEmail"
-              type="email"
-              value={formData.paypalEmail}
-              onChange={handleChange}
-            />
-          </div>
-        )}
-
         <button type="submit" disabled={saving} className="profile-save-btn">
-          שמור שינויים
+          {saving ? 'שומר...' : 'שמור שינויים'}
         </button>
       </form>
 
       <div className="profile-management-grid">
-        {hasPermission('projects.create') && (
-          <div className="management-section">
-            <h3 className="section-title">
-              🚀 הפרויקטים שלי ({projects.length})
-            </h3>
-            {projects.map((p) => (
-              <div key={p.id} className="management-item">
+        <div className="management-section">
+          <h3 className="section-title">
+            🚀 הפרויקטים שלי ({projects.length})
+          </h3>
+          {projects.length > 0 ? (
+            projects.map((p) => (
+              <div key={p.id || p._id} className="management-item">
                 <span>{p.title}</span>
               </div>
-            ))}
-          </div>
-        )}
+            ))
+          ) : (
+            <p>טרם יצרת פרויקטים.</p>
+          )}
+        </div>
 
         <div className="management-section">
           <h3 className="section-title">📦 פרויקטים שרכשתי</h3>
-          {purchasedProjects.map((p) => (
-            <div key={p._id} className="management-item purchased-card">
-              <div
-                className="item-info"
-                onClick={() => setSelectedProject(p)}
-                style={{ cursor: 'pointer' }}
-              >
-                <span className="item-title">{p.title} 🔍</span>
+          {purchasedProjects.length > 0 ? (
+            purchasedProjects.map((p) => (
+              <div key={p._id} className="management-item purchased-card">
+                <div
+                  className="item-info"
+                  onClick={() => setSelectedProject(p)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span className="item-title">{p.title} 🔍</span>
+                </div>
+                <button
+                  onClick={() => downloadAllAsZip(p)}
+                  className="btn-download-action"
+                >
+                  הורד ZIP
+                </button>
               </div>
-              <button
-                onClick={() => downloadAllAsZip(p)}
-                className="btn-download-action"
-              >
-                הורד ZIP
-              </button>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p>טרם רכשת פרויקטים.</p>
+          )}
         </div>
+      </div>
 
-        {/* הוספת הפופאפ בסוף ה-Return */}
-        {selectedProject && (
-          <Popup
-            project={selectedProject}
-            onClose={() => setSelectedProject(null)}
-            isLoggedIn={true}
-          />
+      <section className="profile-ai-history">
+        <h3 className="section-title">📜 היסטוריית ייעוץ AI</h3>
+        {historyLoading ? (
+          <p>טוען שיחות...</p>
+        ) : aiHistory.length > 0 ? (
+          <div className="ai-chats-grid">
+            {aiHistory.map((chat) => {
+              const targetProject = chat.projectId;
+              const pId = chat.projectId?._id || chat.projectId;
+              const linkedProject = projects.find(
+                (p) => (p._id || p.id) === pId
+              );
+              const projectId = targetProject?._id || targetProject; // תמיכה גם אם זה אובייקט וגם אם זה ID בלבד
+              const projectTitle = targetProject?.title || 'פרויקט ללא שם';
+              const displayTitle =
+                linkedProject?.title ||
+                chat.projectId?.title ||
+                'פרויקט ללא שם';
+
+              return (
+                <div key={chat._id} className="ai-chat-card">
+                  <div className="chat-card-header">
+                    <h4>{chat.title || `ייעוץ עבור ${projectTitle}`}</h4>
+                    <span className="chat-date">
+                      {new Date(chat.createdAt).toLocaleDateString('he-IL')}
+                    </span>
+                  </div>
+
+                  {/* הצגת כותרת הפרויקט - אם targetProject קיים, הוא לא יציג "הוסר" */}
+                  <p>
+                    פרויקט: <strong>{displayTitle}</strong>
+                  </p>
+                  <button
+                    className="view-chat-btn"
+                    onClick={() => {
+                      // 1. מציאת אובייקט הפרויקט המלא מתוך רשימת הפרויקטים שלך
+                      const projectToOpen = projects.find(
+                        (p) => (p._id || p.id) === projectId
+                      );
+
+                      if (projectToOpen) {
+                        // 2. עדכון ה-chatId בתוך הפרויקט לפני הפתיחה
+                        const updatedProject = {
+                          ...projectToOpen,
+                          initialChatId: chat._id,
+                        };
+
+                        // 3. פתיחת הפופאפ עם הפרויקט הנכון
+                        setSelectedProject(updatedProject);
+                      } else {
+                        // אם הפרויקט לא ברשימה הכללית, נפתח אותו כאובייקט מינימלי
+                        setSelectedProject({
+                          ...chat.projectId,
+                          initialChatId: chat._id,
+                        });
+                      }
+                    }}
+                  >
+                    צפה בשיחה ←
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p>עדיין לא התייעצת עם המנטור לגבי הפרויקטים שלך.</p>
         )}
-      </div>
-      <div className="my-ai-chats">
-        <h3 className="section-title">💬 הצ'אטים שלי עם ה-AI</h3>
-        <p>כאן יוצגו הצ'אטים שלך עם ה-AI (פיתוח עתידי)</p>
-      </div>
+      </section>
 
       {user?.role !== 'admin' && (
         <div className="profile-danger-zone">
@@ -431,6 +502,14 @@ const PersonalDashboard = () => {
             🗑️ מחק חשבון
           </button>
         </div>
+      )}
+
+      {selectedProject && (
+        <Popup
+          project={selectedProject}
+          onClose={() => setSelectedProject(null)}
+          isLoggedIn={true}
+        />
       )}
     </div>
   );

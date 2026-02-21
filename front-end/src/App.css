@@ -1,8 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;700;800&display=swap');
 
 /* =========================================
-   1. משתנים והגדרות בסיס (Variables & Reset)
-   ========================================= */
+   1. משתנים והגדרות בסיס (Variables & Reset)
+   ========================================= */
 :root {
   /* פלטת צבעים מקצועית */
   --primary-color: #2563eb;
@@ -48,8 +48,8 @@ body {
 }
 
 /* =========================================
-   2. עיצוב גלובלי (Global Layout)
-   ========================================= */
+   2. עיצוב גלובלי (Global Layout)
+   ========================================= */
 a {
   text-decoration: none;
   color: inherit;
@@ -87,8 +87,8 @@ h2 {
 }
 
 /* =========================================
-   3. ניווט (Navbar)
-   ========================================= */
+   3. ניווט (Navbar)
+   ========================================= */
 nav {
   background-color: var(--card-bg);
   padding: 1rem 2rem;
@@ -128,8 +128,8 @@ nav a.active {
 }
 
 /* =========================================
-   4. טפסים וכפתורים (Forms & Buttons)
-   ========================================= */
+   4. טפסים וכפתורים (Forms & Buttons)
+   ========================================= */
 input,
 select,
 textarea {
@@ -205,8 +205,8 @@ button.danger {
 }
 
 /* =========================================
-   5. גריד מוצרים (Products Grid)
-   ========================================= */
+   5. גריד מוצרים (Products Grid)
+   ========================================= */
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill,
@@ -262,8 +262,8 @@ button.danger {
 }
 
 /* =========================================
-   6. דשבורד ופרופיל (Dashboard Styles)
-   ========================================= */
+   6. דשבורד ופרופיל (Dashboard Styles)
+   ========================================= */
 .dashboard-container {
   background: var(--card-bg);
   border-radius: 12px;
@@ -291,8 +291,8 @@ button.danger {
 }
 
 /* =========================================
-   7. הודעות מערכת (Alerts)
-   ========================================= */
+   7. הודעות מערכת (Alerts)
+   ========================================= */
 .alert {
   padding: 15px;
   margin-bottom: 20px;
@@ -313,8 +313,8 @@ button.danger {
 }
 
 /* =========================================
-   8. התאמה למובייל (Responsiveness)
-   ========================================= */
+   8. התאמה למובייל (Responsiveness)
+   ========================================= */
 @media (max-width: 768px) {
 
   /* ניווט הופך לאנכי במובייל */
@@ -351,8 +351,8 @@ button.danger {
 }
 
 /* =========================================
-   9. עיצוב דפי ניהול (Admin Styles)
-   ========================================= */
+   9. עיצוב דפי ניהול (Admin Styles)
+   ========================================= */
 
 /* קונטיינר ראשי לדפי אדמין */
 .admin-container {
@@ -528,4 +528,29 @@ button.danger {
 
 .rank-score {
   font-weight: 600;
+}
+
+/* הכרחת האייקון להופיע מעל הכל ובצבע בולט */
+.accessibility-icon,
+._asb_container,
+#accessibility-icon {
+  display: block !important;
+  visibility: visible !important;
+  z-index: 999999 !important;
+  /* מספר גבוה מאוד */
+  opacity: 1 !important;
+  background-color: #007bff !important;
+  /* כחול בולט */
+  border-radius: 50% !important;
+}
+
+.high-contrast {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+.high-contrast * {
+  background-color: #000 !important;
+  color: #fff !important;
+  border-color: #fff !important;
 }

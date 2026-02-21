@@ -14,25 +14,25 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
       try {
         const token = localStorage.getItem('token');
-        // פנייה לנתיב הסטטיסטיקות שהגדרת ב-Routes
         const res = await axios.get('http://localhost:5000/api/admin/stats', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        // כאן אנחנו מקבלים את האובייקט stats מהשרת
         setStats(res.data.stats);
       } catch (err) {
         console.error('Error fetching stats', err);
       } finally {
         setLoading(false);
       }
-    };
-    // וידוא שהמשתמש הוא אדמין לפני השליפה
+    }; // <--- כאן היה חסר הסוגר של הפונקציה
+
     if (hasPermission('stats.read')) {
       fetchStats();
     } else {
-      setLoading(false); // אם אין הרשאה, נפסיק את הטעינה
+      setLoading(false);
     }
-  }, [hasPermission]); // ה-useEffect תלוי ב-hasPermission
-
+  }, [hasPermission]);
   // אם אין הרשאה כללית לפאנל האדמין, נחסום את הגישה מיד
   if (!hasPermission('admin.panel.access')) {
     return <div className="alert alert-error">אין לך הרשאות לצפות בדף זה.</div>;

@@ -1,6 +1,6 @@
 /* =========================================
-   PUBLIC PAGES - TURQUOISE PREMIUM THEME
-   ========================================= */
+   PUBLIC PAGES - TURQUOISE PREMIUM THEME
+   ========================================= */
 
 :root {
   --teal-dark: #006D77;
@@ -175,6 +175,16 @@ body {
 
 /* --- דף הרשמה והתחברות (Auth) --- */
 .auth-card {
+  background: var(--white);
+  padding: 50px;
+  border-radius: 25px;
+  box-shadow: var(--shadow-soft);
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.forgot-password-container {
   background: var(--white);
   padding: 50px;
   border-radius: 25px;

@@ -1,6 +1,6 @@
 /* =========================================
-   ADMIN PANEL - PREMIUM TEAL DESIGN
-   ========================================= */
+   ADMIN PANEL - PREMIUM TEAL DESIGN
+   ========================================= */
 
 :root {
     --admin-primary: #008080;
@@ -323,8 +323,8 @@
 
 
 /* =========================================
-   MANAGE PROJECTS - PREMIUM TEAL DESIGN
-   ========================================= */
+   MANAGE PROJECTS - PREMIUM TEAL DESIGN
+   ========================================= */
 
 .admin-container {
     max-width: 1200px;
@@ -570,8 +570,8 @@
 }
 
 /* =========================================
-   מובייל ורספונסיביות
-   ========================================= */
+   מובייל ורספונסיביות
+   ========================================= */
 
 /* טאבלטים ומסכים בינוניים */
 @media (max-width: 992px) {
@@ -1030,5 +1030,126 @@
     .group-grid {
         grid-template-columns: 1fr;
         /* הרשאות בטור אחד במובייל */
+    }
+
+    .ai-highlight {
+        border: 1px solid #e0b0ff;
+        /* סגול בהיר */
+        background: linear-gradient(145deg, #ffffff, #fdfaff);
+        box-shadow: 0 4px 15px rgba(142, 68, 173, 0.1);
+    }
+
+    .ai-highlight h4 {
+        color: #8e44ad;
+        /* צבע סגול מותגי ל-AI */
+    }
+
+    .ai-analytics-summary {
+        margin-bottom: 30px;
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* AI Container Styles */
+    .ai-analytics-container {
+        margin-bottom: 30px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .ai-section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .live-indicator {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        animation: pulse 2s infinite;
+    }
+
+    /* Grid & Cards */
+    .ai-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .ai-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        transition: transform 0.2s;
+    }
+
+    .ai-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .ai-card-icon {
+        font-size: 2rem;
+        background: #fff;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .ai-card-info .label {
+        display: block;
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 4px;
+    }
+
+    .ai-card-info .value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .ai-card-info .value.error {
+        color: #ef4444;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+
+        100% {
+            opacity: 1;
+        }
     }
 }

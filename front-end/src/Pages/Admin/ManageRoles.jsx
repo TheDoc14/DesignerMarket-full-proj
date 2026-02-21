@@ -131,16 +131,28 @@ const ManageRoles = () => {
   const handleSavePermissions = async () => {
     if (!selectedRole?.key) return;
     try {
-      await axios.put(
+      setIsSubmitting(true); // כדאי להוסיף חיווי טעינה גם כאן
+      const res = await axios.put(
         `http://localhost:5000/api/admin/roles/${selectedRole.key}`,
         { permissions: selectedRole.permissions, label: selectedRole.label },
         getAuthHeader()
       );
+
       setMessage({ type: 'success', text: `ההרשאות עודכנו בהצלחה` });
-      fetchRoles();
+
+      // עדכון רשימת התפקידים הכללית
+      await fetchRoles();
+
+      // עדכון התפקיד הספציפי שנבחר עם המידע החדש מהתגובה של השרת
+      if (res.data.role) {
+        setSelectedRole(res.data.role);
+      }
+
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {
       setMessage({ type: 'error', text: 'השמירה נכשלה' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

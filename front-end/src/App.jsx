@@ -13,6 +13,7 @@ import { AuthProvider, useAuth } from './Context/AuthContext';
 import Navbar from './Components/Navbar';
 import axios from 'axios';
 import { getFriendlyError } from './Constants/errorMessages';
+import Accessibility from './Components/Accessibility';
 
 // ייבוא עמודי המערכת
 import Login from './Pages/Login';
@@ -66,56 +67,59 @@ function App() {
   const reCaptchaKey = '6Ld-xFcsAAAAAKhfZ3l73xY2xO5Po11EDognFI-G'; // וודא שזה בתוך מרכאות
 
   return (
-    <PayPalScriptProvider options={initialOptions}>
-      <GoogleReCaptchaProvider
-        reCaptchaKey={reCaptchaKey}
-        language="iw"
-        useRecaptchaNet={false}
-      >
-        <Router>
-          <AuthProvider>
-            <Navbar />
-            <Routes>
-              {/* --- נתיבים ציבוריים --- */}
-              <Route path="/" element={<ProjectLibrary />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route path="/projects" element={<ProjectLibrary />} />
-              <Route path="/add-project" element={<AddProject />} />
-              <Route
-                path="/PersonalDashboard"
-                element={<PersonalDashboard />}
-              />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/edit-project/:id" element={<EditProject />} />
-              <Route path="/profile/:userId" element={<PublicProfile />} />
-              <Route path="/about" element={<About />} />
-
-              {/* --- נתיבי ניהול (אדמין בלבד) --- */}
-              <Route path="/admin">
-                <Route path="system-stats" element={<SystemDashboard />} />
-
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="manage-users" element={<ManageUsers />} />
-                <Route path="manage-projects" element={<ManageProjects />} />
-                <Route path="user-approval" element={<UserApproval />} />
-                <Route path="manage-reviews" element={<ManageReviews />} />
-                <Route path="manage-roles" element={<ManageRoles />} />
+    <div className="App">
+      <Accessibility />
+      <PayPalScriptProvider options={initialOptions}>
+        <GoogleReCaptchaProvider
+          reCaptchaKey={reCaptchaKey}
+          language="iw"
+          useRecaptchaNet={false}
+        >
+          <Router>
+            <AuthProvider>
+              <Navbar />
+              <Routes>
+                {/* --- נתיבים ציבוריים --- */}
+                <Route path="/" element={<ProjectLibrary />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/projects" element={<ProjectLibrary />} />
+                <Route path="/add-project" element={<AddProject />} />
                 <Route
-                  path="manage-categories"
-                  element={<ManageCategories />}
+                  path="/PersonalDashboard"
+                  element={<PersonalDashboard />}
                 />
-              </Route>
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/edit-project/:id" element={<EditProject />} />
+                <Route path="/profile/:userId" element={<PublicProfile />} />
+                <Route path="/about" element={<About />} />
 
-              {/* דף 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
-        </Router>
-      </GoogleReCaptchaProvider>
-    </PayPalScriptProvider>
+                {/* --- נתיבי ניהול (אדמין בלבד) --- */}
+                <Route path="/admin">
+                  <Route path="system-stats" element={<SystemDashboard />} />
+
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="manage-users" element={<ManageUsers />} />
+                  <Route path="manage-projects" element={<ManageProjects />} />
+                  <Route path="user-approval" element={<UserApproval />} />
+                  <Route path="manage-reviews" element={<ManageReviews />} />
+                  <Route path="manage-roles" element={<ManageRoles />} />
+                  <Route
+                    path="manage-categories"
+                    element={<ManageCategories />}
+                  />
+                </Route>
+
+                {/* דף 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthProvider>
+          </Router>
+        </GoogleReCaptchaProvider>
+      </PayPalScriptProvider>
+    </div>
   );
 }
 

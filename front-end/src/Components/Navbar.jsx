@@ -22,12 +22,6 @@ const Navbar = () => {
   // שליפת hasPermission והמשתמש. ה-Hook הזה מסתמך על מידע מקומי ולא קורא לשרת
   const { hasPermission, user } = usePermission();
   const [isOpen, setIsOpen] = useState(false);
-  console.log('--- DEBUG NAVBAR ---');
-  console.log('Full User Object:', user);
-  console.log('User Role:', user?.role);
-  console.log('Has Business Perm:', hasPermission(PERMS.BUSINESS_PANEL_ACCESS));
-  console.log('Has stats.read Perm:', hasPermission('stats.read'));
-  console.log('--------------------');
   const closeMenu = () => setIsOpen(false);
 
   const handleLogout = () => {
@@ -139,6 +133,7 @@ const Navbar = () => {
                     <CheckSquare size={16} /> אישור משתמשים
                   </Link>
                 )}
+                <br></br>
                 {hasPermission('users.read') && (
                   <Link
                     to="/admin/manage-users"
@@ -148,6 +143,8 @@ const Navbar = () => {
                     <Users size={16} /> ניהול משתמשים
                   </Link>
                 )}
+                <br></br>
+
                 {hasPermission('projects.publish') && (
                   <Link
                     to="/admin/manage-projects"
@@ -157,6 +154,8 @@ const Navbar = () => {
                     <FileText size={16} /> ניהול פרויקטים
                   </Link>
                 )}
+                <br></br>
+
                 {hasPermission('reviews.manage') && (
                   <Link
                     to="/admin/manage-reviews"
@@ -166,6 +165,8 @@ const Navbar = () => {
                     <MessageSquare size={16} /> ניהול תגובות
                   </Link>
                 )}
+                <br></br>
+
                 <Link
                   to="/admin/manage-categories"
                   onClick={closeMenu}
@@ -173,6 +174,8 @@ const Navbar = () => {
                 >
                   <Tags size={18} /> ניהול קטגוריות
                 </Link>
+                <br></br>
+
                 {hasPermission('roles.manage') && (
                   <Link
                     to="/admin/manage-roles"
@@ -182,6 +185,8 @@ const Navbar = () => {
                     <Shield size={16} /> ניהול תפקידים
                   </Link>
                 )}
+                <br></br>
+
                 <Link
                   to="/admin/dashboard"
                   onClick={closeMenu}
