@@ -1,0 +1,1155 @@
+/* =========================================
+   ADMIN PANEL - PREMIUM TEAL DESIGN
+   ========================================= */
+
+:root {
+    --admin-primary: #008080;
+    /* Teal */
+    --admin-dark: #006D77;
+    --admin-light: #83C5BE;
+    --admin-bg: #f4f7f6;
+    --admin-white: #ffffff;
+    --admin-danger: #e17055;
+    --admin-warning: #f1c40f;
+    --admin-success: #00b894;
+    --admin-shadow: 0 10px 25px rgba(0, 109, 119, 0.1);
+    --admin-border: #dfe6e9;
+    --teal-dark: #006D77;
+    --teal-primary: #008080;
+    --teal-light: #83C5BE;
+    --teal-gradient: linear-gradient(135deg, #006D77 0%, #008181 100%);
+    --bg-light: #f8fbfb;
+    --white: #ffffff;
+    --text-main: #2d3436;
+    --text-muted: #636e72;
+    --shadow-soft: 0 10px 30px rgba(0, 109, 119, 0.08);
+
+}
+
+/* --- Container הראשי --- */
+.admin-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 30px;
+    background-color: var(admin-dark);
+    min-height: 100vh;
+    direction: rtl;
+}
+
+.line {
+    color: var(--teal-darkteal);
+}
+
+/* --- כותרות וראש הדף --- */
+.dashboard-header {
+    margin-bottom: 40px;
+    text-align: right;
+    border-bottom: 2px solid var(--teal);
+    padding-bottom: 15px;
+}
+
+.dashboard-header h1 {
+    font-size: 2.2rem;
+    color: var(--admin-dark);
+    font-weight: 800;
+    margin: 0;
+}
+
+.dashboard-header p {
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
+.form-input-search {
+    width: 800px;
+    flex: 2;
+}
+
+/* --- כרטיסי סטטיסטיקה (Dashboard) --- */
+.action-cards,
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: var(--admin-white);
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: var(--admin-shadow);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 109, 119, 0.15);
+    border-color: var(--admin-light);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(131, 197, 190, 0.2);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.stat-content h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-muted);
+}
+
+.stat-content p {
+    margin: 5px 0;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--admin-dark);
+}
+
+/* --- סרגל כלים (Toolbar) --- */
+.admin-toolbar,
+.admin-toolbar-card {
+    background: var(--admin-white);
+    padding: 20px;
+    border-radius: 15px;
+    display: flex;
+    flex: 2;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 30px;
+    box-shadow: var(--admin-shadow);
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 2;
+    width: 30%;
+}
+
+.input-with-icon svg {
+    position: absolute;
+    right: 12px;
+    width: 700px;
+    color: var(--admin-light);
+}
+
+.input-with-icon input {
+    padding-right: 40px;
+    width: 800px;
+}
+
+/* --- טבלאות ניהול (Admin Tables) --- */
+.table-wrapper {
+    background: var(--admin-white);
+    border: #006D77;
+
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: var(--admin-shadow);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: #006D77;
+}
+
+.admin-table thead {
+    background: var(--admin-gradient, linear-gradient(135deg, #006D77 0%, #008080 100%));
+    color: white;
+    border: #006D77;
+
+}
+
+.admin-table th {
+    padding: 18px;
+    text-align: right;
+    font-weight: 600;
+}
+
+.admin-table td {
+    padding: 15px 18px;
+    border-bottom: 1px solid #f1f2f6;
+    color: var(--text-main);
+    vertical-align: middle;
+}
+
+.admin-table tr:hover {
+    background-color: #f8fbfb;
+}
+
+/* --- כפתורים בטבלה --- */
+.btn-icon,
+.btn-icon-delete {
+    background: red;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: #e3f2fd;
+}
+
+.btn-icon-delete:hover {
+    background: #fee2e2;
+    color: var(--admin-danger);
+}
+
+/* --- באדג'ים (Status & Roles) --- */
+.status-tag,
+.role-badge {
+    padding: 5px 12px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-tag.approved {
+    background: #e3fcef;
+    color: var(--admin-success);
+}
+
+.status-tag.pending {
+    background: #fff9db;
+    color: var(--admin-warning);
+}
+
+.role-badge.admin {
+    background: #000;
+    color: #fff;
+}
+
+.role-badge.designer {
+    background: var(--admin-primary);
+    color: #fff;
+}
+
+.role-badge.customer {
+    background: #a29bfe;
+    color: #fff;
+}
+
+.role-badge.student {
+    background: rgb(65, 153, 65);
+    color: #fff;
+}
+
+.role-badge.systemmanager {
+    background: blue;
+    color: #fff;
+}
+
+/* --- מודאל עריכה (Modal) --- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 48, 52, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--admin-white);
+    width: 100%;
+    max-width: 600px;
+    border-radius: 25px;
+    padding: 40px;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* --- ניתוח נתונים (Analytics Sections) --- */
+.analytics-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.analytics-card {
+    background: var(--admin-white);
+    padding: 25px;
+    border-radius: 20px;
+    box-shadow: var(--admin-shadow);
+}
+
+.ranking-list div {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f2f6;
+}
+
+.ranking-list div:last-child {
+    border: none;
+}
+
+/* --- תיבת טיפים (Advice Box) --- */
+.advice-box {
+    background: #fff9db;
+    border-right: 5px solid var(--admin-warning);
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+
+
+
+/* =========================================
+   MANAGE PROJECTS - PREMIUM TEAL DESIGN
+   ========================================= */
+
+.admin-container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 20px;
+    direction: rtl;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* כותרת הפאנל */
+.admin-header h1 {
+    font-size: 2.2rem;
+    color: #006D77;
+    margin-bottom: 10px;
+    font-weight: 800;
+}
+
+.admin-header p {
+    color: #636e72;
+    margin-bottom: 30px;
+}
+
+/* סרגל כלים וחיפוש */
+.admin-toolbar {
+    display: flex;
+    gap: 15px;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 109, 119, 0.08);
+    margin-bottom: 30px;
+    align-items: center;
+}
+
+.admin-input,
+.admin-toolbar select {
+    padding: 12px 18px;
+    border: 1.5px solid #eef2f2;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.admin-input:focus,
+.admin-toolbar select:focus {
+    border-color: #008080;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(0, 128, 128, 0.1);
+}
+
+.admin-input {
+    flex: 2;
+}
+
+.admin-toolbar select {
+    flex: 1;
+    cursor: pointer;
+}
+
+/* עיצוב הטבלה */
+.table-responsive {
+    background: #ffffff;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 109, 119, 0.08);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: right;
+}
+
+.admin-table thead {
+    background: linear-gradient(135deg, #006D77 0%, #008181 100%);
+    color: #ffffff;
+}
+
+.admin-table th {
+    padding: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+}
+
+.admin-table td {
+    padding: 20px 18px;
+    border-bottom: 1px solid #f1f2f6;
+    vertical-align: middle;
+}
+
+.admin-table tr:hover {
+    background-color: #f8fbfb;
+}
+
+/* כותרות בתוך הטבלה */
+.project-title {
+    font-weight: 700;
+    color: #2d3436;
+    font-size: 1rem;
+}
+
+.project-category {
+    font-size: 0.8rem;
+    color: #83C5BE;
+    font-weight: 600;
+}
+
+/* תגיות סטטוס (כמו בתמונה ששלחת) */
+.status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.status-tag.approved {
+    background: #e3fcef;
+    color: #00b894;
+}
+
+.status-tag.pending {
+    background: #fff9db;
+    color: #f1c40f;
+}
+
+/* כפתורי פעולה */
+.admin-actions-cell {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-icon {
+    background: #ffffff;
+    border: 1px solid #f1f2f6;
+    padding: 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* מודאל עריכה */
+.modal-overlay {
+    background: rgba(0, 48, 52, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: #ffffff;
+    border-radius: 25px;
+    padding: 35px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+}
+
+.profile-save-btn {
+    background: linear-gradient(135deg, #006D77 0%, #008181 100%);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.profile-save-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+}
+
+
+/* מבנה הגריד הראשי */
+.category-management-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    /* שני טורים במחשב */
+    gap: 30px;
+    margin-top: 20px;
+}
+
+/* קונטיינר התגים */
+.category-tags-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+/* עיצוב כל תג */
+.category-tag-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 50px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.category-tag-item:hover {
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+
+.delete-category-inline {
+    color: #ef4444;
+    border: none;
+    background: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.delete-category-inline:hover {
+    background: #fee2e2;
+}
+
+.submit-category-btn {
+    width: 100%;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* =========================================
+   מובייל ורספונסיביות
+   ========================================= */
+
+/* טאבלטים ומסכים בינוניים */
+@media (max-width: 992px) {
+    .category-management-grid {
+        grid-template-columns: 1fr;
+        /* מעבר לטור אחד */
+        gap: 20px;
+    }
+
+    .add-category-section {
+        order: 1;
+        /* שהטופס יהיה ראשון */
+    }
+
+    .list-category-section {
+        order: 2;
+        /* שהרשימה תהיה מתחת */
+    }
+}
+
+/* טלפונים קטנים */
+@media (max-width: 480px) {
+    .category-tags-flex {
+        justify-content: center;
+        /* מרכוז התגים בנייד */
+    }
+
+    .category-tag-item {
+        width: 100%;
+        /* במובייל קטן מאוד, כל תג מקבל שורה */
+        justify-content: space-between;
+        padding: 12px 20px;
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+}
+
+/* --- פריסה כללית (Grid) --- */
+.roles-dashboard {
+    padding: 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.roles-grid-container {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 25px;
+    margin-top: 25px;
+    align-items: start;
+}
+
+/* --- כותרת העמוד --- */
+.roles-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header-main {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-main h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: #2d3436;
+}
+
+.header-main p {
+    margin: 0;
+    color: #636e72;
+    font-size: 0.95rem;
+}
+
+/* --- רשימת תפקידים (Sidebar) --- */
+.roles-nav-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #edf2f7;
+}
+
+.nav-title {
+    padding: 18px;
+    background: #f8fafc;
+    font-weight: 700;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.roles-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.role-nav-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #006D77;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: right;
+}
+
+.role-nav-item:hover {
+    background: #f0f7ff;
+}
+
+.role-nav-item.selected {
+    background: #eef2ff;
+    border-right: 4px solid #4f46e5;
+    color: #4f46e5;
+}
+
+.role-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.role-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.role-key {
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* --- עורך ההרשאות (Main Content) --- */
+.editor-card {
+    background: white;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 1px solid #edf2f7;
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.badge-key {
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 0.85rem;
+    margin-right: 10px;
+}
+
+/* --- שורת חיפוש --- */
+.search-box {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 10px 15px;
+    border-radius: 12px;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.search-box input {
+    border: none;
+    background: none;
+    width: 100%;
+    font-size: 1rem;
+    outline: none;
+}
+
+/* --- קבוצות הרשאות --- */
+.perm-group-card {
+    margin-bottom: 30px;
+}
+
+.group-title {
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    border-right: 3px solid #6366f1;
+    padding-right: 10px;
+}
+
+.group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.perm-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.perm-checkbox-item:hover {
+    border-color: #6366f1;
+    background: #f5f3ff;
+}
+
+.perm-checkbox-item.checked {
+    border-color: #6366f1;
+    background: #eef2ff;
+}
+
+.checkbox-status {
+    color: #94a3b8;
+}
+
+.checked .checkbox-status {
+    color: #6366f1;
+}
+
+.perm-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+}
+
+/* --- כפתורים --- */
+.add-role-btn,
+.btn-save,
+.btn-create-submit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.add-role-btn:hover,
+.btn-save:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+}
+
+/* --- מצב ריק (Empty State) --- */
+.empty-state {
+    text-align: center;
+    padding: 100px 20px;
+    color: #94a3b8;
+}
+
+/* --- רספונסיביות --- */
+@media (max-width: 992px) {
+    .roles-grid-container {
+        grid-template-columns: 1fr;
+    }
+
+    .roles-nav-card {
+        position: relative;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+}
+
+/* הוסיפי ל-AdminDesign.css */
+
+.modal-overlay {
+    background: rgba(15, 23, 42, 0.6);
+    /* רקע כהה ושקוף */
+    backdrop-filter: blur(4px);
+    /* טשטוש עדין של הרקע */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 450px;
+    border-radius: 20px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    padding: 30px;
+    animation: modalIn 0.3s ease-out;
+}
+
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #334155;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.input-group input:focus {
+    border-color: #6366f1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.input-helper {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.btn-create-submit {
+    width: 100%;
+    padding: 14px;
+    background: #4f46e5;
+    color: white;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    border: none;
+    margin-top: 10px;
+}
+
+.btn-create-submit {
+    min-height: 48px;
+    /* גובה קבוע מונע קפיצות */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* הוספת אנימציה עדינה לטעינה במקום סתם טקסט מהבהב */
+.btn-create-submit:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.navbar {
+    position: fixed;
+    /* או sticky */
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    /* ערך גבוה שיבטיח שהוא מעל הכל */
+    background: white;
+    /* ודאי שיש רקע כדי שלא יהיה שקוף */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.roles-grid-container {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 25px;
+    margin-top: 25px;
+    align-items: start;
+}
+
+.roles-nav-card {
+    position: sticky;
+    top: 100px;
+    /* המרחק מגובה ה-Navbar שלך (התאימי לפי הצורך) */
+    max-height: calc(100vh - 120px);
+    /* מונע מהתפריט לצאת מגבולות המסך */
+    overflow-y: auto;
+    /* מאפשר גלילה פנימית אם יש המון תפקידים */
+    z-index: 10;
+    /* ערך נמוך משמעותית מה-Navbar */
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* פתרון לבעיית החסימה של הפס העליון */
+.roles-nav-card {
+    position: sticky;
+    top: 100px;
+    /* מרווח מה-Navbar */
+    z-index: 10;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* === רספונסיביות למובייל === */
+@media (max-width: 992px) {
+    .roles-grid-container {
+        grid-template-columns: 1fr;
+        /* טור אחד במקום שניים */
+        gap: 15px;
+    }
+
+    .roles-nav-card {
+        position: relative;
+        /* ביטול ה-sticky במובייל */
+        top: 0;
+        max-height: 250px;
+        /* הגבלת גובה כדי שלא יתפוס את כל המסך */
+        margin-bottom: 20px;
+        width: 100%;
+    }
+
+    .permissions-editor {
+        width: 100%;
+    }
+
+    .group-grid {
+        grid-template-columns: 1fr;
+        /* הרשאות בטור אחד במובייל */
+    }
+
+    .ai-highlight {
+        border: 1px solid #e0b0ff;
+        /* סגול בהיר */
+        background: linear-gradient(145deg, #ffffff, #fdfaff);
+        box-shadow: 0 4px 15px rgba(142, 68, 173, 0.1);
+    }
+
+    .ai-highlight h4 {
+        color: #8e44ad;
+        /* צבע סגול מותגי ל-AI */
+    }
+
+    .ai-analytics-summary {
+        margin-bottom: 30px;
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* AI Container Styles */
+    .ai-analytics-container {
+        margin-bottom: 30px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .ai-section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .live-indicator {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        animation: pulse 2s infinite;
+    }
+
+    /* Grid & Cards */
+    .ai-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+
+    .ai-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+        border-radius: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        transition: transform 0.2s;
+    }
+
+    .ai-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .ai-card-icon {
+        font-size: 2rem;
+        background: #fff;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    .ai-card-info .label {
+        display: block;
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 4px;
+    }
+
+    .ai-card-info .value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .ai-card-info .value.error {
+        color: #ef4444;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+}
