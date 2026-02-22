@@ -57,6 +57,7 @@ const cleanupUploadsBestEffort = async (req) => {
  * @param {string} expectedAction - למשל: 'register' | 'login' | 'forgot_password' | 'reset_password'
  */
 const verifyRecaptchaV3 = (expectedAction) => {
+  
   return async (req, _res, next) => {
     try {
       // ✅ DEV bypass (רק לפיתוח/בדיקות ידניות כשאין פרונט)
@@ -132,6 +133,7 @@ const verifyRecaptchaV3 = (expectedAction) => {
         !expectedAction || !action
           ? true
           : String(action).toLowerCase() === String(expectedAction).toLowerCase();
+          
       if (!success || !scoreOk || !actionOk) {
         await cleanupUploadsBestEffort(req);
 
