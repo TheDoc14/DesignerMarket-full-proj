@@ -266,7 +266,8 @@ body {
 /* כפתורים יוקרתיים */
 .primary-btn,
 .profile-save-btn,
-.reset-search-btn {
+.reset-search-btn,
+.btn-export {
   width: 100%;
   background: var(--teal-gradient);
   color: white;
@@ -620,7 +621,8 @@ body {
 }
 
 /* כפתור שליחה */
-.submit-project-btn {
+.submit-project-btn,
+.btn-export {
   background: var(--teal-gradient);
   color: white;
   padding: 16px;

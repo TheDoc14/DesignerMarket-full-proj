@@ -271,26 +271,6 @@ const PersonalDashboard = () => {
     <div className="profile-container" dir="rtl">
       <h1 className="profile-header">הגדרות פרופיל</h1>
 
-      {/* תקציר מכסה AI בראש הדף */}
-      <div className="ai-quota-summary-banner">
-        <div className="quota-info">
-          <strong>סטטוס מנטור AI:</strong>
-          <span>
-            {' '}
-            {aiQuota.used} / {aiQuota.limit} שאילתות נוצלו
-          </span>
-          <span className="remaining-tag">
-            ({aiQuota.remaining} נותרו להיום)
-          </span>
-        </div>
-        <div className="quota-progress-bg">
-          <div
-            className="quota-progress-fill"
-            style={{ width: `${(aiQuota.used / aiQuota.limit) * 100}%` }}
-          ></div>
-        </div>
-      </div>
-
       <form onSubmit={handleSubmit} className="profile-card-form">
         {message.text && (
           <div className={`profile-alert ${message.type}`}>{message.text}</div>
@@ -358,6 +338,67 @@ const PersonalDashboard = () => {
             onChange={handleChange}
             maxLength="500"
           />
+        </div>
+        <div className="form-grid-3">
+          <div className="form-group">
+            <label>עיר</label>
+            <input
+              className="form-input"
+              name="city"
+              value={formData.city}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
+        <div className="form-grid-3">
+          <div className="form-group">
+            <label>מדינה</label>
+            <input
+              className="form-input"
+              name="country"
+              value={formData.country}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>טלפון</label>
+            <input
+              className="form-input"
+              name="phone"
+              value={formData.phone}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group">
+            <label>אימייל PayPal</label>
+            <input
+              className="form-input"
+              name="paypalEmail"
+              value={formData.paypalEmail}
+              onChange={handleChange}
+            />
+          </div>
+          <div className="form-group full-width">
+            <label>אימייל</label>
+            <input
+              className="form-input"
+              name="email"
+              value={user.email}
+              onChange={handleChange}
+              readOnly={true}
+            />
+          </div>
+          <div className="form-group ">
+            <label>תאריך לידה</label>
+            <input
+              className="form-input"
+              name="birthDate"
+              type="date"
+              value={formData.birthDate}
+              onChange={handleChange}
+            />
+          </div>
         </div>
 
         <h3 className="section-subtitle">נוכחות ברשת</h3>
@@ -487,7 +528,7 @@ const PersonalDashboard = () => {
             })}
           </div>
         ) : (
-          <p>עדיין לא התייעצת עם המנטור לגבי הפרויקטים שלך.</p>
+          <p>עדיין לא התייעצת עם ה- AI לגבי הפרויקטים שלך.</p>
         )}
       </section>
 

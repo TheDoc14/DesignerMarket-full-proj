@@ -302,7 +302,9 @@
 /* כפתורי מערכת בצבעי הטורקיז של ה-Navbar */
 .submit-review-btn,
 .edit-trigger-btn,
-.save-btn {
+.save-btn,
+.view-public-profile-btn,
+.ai-send-btn {
   background: var(--teal-gradient) !important;
   color: white;
   border: none;
@@ -316,7 +318,9 @@
 
 .submit-review-btn:hover,
 .edit-trigger-btn:hover,
-.save-btn:hover {
+.save-btn:hover,
+.view-public-profile-btn:hover,
+.ai-send-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(0, 109, 119, 0.3);
 }
@@ -649,4 +653,170 @@
   /* שומר על ירידות שורה של ה-AI */
   font-size: 0.9rem;
   line-height: 1.6;
+}
+
+.paypal-purchase-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  border: 1px solid #e9ecef;
+  text-align: center;
+}
+
+.paypal-purchase-section h4 {
+  margin-bottom: 12px;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.paypal-button-container {
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+/* מכולת התשלום - PayPal */
+.paypal-purchase-section {
+  margin: 25px 0;
+  padding: 20px;
+  background: #fdfdfd;
+  border: 1px dashed #e0e0e0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.paypal-purchase-section h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* התאמת כפתור הפייפאל למכולה */
+.paypal-button-container {
+  width: 100%;
+  max-width: 350px;
+}
+
+/* קו מפריד מעוצב בין סקציות */
+.popup-sections-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #eee, transparent);
+  margin: 30px 0;
+}
+
+/* סקציית תגובות */
+.reviews-section {
+  padding: 10px 5px;
+}
+
+.reviews-section h3 {
+  font-size: 1.3rem;
+  color: #333;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* טופס הוספת תגובה */
+.add-review-form {
+  background: #f9fbfd;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.review-inputs-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.add-review-form select {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.add-review-form textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  resize: vertical;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.add-review-form textarea:focus {
+  outline: none;
+  border-color: #1abc9c;
+  /* צבע הטורקיז של הכפתורים שלך */
+}
+
+.submit-review-btn {
+  background-color: #1abc9c;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.2s;
+  float: left;
+  /* הצמדה לשמאל */
+  margin-top: 10px;
+}
+
+.submit-review-btn:hover {
+  background-color: #16a085;
+  transform: translateY(-1px);
+}
+
+/* כרטיס תגובה קיימת */
+.review-card {
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 15px 5px;
+}
+
+.review-card:last-child {
+  border-bottom: none;
+}
+
+.popup-main-wrapper {
+  display: flex;
+  flex-direction: row-reverse;
+  /* AI בצד ימין */
+  width: 95vw;
+  max-width: 1400px;
+  height: 90vh;
+  gap: 20px;
+  margin: auto;
+}
+
+.project-modal-content {
+  flex: 2;
+  background: white;
+  border-radius: 20px;
+  overflow-y: auto;
+}
+
+.ai-sidebar {
+  flex: 0.8;
+  background: #f8fafc;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  /* וודאי שזה לא מוסתר */
+  min-width: 300px;
 }

@@ -47,7 +47,7 @@ const ProjectLibrary = () => {
             : project.createdBy?.toString();
 
         // חיפוש המשתמש ברשימה הכללית בבטחה
-        let creatorName = 'מעצב במערכת';
+        let creatorName = 'גלית בוסי';
 
         // שימוש ב-allUsers שהגיעו מהשרת באותו רגע
         if (allUsers && allUsers.length > 0) {

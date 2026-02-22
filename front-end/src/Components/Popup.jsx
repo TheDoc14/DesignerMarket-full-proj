@@ -17,6 +17,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
 
   // --- States ---
   const [reviews, setReviews] = useState([]);
+  const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,46 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     setFeedback({ type, msg });
     setTimeout(() => setFeedback({ type: '', msg: null }), 6000);
   };
+  const fetchReviews = useCallback(async () => {
+    setReviewsLoading(true);
+    try {
+      // בדרך כלל ב-Backend כזה, השליפה היא לפי query parameter
+      // במקום ה-URL הישן שגרם ל-404
+      const res = await axios.get(
+        `http://localhost:5000/api/reviews?projectId=${projectId}`
+      );
+      setReviews(res.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch reviews', err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }, [projectId]);
 
+  const handleAddReview = async (e) => {
+    e.preventDefault();
+    if (!isLoggedIn) return showFeedback('error', 'עליך להתחבר כדי להגיב');
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.post(
+        `http://localhost:5000/api/reviews`,
+        {
+          projectId: projectId,
+          rating: newReview.rating,
+          text: newReview.comment, // הפרונט משתמש ב-comment, אבל שולחים ל-בקאנד text
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // הוספת התגובה החדשה לרשימה למעלה
+      setReviews((prev) => [res.data.data, ...prev]);
+      setNewReview({ rating: 5, comment: '' });
+      showFeedback('success', 'התגובה נוספה בהצלחה!');
+    } catch (err) {
+      showFeedback('error', err.friendlyMessage || 'שגיאה בהוספת תגובה');
+    }
+  };
   // --- API Functions ---
 
   // שליפת היסטוריית צ'אט
@@ -58,17 +98,21 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
 
       try {
         if (!targetChatId) {
+          if (!projectId) return;
           // חיפוש צ'אט קיים לפרויקט
           const chatRes = await axios.get(
-            `http://localhost:5000/api/ai-chats?projectId=${projectId}`,
+            `http://localhost:5000/api/ai-chats`,
             {
+              params: { projectId },
               headers: { Authorization: `Bearer ${token}` },
             }
           );
           const chats = chatRes.data.data || [];
           if (chats.length > 0) {
-            setChatId(chats[0]._id);
-            return fetchAiChat(chats[0]._id);
+            const firstChatId = chats[0]._id;
+            setChatId(firstChatId);
+            // במקום לקרוא לפונקציה שוב, נמשיך לטעינת ההודעות עם ה-ID החדש
+            loadMessages(firstChatId, token);
           }
           return;
         }
@@ -86,6 +130,14 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     },
     [projectId, chatId]
   );
+
+  const loadMessages = async (id, token) => {
+    const msgRes = await axios.get(
+      `http://localhost:5000/api/ai-chats/${id}/messages?limit=50&order=asc`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setAiMessages(msgRes.data.data || []);
+  };
 
   // שליפת מכסה אמיתית מה-meta
   const fetchAiQuota = useCallback(async () => {
@@ -162,7 +214,9 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   };
 
   // --- Effects ---
-
+  useEffect(() => {
+    if (projectId) fetchReviews();
+  }, [projectId, fetchReviews]);
   // טעינה ראשונית וטיפול בלינקים מהדשבורד
   useEffect(() => {
     const initPopup = async () => {
@@ -208,6 +262,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="project-modal-content">
+          {/* כפתור סגירה ופידבק */}
           <button className="close-btn" onClick={onClose}>
             &times;
           </button>
@@ -218,6 +273,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
           )}
 
           <div className="popup-scroll-container">
+            {/* --- חלק 1: פרטי הפרויקט --- */}
             <div className="popup-header">
               <div className="popup-creator-info">
                 <span>
@@ -246,15 +302,103 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
                   />
                 </div>
                 <div className="info-side">
-                  <div className="view-mode">
-                    <p className="price-row">₪{project.price}</p>
-                    <p className="desc-text">{project.description}</p>
-                  </div>
+                  <p className="price-row">₪{project.price}</p>
+                  <p className="desc-text">{project.description}</p>
                 </div>
+              </div>
+            </div>
+
+            <div className="popup-sections-divider" />
+
+            {/* --- חלק 2: אזור רכישה (PayPal) --- */}
+            {!isOwner && project.price > 0 && (
+              <div className="paypal-purchase-section">
+                <h4>💳 רכישת רישיון לפרויקט</h4>
+                <div className="paypal-button-container">
+                  <PayPalButtons
+                    style={{ layout: 'horizontal', height: 45 }}
+                    createOrder={(data, actions) => {
+                      return actions.order.create({
+                        purchase_units: [
+                          {
+                            amount: {
+                              value: project.price.toString(),
+                              currency_code: 'ILS',
+                            },
+                            description: project.title,
+                          },
+                        ],
+                      });
+                    }}
+                    onApprove={async (data, actions) => {
+                      const details = await actions.order.capture();
+                      showFeedback(
+                        'success',
+                        `תודה ${details.payer.name.given_name}! הרכישה הושלמה.`
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="popup-sections-divider" />
+
+            {/* --- חלק 3: אזור תגובות --- */}
+            <div className="reviews-section">
+              <h3>💬 תגובות משתמשים ({reviews.length})</h3>
+
+              {/* טופס הוספה (רק אם מחובר) */}
+              {isLoggedIn && (
+                <form onSubmit={handleAddReview} className="add-review-form">
+                  <div className="reviews-list">
+                    {reviews.map((rev) => (
+                      <div key={rev._id} className="review-card">
+                        <div className="review-header">
+                          <strong>{rev.userId?.username || 'משתמש'}</strong>
+                          <span>⭐ {rev.rating}</span>
+                        </div>
+                        <p>{rev.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <textarea
+                    placeholder="כתוב תגובה..."
+                    value={newReview.comment}
+                    onChange={(e) =>
+                      setNewReview({ ...newReview, comment: e.target.value })
+                    }
+                    required
+                  />
+                  <button type="submit" className="submit-review-btn">
+                    פרסם תגובה
+                  </button>
+                </form>
+              )}
+
+              {/* רשימת התגובות הקיימות */}
+              <div className="reviews-list">
+                {reviews.length === 0 ? (
+                  <p className="no-reviews">אין עדיין תגובות לפרויקט זה.</p>
+                ) : (
+                  reviews.map((rev) => (
+                    <div key={rev._id} className="review-card">
+                      <div className="review-header">
+                        <strong>{rev.userId?.username || 'משתמש'}</strong>
+                        <span className="review-rating">⭐ {rev.rating}</span>
+                      </div>
+                      <p className="review-text">{rev.text}</p>
+                      <small>
+                        {new Date(rev.createdAt).toLocaleDateString('he-IL')}
+                      </small>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
 
+          {/* כפתור עריכה לבעלים */}
           <div className="popup-footer">
             {canEdit && (
               <button
@@ -267,11 +411,12 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
           </div>
         </div>
 
-        {hasPermission('ai.consult') && isOwner && (
+        {/* סיידבר AI - מופיע רק לבעלים */}
+        {
           <aside className="ai-sidebar">
             <div className="ai-sidebar-header">
-              <h3>🤖 משוב AI</h3>
-              <p>התייעצות לגבי "{project.title}"</p>
+              <h3>🤖 סוכן AI</h3>
+              <p>ייעוץ עבור "{project.title}"</p>
             </div>
 
             <div className="ai-content-area">
@@ -281,56 +426,34 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
                     {msg.content}
                   </div>
                 ))}
-                {loading && <div className="ai-loading">המנטור חושב...</div>}
+                {loading && (
+                  <div className="ai-loading">הסוכן מעבד נתונים...</div>
+                )}
                 <div ref={chatEndRef} />
               </div>
             </div>
 
             <div className="ai-sidebar-footer">
-              <div className="ai-quota-display">
-                <div className="quota-text">
-                  <span>מכסה יומית:</span>
-                  <span className="quota-numbers">
-                    {aiQuota.used} / {aiQuota.limit}
-                  </span>
-                </div>
-                <div className="quota-bar-container">
-                  <div
-                    className="quota-bar-fill"
-                    style={{
-                      width: `${(aiQuota.used / aiQuota.limit) * 100}%`,
-                      backgroundColor:
-                        aiQuota.remaining === 0 ? '#ef4444' : '#8e44ad',
-                    }}
-                  ></div>
-                </div>
-                <p className="quota-remaining">
-                  נותרו לך עוד {aiQuota.remaining} שאילתות
-                </p>
+              <div className="ai-quota-info">
+                <small>נותרו {aiQuota.remaining} שאילתות</small>
               </div>
-
               <div className="ai-input-wrapper">
                 <textarea
                   value={userQuery}
                   onChange={(e) => setUserQuery(e.target.value)}
-                  placeholder={
-                    aiQuota.remaining > 0 ? 'שאל את המנטור...' : 'המכסה הסתיימה'
-                  }
-                  disabled={aiQuota.remaining === 0 || loading}
+                  placeholder="שאל משהו..."
                 />
                 <button
-                  className="send-ai-btn"
                   onClick={handleSendAiMessage}
-                  disabled={
-                    loading || !userQuery.trim() || aiQuota.remaining === 0
-                  }
+                  className="ai-send-btn"
+                  disabled={loading}
                 >
-                  {loading ? '...' : 'שלח'}
+                  שלח
                 </button>
               </div>
             </div>
           </aside>
-        )}
+        }
       </div>
     </div>
   );
