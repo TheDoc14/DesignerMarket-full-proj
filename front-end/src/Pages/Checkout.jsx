@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook ההרשאות המרכזי
 
 const Checkout = () => {
@@ -34,10 +34,12 @@ const Checkout = () => {
   const fetchProject = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axios.get(
-        `http://localhost:5000/api/projects/${projectId}`
+      const response = await api.get(`/api/projects/${projectId}`);
+      setProject(
+        response.data?.project ||
+          response.data?.data?.project ||
+          response.data?.data
       );
-      setProject(response.data.project);
     } catch (err) {
       setError('שגיאה בטעינת פרטי הפרויקט.');
     } finally {
@@ -62,18 +64,14 @@ const Checkout = () => {
     setIsProcessing(true);
     setError(null);
 
-    const token = localStorage.getItem('token');
     const storageKey = `pending_paypal_${projectId}`;
 
     try {
       // ניסיון 1: יצירת הזמנה חדשה (עם נטרול מסך אדום)
-      const response = await axios.post(
-        `http://localhost:5000/api/orders/paypal/create`,
+      const response = await api.post(
+        '/api/orders/paypal/create',
         { projectId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          validateStatus: (status) => status < 500,
-        }
+        { validateStatus: (status) => status < 500 }
       );
 
       // --- טיפול יצירתי ב-409 (Conflict) ---
@@ -93,13 +91,10 @@ const Checkout = () => {
         }
 
         if (paypalId) {
-          const captureRes = await axios.post(
-            `http://localhost:5000/api/orders/paypal/capture`,
+          const captureRes = await api.post(
+            '/api/orders/paypal/capture',
             { paypalOrderId: paypalId },
-            {
-              headers: { Authorization: `Bearer ${token}` },
-              validateStatus: (status) => status < 500,
-            }
+            { validateStatus: (status) => status < 500 }
           );
 
           if (captureRes.status === 200) {

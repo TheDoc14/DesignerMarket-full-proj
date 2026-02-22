@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import api from '../api/axios';
 import JSZip from 'jszip';
 import { usePermission } from '../Hooks/usePermission.jsx';
 import defaultUserPic from '../DefaultPics/userDefault.jpg';
@@ -12,11 +12,9 @@ const PersonalDashboard = () => {
   // --- Hooks & Auth ---
   const { user, login, logout } = useAuth();
   const {
-    hasPermission,
     loading: permissionLoading,
     user: currentUser,
   } = usePermission();
-  const navigate = useNavigate();
   const { userId } = useParams();
   const fileInputRef = useRef(null);
 
@@ -63,10 +61,7 @@ const PersonalDashboard = () => {
   const fetchMyAiHistory = useCallback(async () => {
     try {
       setHistoryLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/ai-chats', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/api/ai-chats');
 
       // עדכון היסטוריית הצ'אטים
       setAiHistory(res.data.data || []);
@@ -90,17 +85,11 @@ const PersonalDashboard = () => {
 
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
-    const token = localStorage.getItem('token');
 
     try {
       setLoading(true);
       // 1. שליפת פרופיל אישי
-      const profileRes = await axios.get(
-        'http://localhost:5000/api/profile/me',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const profileRes = await api.get('/api/profile/me');
       setProjects(profileRes.data.projects || []);
 
       // עדכון ה-formData עם נתוני המשתמש שחזרו
@@ -120,14 +109,9 @@ const PersonalDashboard = () => {
       }
 
       // 2. שליפת פרויקטים לרכישות
-      const projectsRes = await axios.get(
-        'http://localhost:5000/api/projects',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      const allProjects = projectsRes.data.projects || [];
+      const projectsRes = await api.get('/api/projects');
+      const allProjects =
+        projectsRes.data?.projects || projectsRes.data?.data || [];
       const purchased = allProjects.filter((p) => {
         const isOwner = p.createdBy === user.id || p.createdBy?._id === user.id;
         return !isOwner && Array.isArray(p.files) && p.files.length > 0;
@@ -216,7 +200,6 @@ const PersonalDashboard = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
       const data = new FormData();
       Object.keys(formData).forEach((key) => {
         if (key === 'social') data.append(key, JSON.stringify(formData.social));
@@ -225,17 +208,13 @@ const PersonalDashboard = () => {
         else if (formData[key] !== null) data.append(key, formData[key]);
       });
 
-      const res = await axios.put(
-        'http://localhost:5000/api/profile/me',
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'multipart/form-data',
-          },
-        }
+      const res = await api.put('/api/profile/me', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await login(
+        res.data?.user || res.data?.data?.user,
+        localStorage.getItem('token')
       );
-      await login(res.data.user, token);
       setMessage({ type: 'success', text: 'הפרופיל עודכן בהצלחה!' });
       window.scrollTo(0, 0);
     } catch (err) {
@@ -249,10 +228,7 @@ const PersonalDashboard = () => {
     if (!window.confirm('אזהרה: מחיקת החשבון היא סופית! האם להמשיך?')) return;
     try {
       setSaving(true);
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/profile/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/api/profile/${user.id}`);
       logout();
     } catch (err) {
       alert('מחיקת החשבון נכשלה');

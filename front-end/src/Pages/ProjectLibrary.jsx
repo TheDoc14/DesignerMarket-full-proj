@@ -1,17 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import { useEffect, useState, useCallback } from 'react';
+import api from '../api/axios';
 import Popup from '../Components/Popup';
 import './PublicPages.css';
 import projectDefault from '../DefaultPics/projectDefault.png';
 import { usePermission } from '../Hooks/usePermission.jsx'; // ייבוא ה-Hook החדש
 
 const ProjectLibrary = () => {
-  const { hasPermission, user } = usePermission();
+  const { user } = usePermission();
   const [projects, setProjects] = useState([]);
   const [displayList, setDisplayList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeProject, setActiveProject] = useState(null);
-  const [users, setUsers] = useState([]); // State חדש לשמירת המשתמשים
+  //const [users, setUsers] = useState([]); // State חדש לשמירת המשתמשים
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
@@ -21,61 +21,33 @@ const ProjectLibrary = () => {
   const loadLibraryData = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // 1. שליפה מקבילה של פרויקטים ומשתמשים
-      const [projectsRes, usersRes] = await Promise.all([
-        axios.get(
-          `http://localhost:5000/api/projects?published=true&page=${currentPage}&limit=8&search=${searchTerm}`,
-          { headers: authHeader }
-        ),
-        axios
-          .get('http://localhost:5000/api/admin/users', { headers: authHeader })
-          .catch(() => ({ data: { users: [] } })),
-      ]);
-      const allProjects = projectsRes.data.projects || [];
-      const allUsers = usersRes.data.users || [];
-      setMeta(projectsRes.data.meta || { page: 1, totalPages: 1 });
-      // 2. הצלבת ה-ID של היוצר עם שם המשתמש שלו
-      // 2. הצלבת ה-ID של היוצר עם שם המשתמש שלו
-      const projectsWithCreators = allProjects.map((project) => {
-        // חילוץ בטוח של ה-ID של היוצר מתוך הפרויקט
-        const creatorId =
-          typeof project.createdBy === 'object'
-            ? project.createdBy?._id?.toString()
-            : project.createdBy?.toString();
-
-        // חיפוש המשתמש ברשימה הכללית בבטחה
-        let creatorName = 'גלית בוסי';
-
-        // שימוש ב-allUsers שהגיעו מהשרת באותו רגע
-        if (allUsers && allUsers.length > 0) {
-          const foundUser = allUsers.find((u) => {
-            const userId = u._id?.toString() || u.id?.toString();
-            return userId && creatorId && userId === creatorId;
-          });
-
-          if (foundUser) {
-            creatorName = foundUser.username;
-          }
-        }
-
-        // ✅ תיקון קריטי: חייבים להחזיר את אובייקט הפרויקט!
-        return {
-          ...project,
-          creatorName: creatorName,
-        };
+      const res = await api.get('/api/projects', {
+        params: {
+          published: true,
+          page: currentPage,
+          limit: 8,
+          search: searchTerm || '',
+        },
       });
 
-      setProjects(projectsWithCreators);
-      setDisplayList(projectsWithCreators);
+      const allProjects = res.data.projects || res.data.data || [];
+      setMeta(res.data.meta || { page: 1, totalPages: 1 });
+
+      // אם השרת כבר מחזיר createdBy כאובייקט (populate) — זה יספיק:
+      const normalized = allProjects.map((p) => ({
+        ...p,
+        creatorName: p.createdBy?.username || p.creatorName || 'משתמש',
+      }));
+
+      setProjects(normalized);
+      setDisplayList(normalized);
     } catch (err) {
       console.error('טעינת הנתונים נכשלה:', err);
     } finally {
       setLoading(false);
     }
-  }, [currentPage]);
+  }, [currentPage, searchTerm]);
 
   // הפעלה ראשונית של הטעינה המאוחדת
   useEffect(() => {
@@ -119,9 +91,6 @@ const ProjectLibrary = () => {
     setActiveProject(null);
   };
 
-  const refreshData = async () => {
-    await loadLibraryData();
-  };
 
   if (loading) return <div className="loader">טוען את ספריית הפרויקטים...</div>;
 

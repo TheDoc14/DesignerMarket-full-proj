@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import api from '../../api/axios';
 import {
   BarChart,
   Bar,
@@ -8,26 +8,19 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
   LineChart,
   Line,
 } from 'recharts';
 import {
   DollarSign,
   TrendingUp,
-  ArrowUpRight,
   FileSpreadsheet,
   FileText,
   Lightbulb,
   Target,
   Award,
   History,
-  Briefcase,
 } from 'lucide-react';
-import { useAuth } from '../../Context/AuthContext';
 import { usePermission } from '../../Hooks/usePermission.jsx'; // שינוי 1: ייבוא usePermission
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -47,31 +40,30 @@ const SystemDashboard = () => {
   const [loading, setLoading] = useState(true);
   const dashboardRef = useRef(null);
 
-  const COLORS = ['#0984e3', '#00b894', '#fdcb6e', '#e17055', '#6c5ce7'];
-
   const fetchData = useCallback(async () => {
     if (!hasPermission('stats.read')) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
       const requests = [
-        axios.get('http://localhost:5000/api/business/stats', { headers }),
-        axios.get('http://localhost:5000/api/business/finance', { headers }),
+        api.get('/api/business/stats'),
+        api.get('/api/business/finance'),
       ];
-      // רק אם המשתמש הוא אדמין ממש, נוסיף את הקריאה ל-admin/stats
+
       if (hasPermission('admin.panel.access')) {
-        requests.push(
-          axios.get('http://localhost:5000/api/admin/stats', { headers })
-        );
+        requests.push(api.get('/api/admin/stats'));
       }
+
       const responses = await Promise.all(requests);
 
-      setStats(responses[0].data.stats);
-      setFinance(responses[1].data.finance);
-      // אם חזר אובייקט שלישי (של האדמין)
+      setStats(responses[0].data?.stats || responses[0].data?.data?.stats);
+      setFinance(
+        responses[1].data?.finance || responses[1].data?.data?.finance
+      );
+
       if (responses[2]) {
-        setAdminStats(responses[2].data.stats);
+        setAdminStats(
+          responses[2].data?.stats || responses[2].data?.data?.stats
+        );
       }
     } catch (err) {
       console.error('Managerial data load failed', err);
@@ -138,7 +130,7 @@ const SystemDashboard = () => {
     );
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(finance.recent),
+      XLSX.utils.json_to_sheet(finance?.recent || []),
       'Transactions Detail'
     );
     XLSX.writeFile(
@@ -251,7 +243,7 @@ const SystemDashboard = () => {
                 <YAxis axisLine={false} tickLine={false} />
                 <Tooltip />
                 <Line
-                  ype="monotone"
+                  type="monotone"
                   dataKey="val"
                   stroke="#6c5ce7"
                   strokeWidth={4}

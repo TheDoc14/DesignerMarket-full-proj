@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import './PublicPages.css';
 import { useAuth } from '../Context/AuthContext';
+import api from '../api/axios';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -35,50 +36,40 @@ const Login = () => {
 
     try {
       const gToken = await executeRecaptcha('login');
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          captchaToken: gToken,
-        }),
+
+      const res = await api.post('/api/auth/login', {
+        email: formData.email,
+        password: formData.password,
+        captchaToken: gToken,
       });
 
-      const data = await response.json();
+      // לפי רוב המבנים אצלכם
+      const data = res.data?.data || res.data;
 
-      if (!response.ok) {
-        const msg = data.message;
-        const errorTranslations = {
-          'Invalid credentials.': 'האימייל או הסיסמה אינם נכונים.',
-          'Email verification required.':
-            'אנא אמת את כתובת המייל שלך לפני ההתחברות.',
-          'Your account is awaiting admin approval.':
-            'חשבונך ממתין לאישור מנהל מערכת.',
-          'User not found.': 'משתמש זה אינו קיים במערכת.',
-          'Internal Server Error': 'יש לנו תקלה בשרת, אנחנו כבר מטפלים בזה.',
-        };
-
-        if (msg === 'Your account is awaiting admin approval.') {
-          throw new Error('Pending_approval');
-        }
-        const errorMessage =
-          errorTranslations[msg] || msg || 'אירעה שגיאה בכניסה.';
-        throw new Error(errorMessage);
-      }
-
-      // שינוי 2: שימוש בפונקציית ה-login המרכזית
-      // פונקציה זו תפעיל את fetchDynamicPermissions ותעדכן את ההרשאות
       await login(data.user, data.token);
-
-      // שינוי 3: מעבר דף ללא window.location.reload()
-      // ה-AuthContext כבר מעדכן את ה-State, מה שגורם לרינדור מחדש של ה-Navbar
       navigate('/');
     } catch (err) {
-      if (err.message === 'Pending_approval') {
+      const msg = err.response?.data?.message;
+
+      const errorTranslations = {
+        'Invalid credentials.': 'האימייל או הסיסמה אינם נכונים.',
+        'Email verification required.':
+          'אנא אמת את כתובת המייל שלך לפני ההתחברות.',
+        'Your account is awaiting admin approval.':
+          'חשבונך ממתין לאישור מנהל מערכת.',
+        'User not found.': 'משתמש זה אינו קיים במערכת.',
+        'Internal Server Error': 'יש לנו תקלה בשרת, אנחנו כבר מטפלים בזה.',
+      };
+
+      if (msg === 'Your account is awaiting admin approval.') {
         setError('חשבונך ממתין לאישור מנהל מערכת.');
       } else {
-        setError(err.message);
+        setError(
+          err.friendlyMessage ||
+            errorTranslations[msg] ||
+            msg ||
+            'אירעה שגיאה בכניסה.'
+        );
       }
     } finally {
       setLoading(false);

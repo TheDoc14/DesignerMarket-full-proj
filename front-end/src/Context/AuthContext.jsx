@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import api from '../api/axios';
 
 const AuthContext = createContext(null);
 
@@ -8,13 +8,13 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   /**
+   *
    * שליפת הרשאות מה-DB בזמן אמת.
    * מכיוון שהכל דינמי, אנחנו מושכים את כל רשימת ה-Roles ומחפשים את ה-permissions
    * של ה-role הספציפי שהגיע מהלוגין.
    */
 
-  const fetchDynamicPermissions = async (userRole, token) => {
-    // אם המשתמש הוא מנהל עסקי או אדמין, ננסה למשוך הרשאות מהשרת
+  const fetchDynamicPermissions = async (userRole) => {
     const isManagerial =
       userRole === 'admin' || userRole === 'business_manager';
 
@@ -24,13 +24,14 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      // אם כאן את מקבלת 403, סימן שהבקהאנד לא מרשה למנהל עסקי לראות את רשימת התפקידים
-      const res = await axios.get('http://localhost:5000/api/admin/roles', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const allRoles = res.data.roles || res.data;
+      // Authorization מגיע אוטומטית מה-interceptor של api
+      const res = await api.get('/api/admin/roles');
+
+      // לפי המבנה אצלכם: לפעמים roles, לפעמים data
+      const allRoles = res.data?.roles || res.data?.data || res.data || [];
       const foundRole = allRoles.find((r) => r.key === userRole);
-      return foundRole ? foundRole.permissions : [];
+
+      return foundRole?.permissions || [];
     } catch (error) {
       console.warn('RBAC Fetch failed for role:', userRole);
       const storedUser = JSON.parse(localStorage.getItem('user'));
@@ -42,33 +43,26 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', token);
 
     // שליפה דינמית - אם מחר אדמין יוסיף הרשאה ב-DB, היא תופיע כאן אוטומטית
-    const permissions = await fetchDynamicPermissions(userData.role, token);
+    const permissions = await fetchDynamicPermissions(userData.role);
 
     const fullUser = { ...userData, permissions };
     setUser(fullUser);
     localStorage.setItem('user', JSON.stringify(fullUser));
   };
 
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async () => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
     if (token && storedUser) {
       try {
         // קריאה לפרופיל כדי לראות אם ה-Role השתנה
-        const profileRes = await axios.get(
-          'http://localhost:5000/api/profile/me',
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const profileRes = await api.get('/api/profile/me');
+        const serverUser = profileRes.data?.user || profileRes.data?.data?.user;
 
-        const serverUser = profileRes.data.user;
-        const permissions = await fetchDynamicPermissions(
-          serverUser.role,
-          token
-        );
+        if (!serverUser) throw new Error('Profile response missing user');
 
+        const permissions = await fetchDynamicPermissions(serverUser.role);
         const updatedUser = { ...serverUser, permissions };
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -77,11 +71,11 @@ export const AuthProvider = ({ children }) => {
       }
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     refreshUserData();
-  }, []);
+  }, [refreshUserData]);
 
   const logout = () => {
     setUser(null);

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import { useState } from 'react';
+import api from '../api/axios';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,7 +18,6 @@ const Register = () => {
 
   const navigate = useNavigate();
   const { executeRecaptcha } = useGoogleReCaptcha();
-  const API_BASE_URL = 'http://localhost:5000';
 
   const handleChange = (e) => {
     const { name, value, type, files } = e.target;
@@ -32,6 +31,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // reCAPTCHA provider לא מוכן עדיין
     if (!executeRecaptcha) {
       setError('שירות האבטחה אינו מוכן. נסה שנית בעוד רגע.');
       return;
@@ -62,39 +62,40 @@ const Register = () => {
         dataToSend.append('approvalDocument', formData.approvalDocument);
       }
 
-      await axios.post(`${API_BASE_URL}/api/auth/register`, dataToSend, {
+      await api.post('/api/auth/register', dataToSend, {
+        // חשוב: FormData
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setSuccess(true);
     } catch (err) {
-      // חילוץ ההודעה מה-Middleware
       const serverMsg = err.response?.data?.message;
+      console.log('REGISTER ERROR STATUS:', err.response?.status);
+      console.log('REGISTER ERROR DATA:', err.response?.data);
 
-      // מפת תרגומים המבוססת על error.middleware.js
       const errorTranslations = {
         'User already exists with this email.':
           'כבר קיים משתמש עם כתובת אימייל זו.',
         'Username already taken.': 'שם המשתמש כבר תפוס, נסה שם אחר.',
         'Approval document is required for student/designer.':
           'חובה לצרף מסמך אישור עבור סטודנט או מעצב.',
-
         'Approval document is not allowed for customers.':
           'לקוח אינו רשאי להעלות מסמך אישור.',
         'Unsupported file type.': 'סוג הקובץ אינו נתמך (העלה PDF, JPG או PNG).',
         'File too large.': 'הקובץ גדול מדי, הגבלת המערכת היא עד 5MB.',
         'Password is too short': 'הסיסמה קצרה מדי, עליה להכיל לפחות 6 תווים.',
-        'Internal Server Error': 'אירעה שגיאה בשרת, אנא נסה שוב מאוחר יותר.',
         'Too many requests. Please try again later.':
           'הגעת למגבלת הבקשות. אנא נסה שוב מאוחר יותר.',
-        'Invalid role.': 'תפקיד משתמש לא תקין.', // השגיאה שקיבלת קודם
+        'Invalid role.': 'תפקיד משתמש לא תקין.',
         'Invalid role selected.': 'התפקיד שנבחר אינו מורשה במערכת.',
       };
 
-      // הצגת התרגום או הודעה גנרית
-      const errorMessage =
-        errorTranslations[serverMsg] || serverMsg || 'שגיאה בתהליך ההרשמה.';
-      setError(errorMessage);
+      setError(
+        err.friendlyMessage ||
+          errorTranslations[serverMsg] ||
+          serverMsg ||
+          'שגיאה בתהליך ההרשמה.'
+      );
     } finally {
       setLoading(false);
     }
@@ -129,6 +130,7 @@ const Register = () => {
       <div className="auth-card">
         <h2>יצירת חשבון חדש</h2>
         {error && <div className="error-message">{error}</div>}
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>שם משתמש</label>
@@ -167,6 +169,7 @@ const Register = () => {
               <option value="designer">מעצב תעשייתי</option>
             </select>
           </div>
+
           {(formData.role === 'student' || formData.role === 'designer') && (
             <div className="file-upload-area">
               <label>
@@ -183,6 +186,7 @@ const Register = () => {
               />
             </div>
           )}
+
           <div className="form-group">
             <label>סיסמה</label>
             <input
@@ -194,10 +198,11 @@ const Register = () => {
             />
           </div>
 
-          <button type="submit" className="primary-btn">
-            הרשמה למערכת
+          <button type="submit" className="primary-btn" disabled={loading}>
+            {loading ? 'נרשם...' : 'הרשמה למערכת'}
           </button>
         </form>
+
         <div className="auth-footer">
           <span>כבר יש לך חשבון? </span>
           <button className="link-btn" onClick={() => navigate('/login')}>

@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import api from '../api/axios';
 import { PayPalButtons } from '@paypal/react-paypal-js';
-import projectDefault from '../DefaultPics/projectDefault.png';
 import './componentStyle.css';
 import { usePermission } from '../Hooks/usePermission.jsx';
-import { Tag, X, Shield } from 'lucide-react';
 
 const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const { hasPermission, user: currentUser } = usePermission();
@@ -53,9 +51,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     try {
       // בדרך כלל ב-Backend כזה, השליפה היא לפי query parameter
       // במקום ה-URL הישן שגרם ל-404
-      const res = await axios.get(
-        `http://localhost:5000/api/reviews?projectId=${projectId}`
-      );
+      const res = await api.get(`/api/reviews`, { params: { projectId } });
       setReviews(res.data.data || []);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
@@ -69,18 +65,12 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     if (!isLoggedIn) return showFeedback('error', 'עליך להתחבר כדי להגיב');
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        `http://localhost:5000/api/reviews`,
-        {
-          projectId: projectId,
-          rating: newReview.rating,
-          text: newReview.comment, // הפרונט משתמש ב-comment, אבל שולחים ל-בקאנד text
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post('/api/reviews', {
+        projectId,
+        rating: newReview.rating,
+        text: newReview.comment,
+      });
 
-      // הוספת התגובה החדשה לרשימה למעלה
       setReviews((prev) => [res.data.data, ...prev]);
       setNewReview({ rating: 5, comment: '' });
       showFeedback('success', 'התגובה נוספה בהצלחה!');
@@ -93,36 +83,29 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   // שליפת היסטוריית צ'אט
   const fetchAiChat = useCallback(
     async (forcedChatId = null) => {
-      const token = localStorage.getItem('token');
       const targetChatId = forcedChatId || chatId;
 
       try {
         if (!targetChatId) {
           if (!projectId) return;
-          // חיפוש צ'אט קיים לפרויקט
-          const chatRes = await axios.get(
-            `http://localhost:5000/api/ai-chats`,
-            {
-              params: { projectId },
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+
+          const chatRes = await api.get('/api/ai-chats', {
+            params: { projectId },
+          });
+
           const chats = chatRes.data.data || [];
           if (chats.length > 0) {
             const firstChatId = chats[0]._id;
             setChatId(firstChatId);
-            // במקום לקרוא לפונקציה שוב, נמשיך לטעינת ההודעות עם ה-ID החדש
-            loadMessages(firstChatId, token);
+            await loadMessages(firstChatId);
           }
           return;
         }
 
-        const msgRes = await axios.get(
-          `http://localhost:5000/api/ai-chats/${targetChatId}/messages?limit=50&order=asc`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const msgRes = await api.get(`/api/ai-chats/${targetChatId}/messages`, {
+          params: { limit: 50, order: 'asc' },
+        });
+
         setAiMessages(msgRes.data.data || []);
       } catch (err) {
         console.error('Failed to fetch AI chat', err);
@@ -131,24 +114,21 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     [projectId, chatId]
   );
 
-  const loadMessages = async (id, token) => {
-    const msgRes = await axios.get(
-      `http://localhost:5000/api/ai-chats/${id}/messages?limit=50&order=asc`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  const loadMessages = async (id) => {
+    const msgRes = await api.get(`/api/ai-chats/${id}/messages`, {
+      params: { limit: 50, order: 'asc' },
+    });
     setAiMessages(msgRes.data.data || []);
   };
 
   // שליפת מכסה אמיתית מה-meta
   const fetchAiQuota = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('http://localhost:5000/api/ai-chats', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get('/api/ai-chats');
 
       const quota =
         res.data.meta?.quota || res.data.quota || res.data.data?.quota;
+
       if (quota) {
         setAiQuota({
           used: Number(quota.used) || 0,
@@ -164,7 +144,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const handleSendAiMessage = async () => {
     if (!userQuery.trim() || aiQuota.remaining === 0 || loading) return;
 
-    const token = localStorage.getItem('token');
     const messageContent = userQuery.trim();
     setLoading(true);
     setUserQuery('');
@@ -172,11 +151,10 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     try {
       let currentChatId = chatId;
       if (!currentChatId) {
-        const chatRes = await axios.post(
-          'http://localhost:5000/api/ai-chats',
-          { projectId, title: `ייעוץ עבור ${project.title}` },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const chatRes = await api.post('/api/ai-chats', {
+          projectId,
+          title: `ייעוץ עבור ${project.title}`,
+        });
         currentChatId = chatRes.data.data.chatId;
         setChatId(currentChatId);
       }
@@ -186,10 +164,11 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
         { role: 'user', content: messageContent, _id: Date.now() },
       ]);
 
-      const response = await axios.post(
-        `http://localhost:5000/api/ai-chats/${currentChatId}/messages`,
-        { content: messageContent },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.post(
+        `/api/ai-chats/${currentChatId}/messages`,
+        {
+          content: messageContent,
+        }
       );
 
       if (response.data.data) {
@@ -206,7 +185,9 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     } catch (err) {
       showFeedback(
         'error',
-        err.response?.data?.message || 'שגיאה בשליחת הודעה'
+        err.friendlyMessage ||
+          err.response?.data?.message ||
+          'שגיאה בשליחת הודעה'
       );
     } finally {
       setLoading(false);
@@ -242,7 +223,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   }, [
     projectId,
     location.search,
-    project.initialChatId,
+    project?.initialChatId,
     isOwner,
     hasPermission,
     fetchAiQuota,

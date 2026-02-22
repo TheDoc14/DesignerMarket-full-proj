@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { useAuth } from '../../Context/AuthContext';
-import { UserCog, Trash2, ShieldCheck, Search } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../../api/axios';
+import { UserCog, Trash2 } from 'lucide-react';
 import './AdminDesign.css';
 import { usePermission } from '../../Hooks/usePermission.jsx'; // שינוי 1: ייבוא usePermission
 
-const getAuthHeader = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-});
 const ManageUsers = () => {
   const {
     hasPermission,
@@ -28,15 +24,8 @@ const ManageUsers = () => {
     if (!hasPermission('users.read')) return;
     try {
       setLoading(true);
-      const params = new URLSearchParams(
-        Object.fromEntries(Object.entries(filters).filter(([_, v]) => v !== ''))
-      ).toString();
-
-      const res = await axios.get(
-        `http://localhost:5000/api/admin/users?${params}`,
-        getAuthHeader()
-      );
-      setUsers(res.data.users || res.data || []);
+      const res = await api.get('/api/admin/users', { params: filters });
+      setUsers(res.data?.users || res.data?.data || res.data || []);
     } catch (err) {
       console.error('טעינת משתמשים נכשלה', err);
     } finally {
@@ -60,13 +49,8 @@ const ManageUsers = () => {
     if (!window.confirm(`האם לשנות את תפקיד המשתמש ל-${newRole}?`)) return;
 
     try {
-      const token = localStorage.getItem('token');
       // עדכון הראוט לכתובת הנכונה לפי הקבצים ששלחת קודם
-      await axios.put(
-        `http://localhost:5000/api/admin/users/${userId}/role`,
-        { role: newRole },
-        getAuthHeader()
-      );
+      await api.put(`/api/admin/users/${userId}/role`, { role: newRole });
 
       setUsers((prev) =>
         prev.map((u) =>
@@ -86,10 +70,7 @@ const ManageUsers = () => {
     }
     if (!window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:5000/api/profile/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/api/profile/${userId}`);
       setUsers((prev) => prev.filter((u) => (u._id || u.id) !== userId));
     } catch (err) {
       alert('שגיאה במחיקת המשתמש');

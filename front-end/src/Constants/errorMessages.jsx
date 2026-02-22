@@ -87,6 +87,19 @@ export const ERROR_TRANSLATIONS = {
   'Duplicate key: record already exists.': 'המידע כבר קיים במערכת (כפילות).',
   'Invalid value for field': 'ערך לא תקין בשדה שנשלח.',
 
+  // --- Access / Permissions ---
+  Forbidden: 'אין לך הרשאה לבצע פעולה זו.',
+  'Access denied.': 'אין לך הרשאה לבצע פעולה זו.',
+  'Not authorized': 'אין הרשאה. התחבר מחדש.',
+  'Token expired': 'פג תוקף ההתחברות. התחבר מחדש.',
+
+  // --- Captcha ---
+  'Captcha verification failed.': 'אימות Captcha נכשל. נסה שוב.',
+  'Captcha score too low.': 'אימות Captcha נכשל (ציון נמוך). נסה שוב.',
+
+  // --- Routes ---
+  'Route not found': 'הנתיב המבוקש לא נמצא בשרת.',
+
   // === כללי ===
   'Internal Server Error': 'אירעה שגיאה פנימית בשרת, אנא נסו שוב מאוחר יותר.',
   'Access denied: insufficient permissions.':
@@ -97,31 +110,48 @@ export const ERROR_TRANSLATIONS = {
 /**
  * פונקציה המחזירה תרגום ידידותי להודעות השגיאה מהשרת
  */
-export const getFriendlyError = (serverMsg) => {
-  if (!serverMsg) return 'אירעה שגיאה בלתי צפויה.';
+export const getFriendlyError = (serverMsg, fallback = null) => {
+  // 0) אם הגיע כבר בעברית
+  if (typeof serverMsg === 'string' && /[\u0590-\u05FF]/.test(serverMsg))
+    return serverMsg;
 
-  // 1. חיפוש התאמה מדויקת (Case Sensitive)
-  if (ERROR_TRANSLATIONS[serverMsg]) {
-    return ERROR_TRANSLATIONS[serverMsg];
+  // 1) אם אין הודעה מהשרת (Network / CORS / timeout)
+  if (!serverMsg) {
+    return (
+      fallback ||
+      'לא הצלחנו להתחבר לשרת. בדוק חיבור אינטרנט / כתובת API / חסימת CORS.'
+    );
   }
 
-  // 2. חיפוש חלקי (לשגיאות עם פרמטרים משתנים או הבדלי רישיות)
+  // 2) התאמה מדויקת
+  if (ERROR_TRANSLATIONS[serverMsg]) return ERROR_TRANSLATIONS[serverMsg];
+
+  // 3) התאמה חלקית (כולל הבדלי רישיות)
   const translationKey = Object.keys(ERROR_TRANSLATIONS).find((key) =>
     serverMsg.toLowerCase().includes(key.toLowerCase())
   );
-
   if (translationKey) return ERROR_TRANSLATIONS[translationKey];
 
-  // 3. טיפול בשגיאות ולידציה מורכבות של Mongoose
-  if (serverMsg.includes('Validation Error:')) {
-    // ניתן לפרק את הודעות הולידציה אם רוצים, כרגע נחזיר הודעה כללית וברורה
+  // 4) שגיאות נפוצות בפרודקשן שלא תמיד מגיעות אותו דבר
+  const lower = serverMsg.toLowerCase();
+
+  if (lower.includes('cors'))
+    return 'נחסמה גישה לשרת (CORS). ודא שהדומיין של הפרונט מאושר בבאק.';
+  if (lower.includes('network error'))
+    return 'שגיאת רשת. ודא שהשרת פעיל ושהכתובת נכונה.';
+  if (lower.includes('timeout'))
+    return 'הבקשה לשרת לקחה יותר מדי זמן. נסה שוב בעוד רגע.';
+  if (lower.includes('route not found') || lower.includes('not found'))
+    return 'הנתיב המבוקש לא נמצא בשרת.';
+  if (lower.includes('captcha') && lower.includes('hostname'))
+    return 'תקלה באימות Captcha: הדומיין לא תואם. בדוק RECAPTCHA_HOSTNAME בשרת.';
+  if (lower.includes('captcha') && lower.includes('score'))
+    return 'אימות Captcha נכשל (ציון נמוך). נסה שוב.';
+
+  // 5) Mongoose / Validation
+  if (serverMsg.includes('Validation Error:') || lower.includes('validation')) {
     return 'חלק מהנתונים שהוזנו אינם תקינים, אנא בדקו את הטופס.';
   }
 
-  // 4. אם ההודעה כבר בעברית
-  const isHebrew = /[\u0590-\u05FF]/.test(serverMsg);
-  if (isHebrew) return serverMsg;
-
-  // ברירת מחדל
-  return 'חלה שגיאה בעיבוד הבקשה. אנא נסו שנית.';
+  return fallback || 'חלה שגיאה בעיבוד הבקשה. אנא נסו שנית.';
 };
