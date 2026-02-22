@@ -77,7 +77,15 @@ const registerUser = async (req, res, next) => {
     });
 
     await user.save();
-    await sendVerificationEmail(user.email, verificationToken);
+    try {
+      await sendVerificationEmail({
+        to: user.email,
+        token: verificationToken,
+      });
+    } catch (err) {
+      console.error('❌ Verification email failed:', err?.message || err);
+      // לא זורקים שגיאה
+    }
 
     return res.status(201).json({
       message: 'Registered successfully. Check your email for verification link.',

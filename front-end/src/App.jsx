@@ -1,18 +1,9 @@
-import React from 'react';
-
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { GoogleReCaptchaProvider } from 'react-google-recaptcha-v3';
-import { AuthProvider, useAuth } from './Context/AuthContext';
+import { AuthProvider } from './Context/AuthContext';
 import Navbar from './Components/Navbar';
-import axios from 'axios';
-import { getFriendlyError } from './Constants/errorMessages';
 import Accessibility from './Components/Accessibility';
 
 // ייבוא עמודי המערכת
@@ -39,32 +30,21 @@ import ManageRoles from './Pages/Admin/ManageRoles';
 import SystemDashboard from './Pages/systemManager/SystemDashboard';
 import ManageCategories from './Pages/Admin/ManageCategories.jsx';
 
-// --- 🛡️ הוספת המתרגם האוטומטי (Axios Interceptor) ---
-// אנחנו שמים את זה כאן כדי שזה יפעל על כל קריאת axios בפרויקט
-axios.interceptors.response.use(
-  (response) => response, // אם הכל תקין, פשוט תמשיך
-  (error) => {
-    // שליפת ההודעה מהשרת
-    const serverMsg = error.response?.data?.message;
-
-    // תרגום ההודעה לעברית באמצעות המילון שיצרנו ב-constants
-    const friendlyMessage = getFriendlyError(serverMsg);
-
-    // הצמדת ההודעה המתורגמת לאובייקט השגיאה
-    // כך שבכל עמוד נוכל להשתמש ב: err.friendlyMessage
-    error.friendlyMessage = friendlyMessage;
-
-    return Promise.reject(error);
-  }
-);
 function App() {
   const initialOptions = {
-    'client-id':
-      'AcmJ_D9sdEPr-xljTP6benC3y5quxmpENgJ-HxyQcC-WtKTXZqyv3pVmlJ99YUfxPccaAyb32G88V1W6', // כאן שמים את ה-Client ID מה-Dashboard של PayPal
-    currency: 'ILS', // וודא שזה תואם למה שהגדרת בבקאנד (PAYPAL_CURRENCY)
+    'client-id': process.env.REACT_APP_PAYPAL_CLIENT_ID,
+    currency: 'ILS',
     intent: 'capture',
   };
-  const reCaptchaKey = '6Ld-xFcsAAAAAKhfZ3l73xY2xO5Po11EDognFI-G'; // וודא שזה בתוך מרכאות
+
+  const reCaptchaKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
+
+  if (!process.env.REACT_APP_PAYPAL_CLIENT_ID) {
+    console.warn('Missing REACT_APP_PAYPAL_CLIENT_ID');
+  }
+  if (!reCaptchaKey) {
+    console.warn('Missing REACT_APP_RECAPTCHA_SITE_KEY');
+  }
 
   return (
     <div className="App">

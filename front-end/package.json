@@ -9,6 +9,8 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.13.2",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.8",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
     "jszip": "^3.10.1",
@@ -27,7 +29,10 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "format": "prettier --write ."
+    "format": "prettier --write \"**/*.{js,jsx,json,md,yml}\"",
+    "format:check": "prettier --check \"**/*.{js,json,md,yml}\"",
+    "lint": "eslint \"**/*.js\"",
+    "lint:fix": "eslint \"**/*.js\" --fix"
   },
   "eslintConfig": {
     "extends": [
@@ -48,6 +53,6 @@
     ]
   },
   "devDependencies": {
-    "prettier": "3.8.1"
+    "prettier": "^3.8.1"
   }
 }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
 import { PERMS } from '../../Constants/permissions.jsx';
 import { getFriendlyError } from '../../Constants/errorMessages';
@@ -8,7 +8,6 @@ import {
   Save,
   Plus,
   Lock,
-  Trash2,
   X,
   Search,
   ChevronRight,
@@ -16,10 +15,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import './AdminDesign.css';
-
-const getAuthHeader = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-});
 
 const ManageRoles = () => {
   const { hasPermission, loading: permissionLoading } = usePermission();
@@ -62,11 +57,8 @@ const ManageRoles = () => {
   // פונקציית טעינה יציבה
   const fetchRoles = useCallback(async () => {
     try {
-      const res = await axios.get(
-        'http://localhost:5000/api/admin/roles',
-        getAuthHeader()
-      );
-      setRoles(res.data.roles || []);
+      const res = await api.get('/api/admin/roles');
+      setRoles(res.data?.roles || res.data?.data || []);
     } catch (err) {
       console.error('Failed to fetch roles', err);
     } finally {
@@ -87,7 +79,7 @@ const ManageRoles = () => {
     if (!permissionLoading && hasPermission('roles.manage')) {
       fetchRoles();
     }
-  }, [permissionLoading, hasPermission]); // הסרנו את fetchRoles מהתלויות כדי למנוע לולאה
+  }, [permissionLoading, hasPermission, fetchRoles]); // הסרנו את fetchRoles מהתלויות כדי למנוע לולאה
 
   const handleCreateRole = async (e) => {
     if (e) e.preventDefault();
@@ -108,11 +100,10 @@ const ManageRoles = () => {
       setIsSubmitting(true);
       setMessage({ type: '', text: '' });
 
-      const res = await axios.post(
-        'http://localhost:5000/api/admin/roles',
-        { key: cleanKey, label: cleanLabel },
-        getAuthHeader()
-      );
+      const res = await api.post('/api/admin/roles', {
+        key: cleanKey,
+        label: cleanLabel,
+      });
 
       if (res.status === 200 || res.status === 201) {
         setMessage({ type: 'success', text: 'התפקיד נוצר בהצלחה!' });
@@ -131,22 +122,11 @@ const ManageRoles = () => {
   const handleSavePermissions = async () => {
     if (!selectedRole?.key) return;
     try {
-      setIsSubmitting(true); // כדאי להוסיף חיווי טעינה גם כאן
-      const res = await axios.put(
-        `http://localhost:5000/api/admin/roles/${selectedRole.key}`,
-        { permissions: selectedRole.permissions, label: selectedRole.label },
-        getAuthHeader()
-      );
-
-      setMessage({ type: 'success', text: `ההרשאות עודכנו בהצלחה` });
-
-      // עדכון רשימת התפקידים הכללית
-      await fetchRoles();
-
-      // עדכון התפקיד הספציפי שנבחר עם המידע החדש מהתגובה של השרת
-      if (res.data.role) {
-        setSelectedRole(res.data.role);
-      }
+      const res = await api.put(`/api/admin/roles/${selectedRole.key}`, {
+        permissions: selectedRole.permissions,
+        label: selectedRole.label,
+      });
+      if (res.data?.role) setSelectedRole(res.data.role);
 
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {

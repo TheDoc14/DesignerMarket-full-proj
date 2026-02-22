@@ -4,7 +4,7 @@
  * response.utils.js
  * פונקציות עזר ליצירת תגובות אחידות ללקוח.
  */
-function ok(res, { status = 200, message = 'OK', data = null, meta = undefined } = {}) {
+const ok = (res, { status = 200, message = 'OK', data = null, meta = undefined } = {}) => {
   const payload = { success: true, message };
 
   if (data !== null) payload.data = data;
@@ -13,7 +13,7 @@ function ok(res, { status = 200, message = 'OK', data = null, meta = undefined }
   return res.status(status).json(payload);
 }
 
-function noContent(res) {
+const noContent = (res) => {
   return res.status(204).send();
 }
 

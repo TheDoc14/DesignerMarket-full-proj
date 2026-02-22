@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import axios from 'axios';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
+import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import ReactDOM from 'react-dom';
@@ -17,7 +17,7 @@ import './PublicPages.css';
 
 const PublicProfile = () => {
   const { userId } = useParams();
-  const { hasPermission, loading: permissionLoading } = usePermission();
+  const {  loading: permissionLoading } = usePermission();
 
   const [profile, setProfile] = useState(null);
   const [userProjects, setUserProjects] = useState([]);
@@ -28,13 +28,9 @@ const PublicProfile = () => {
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await axios.get(
-        `http://localhost:5000/api/profile/${userId}`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
-      setProfile(res.data.user);
-      setUserProjects(res.data.projects || []);
+      const res = await api.get(`/api/profile/${userId}`);
+      setProfile(res.data?.user || res.data?.data?.user);
+      setUserProjects(res.data?.projects || res.data?.data?.projects || []);
     } catch (err) {
       setError('לא ניתן היה לטעון את הפרופיל.');
     } finally {
@@ -64,11 +60,17 @@ const PublicProfile = () => {
     );
 
   return (
+    
     <div className="profile-page-wrapper" dir="rtl">
       {/* באנר עליון */}
       <div className="profile-top-banner"></div>
 
       <div className="profile-main-content">
+        {error && (
+          <div style={{ background: '#ffe5e5', padding: 12, borderRadius: 8 }}>
+            {error}
+          </div>
+        )}
         <header className="profile-header-card">
           <div className="header-flex-container">
             <div className="profile-avatar-area">
@@ -101,21 +103,20 @@ const PublicProfile = () => {
               </p>
               <div className="public-social-links">
                 {profile?.social &&
-                  Object.entries(profile.social).map(
-                    ([platform, url]) =>
-                      url && (
-                        <a
-                          key={platform}
-                          href={url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="social-btn-premium"
-                          title={platform}
-                        >
-                          <ExternalLink size={14} />
-                          <span>{platform}</span>
-                        </a>
-                      )
+                  Object.entries(profile.social).map(([platform, url]) =>
+                    url ? (
+                      <a
+                        key={`${platform}-${url}`}   // ✅ key יציב וייחודי
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="social-btn-premium"
+                        title={platform}
+                      >
+                        <ExternalLink size={14} />
+                        <span>{platform}</span>
+                      </a>
+                    ) : null
                   )}
               </div>
             </div>
@@ -125,8 +126,8 @@ const PublicProfile = () => {
         <section className="portfolio-grid-section">
           <h2 className="portfolio-grid-title">תיק עבודות</h2>
           <div className="projects-display-grid">
-            {userProjects.map((project) => (
-              <div key={project._id} className="minimal-project-card">
+            {userProjects.map((project, idx) => (
+              <div key={project._id || project.id || idx} className="minimal-project-card">
                 <div
                   className="card-visual-part"
                   onClick={() => openProjectModal(project)}

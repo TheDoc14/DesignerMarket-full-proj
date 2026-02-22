@@ -6,7 +6,7 @@ const AiUsageLog = require('../../models/AiUsageLog.model');
  * יוצר טווח זמן של "היום" לפי שעון השרת.
  * (לגרסה מתקדמת אפשר לשנות לפי timezone משתמש; כרגע מספיק.)
  */
-function getTodayWindow() {
+const getTodayWindow = () => {
   const now = new Date();
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
@@ -21,7 +21,7 @@ function getTodayWindow() {
  * countAiCallsToday(userId)
  * סופר כמה קריאות AI המשתמש עשה היום.
  */
-async function countAiCallsToday(userId) {
+const countAiCallsToday = async(userId) => {
   const { start, end } = getTodayWindow();
 
   const count = await AiUsageLog.countDocuments({
@@ -36,7 +36,7 @@ async function countAiCallsToday(userId) {
  * getDailyLimit()
  * קורא את המגבלה מה-ENV, ברירת מחדל 20.
  */
-function getDailyLimit() {
+const getDailyLimit = () => {
   const n = Number(process.env.AI_DAILY_LIMIT || 20);
   return Number.isFinite(n) && n > 0 ? n : 20;
 }

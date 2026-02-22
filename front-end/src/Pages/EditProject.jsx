@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook החדש
 
 const EditProject = () => {
@@ -28,14 +28,8 @@ const EditProject = () => {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get(
-        'http://localhost:5000/api/admin/categories',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setCategories(res.data.categories || []);
+      const res = await api.get('/api/admin/categories');
+      setCategories(res.data?.categories || res.data?.data || []);
     } catch (err) {
       console.error('Failed to load categories');
     }
@@ -45,15 +39,12 @@ const EditProject = () => {
     const fetchProject = async () => {
       if (!id) return;
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get(
-          `http://localhost:5000/api/projects/${id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        const p = res.data.project;
+        const res = await api.get(`/api/projects/${id}`);
+        const p =
+          res.data?.project ||
+          res.data?.data?.project ||
+          res.data?.data ||
+          res.data;
         setFormData({
           title: p.title || '',
           description: p.description || '',
@@ -100,7 +91,6 @@ const EditProject = () => {
 
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
       const data = new FormData();
 
       data.append('title', formData.title);
@@ -119,11 +109,8 @@ const EditProject = () => {
         newFiles.forEach((file) => data.append('files', file));
       }
 
-      await axios.put(`http://localhost:5000/api/projects/${id}`, data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
+      await api.put(`/api/projects/${id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       alert('הפרויקט עודכן בהצלחה!');

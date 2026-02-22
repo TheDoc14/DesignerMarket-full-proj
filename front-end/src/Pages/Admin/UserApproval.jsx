@@ -1,12 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
 import './AdminDesign.css';
-
-// פונקציית עזר מחוץ לקומפוננטה
-const getAuthHeader = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-});
 
 const UserApproval = () => {
   const {
@@ -26,11 +21,10 @@ const UserApproval = () => {
 
     try {
       setLoading(true);
-      const res = await axios.get(
-        'http://localhost:5000/api/admin/users?approved=false',
-        getAuthHeader()
-      );
-      setUsers(res.data.users || []);
+      const res = await api.get('/api/admin/users', {
+        params: { approved: false },
+      });
+      setUsers(res.data?.users || res.data?.data || []);
       isInitialFetched.current = true; // סימון שהשליפה הצליחה
     } catch (err) {
       console.error('Error fetching users', err);
@@ -58,12 +52,9 @@ const UserApproval = () => {
     }
 
     try {
-      await axios.put(
-        `http://localhost:5000/api/admin/users/${userId}/approval`,
-        { isApproved: true },
-        getAuthHeader()
-      );
-      // עדכון ה-State המקומי - מונע צורך ב-fetchUsers מחדש
+      await api.put(`/api/admin/users/${userId}/approval`, {
+        isApproved: true,
+      });
       setUsers((prev) => prev.filter((u) => (u._id || u.id) !== userId));
       alert('המשתמש אושר בהצלחה');
     } catch (err) {

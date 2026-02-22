@@ -1,37 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '../../Context/AuthContext';
+import { useState, useEffect } from 'react';
+import api from '../../api/axios';
 import { Link } from 'react-router-dom';
 import './AdminDesign.css';
 import { usePermission } from '../../Hooks/usePermission.jsx'; // ייבוא ה-Hook החדש
 
 const AdminDashboard = () => {
-  const { hasPermission, user: currentUser } = usePermission(); // שימוש ב-hasPermission
+  const { hasPermission } = usePermission();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('http://localhost:5000/api/admin/stats', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        // כאן אנחנו מקבלים את האובייקט stats מהשרת
-        setStats(res.data.stats);
+        const res = await api.get('/api/admin/stats');
+        setStats(res.data?.stats || res.data?.data?.stats);
       } catch (err) {
         console.error('Error fetching stats', err);
       } finally {
         setLoading(false);
       }
-    }; // <--- כאן היה חסר הסוגר של הפונקציה
+    };
 
-    if (hasPermission('stats.read')) {
-      fetchStats();
-    } else {
-      setLoading(false);
-    }
+    if (hasPermission('stats.read')) fetchStats();
+    else setLoading(false);
   }, [hasPermission]);
   // אם אין הרשאה כללית לפאנל האדמין, נחסום את הגישה מיד
   if (!hasPermission('admin.panel.access')) {

@@ -1,20 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
-import {
-  Trash2,
-  Edit3,
-  Save,
-  XCircle,
-  Star,
-  MessageSquare,
-} from 'lucide-react';
+import { Trash2, Edit3, Save, MessageSquare } from 'lucide-react';
 import '../../App.css';
 import './AdminDesign.css';
-
-const getAuthHeader = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-});
 
 const ManageReviews = () => {
   const {
@@ -42,13 +31,8 @@ const ManageReviews = () => {
       const queryParams = { ...filters };
       if (!queryParams.projectId) delete queryParams.projectId;
 
-      const params = new URLSearchParams(queryParams).toString();
-      const res = await axios.get(
-        `http://localhost:5000/api/admin/reviews?${params}`,
-        getAuthHeader()
-      );
-      // עדכון ה-State עם המידע החדש בלבד כדי למנוע "שכפולים"
-      setReviews(res.data.reviews || []);
+      const res = await api.get('/api/admin/reviews', { params: queryParams });
+      setReviews(res.data?.reviews || res.data?.data || []);
     } catch (err) {
       console.error('Error fetching reviews:', err);
     } finally {
@@ -58,26 +42,21 @@ const ManageReviews = () => {
 
   const fetchProjectsNames = useCallback(async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/admin/projects?limit=100`,
-        getAuthHeader()
-      );
-      setProjectsList(res.data.projects || []);
+      const res = await api.get('/api/admin/projects', {
+        params: { limit: 100 },
+      });
+      setProjectsList(res.data?.projects || res.data?.data || []);
     } catch (err) {
       console.error(err);
     }
   }, []);
 
   useEffect(() => {
-    if (
-      !permissionLoading &&
-      currentUser?.id &&
-      hasPermission('reviews.manage')
-    ) {
-      fetchProjectsNames();
-      fetchReviews();
-    }
-  }, [currentUser?.id, permissionLoading, filters.projectId, filters.sortBy]);
+  if (!permissionLoading && currentUser?.id && hasPermission('reviews.manage')) {
+    fetchProjectsNames();
+    fetchReviews();
+  }
+}, [permissionLoading, currentUser?.id, hasPermission, fetchProjectsNames, fetchReviews]);
 
   // 2. תיקון קריטי: שליפת ה-ID הנכון (_id)
   const handleStartEdit = (review) => {
@@ -93,13 +72,9 @@ const ManageReviews = () => {
     if (!reviewId) return alert('שגיאה: מזהה תגובה חסר');
     try {
       // שליחה לנתיב הכללי של עדכון תגובות
-      await axios.put(
-        `http://localhost:5000/api/reviews/${reviewId}`,
-        editForm,
-        getAuthHeader()
-      );
+      await api.put(`/api/reviews/${reviewId}`, editForm);
       setEditingReviewId(null);
-      fetchReviews(); // ריענון הרשימה
+      fetchReviews();
     } catch (err) {
       console.error(err);
       alert('עדכון התגובה נכשל. וודא שהשרת תומך בעדכון תגובות בנתיב זה.');
@@ -109,10 +84,7 @@ const ManageReviews = () => {
   const handleDeleteReview = async (reviewId) => {
     if (!reviewId || !window.confirm('למחוק תגובה זו?')) return;
     try {
-      await axios.delete(
-        `http://localhost:5000/api/reviews/${reviewId}`,
-        getAuthHeader()
-      );
+      await api.delete(`/api/reviews/${reviewId}`);
       fetchReviews();
     } catch (err) {
       alert('המחיקה נכשלה');

@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import '../App.css';
 
 const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // שליפת הטוקן מה-Query String (?token=...) כפי שמוגדר ב-email.utils.js
   const queryParams = new URLSearchParams(location.search);
   const token = queryParams.get('token');
 
@@ -19,11 +18,8 @@ const ResetPassword = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // בדיקה ראשונית אם הטוקן קיים בכתובת
   useEffect(() => {
-    if (!token) {
-      setError('קישור לא תקין או חסר טוקן אימות.');
-    }
+    if (!token) setError('קישור לא תקין או חסר טוקן אימות.');
   }, [token]);
 
   const handleSubmit = async (e) => {
@@ -38,21 +34,17 @@ const ResetPassword = () => {
     setMessage('');
 
     try {
-      // התאמה ל-auth.controller.js: השרת מצפה ל-token ול-newPassword בתוך req.body
-      const res = await axios.post(
-        `http://localhost:5000/api/auth/reset-password`,
-        {
-          token: token,
-          newPassword: formData.newPassword,
-        }
-      );
+      await api.post('/api/auth/reset-password', {
+        token,
+        newPassword: formData.newPassword,
+      });
 
       setMessage('הסיסמה שונתה בהצלחה! מועבר לעמוד ההתחברות...');
       setTimeout(() => navigate('/login'), 3000);
     } catch (err) {
-      // השרת מחזיר שגיאה אם הטוקן לא תקין או פג תוקף (לפי hashToken)
       setError(
-        err.response?.data?.message ||
+        err.friendlyMessage ||
+          err.response?.data?.message ||
           'חלה שגיאה בעיבוד הבקשה. ייתכן והלינק פג תוקף.'
       );
     } finally {

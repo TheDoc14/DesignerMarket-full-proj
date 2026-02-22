@@ -1,14 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
 import Popup from '../../Components/Popup';
-import { Trash2, Edit3, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Trash2, Edit3, CheckCircle, Clock } from 'lucide-react';
 import '../../App.css';
-
-// 1. הגדרה מחוץ לקומפוננטה למניעת יצירה מחדש בכל רינדור (מונע הבהוב)
-const getAuthHeader = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-});
 
 const ManageProjects = () => {
   const {
@@ -36,27 +31,22 @@ const ManageProjects = () => {
 
   // 2. פונקציית שליפה יציבה - תלויה רק בערכי הפילטרים וב-ID של המשתמש
   const fetchProjects = useCallback(async () => {
-    // בדיקה בסיסית - אם אין משתמש, אל תנסה לפנות לשרת
     if (!currentUser?.id) return;
 
     try {
       setLoading(true);
-      const queryParams = { limit: 50, page: filters.page };
-      if (filters.q) queryParams.q = filters.q;
-      if (filters.published !== '') queryParams.published = filters.published;
 
-      const params = new URLSearchParams(queryParams).toString();
-      const res = await axios.get(
-        `http://localhost:5000/api/admin/projects?${params}`,
-        getAuthHeader()
-      );
-      setProjects(res.data.projects || []);
+      const params = { limit: 50, page: filters.page };
+      if (filters.q) params.q = filters.q;
+      if (filters.published !== '') params.published = filters.published;
+
+      const res = await api.get('/api/admin/projects', { params });
+      setProjects(res.data?.projects || res.data?.data || []);
     } catch (err) {
-      console.error('טעינת פרויקטים נכשלה', err.message);
+      console.error('טעינת פרויקטים נכשלה', err);
     } finally {
       setLoading(false);
     }
-    // הערה: הסרנו את hasPermission מהתלויות כדי למנוע את ההבהוב
   }, [filters.page, filters.q, filters.published, currentUser?.id]);
 
   // 3. Effect שרץ רק כשנתוני המשתמש או הפילטרים משתנים באמת
@@ -71,49 +61,34 @@ const ManageProjects = () => {
     filters.q,
     filters.published,
     fetchProjects,
+    hasPermission,
   ]);
 
   const handleDeleteProject = async (e, projectId) => {
     e.stopPropagation();
-    if (!hasPermission('projects.delete')) {
-      alert('אין לך הרשאה למחוק פרויקטים');
-      return;
-    }
-
+    if (!hasPermission('projects.delete'))
+      return alert('אין לך הרשאה למחוק פרויקטים');
     if (!window.confirm('האם אתה בטוח שברצונך למחוק פרויקט זה לצמיתות?'))
       return;
 
     try {
-      await axios.delete(
-        `http://localhost:5000/api/projects/${projectId}`,
-        getAuthHeader()
-      );
+      await api.delete(`/api/projects/${projectId}`);
       alert('הפרויקט נמחק בהצלחה');
       fetchProjects();
     } catch (err) {
-      alert('מחיקת הפרויקט נכשלה');
+      alert(err.friendlyMessage || 'מחיקת הפרויקט נכשלה');
     }
   };
 
   const togglePublish = async (project) => {
-    // חילוץ ה-ID הנכון: MongoDB משתמש ב-_id
     const projectId = project._id || project.id;
-
-    if (!projectId) {
-      console.error('Missing Project ID!', project);
-      return;
-    }
+    if (!projectId) return;
 
     try {
-      const token = localStorage.getItem('token');
-      // שליחת הבקשה לנתיב הניהול המוגן
-      await axios.put(
-        `http://localhost:5000/api/admin/projects/${projectId}/publish`,
-        { isPublished: !project.isPublished },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.put(`/api/admin/projects/${projectId}/publish`, {
+        isPublished: !project.isPublished,
+      });
 
-      // עדכון מקומי של הרשימה
       setProjects((prev) =>
         prev.map((p) =>
           p._id === projectId || p.id === projectId
@@ -122,8 +97,9 @@ const ManageProjects = () => {
         )
       );
     } catch (err) {
-      console.error('Update failed', err);
-      alert('העדכון נכשל: ' + (err.response?.data?.message || 'שגיאת שרת'));
+      alert(
+        err.friendlyMessage || err.response?.data?.message || 'העדכון נכשל'
+      );
     }
   };
 
@@ -135,23 +111,18 @@ const ManageProjects = () => {
   };
 
   const handleSaveEdit = async () => {
-    if (!hasPermission('projects.update')) {
-      alert('אין לך הרשאה לערוך פרויקטים');
-      return;
-    }
+    if (!hasPermission('projects.update'))
+      return alert('אין לך הרשאה לערוך פרויקטים');
+
     try {
       const id = activeProject._id || activeProject.id;
-      await axios.put(
-        `http://localhost:5000/api/projects/${id}`,
-        editData,
-        getAuthHeader()
-      );
+      await api.put(`/api/projects/${id}`, editData);
       alert('הפרויקט עודכן בהצלחה');
       setIsEditing(false);
       setActiveProject(null);
       fetchProjects();
     } catch (err) {
-      alert('עדכון הפרויקט נכשל.');
+      alert(err.friendlyMessage || 'עדכון הפרויקט נכשל.');
     }
   };
 

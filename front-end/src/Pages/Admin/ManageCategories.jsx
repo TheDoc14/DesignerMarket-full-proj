@@ -1,16 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
 import { getFriendlyError } from '../../Constants/errorMessages';
-import {
-  Tag,
-  Plus,
-  Trash2,
-  FolderPlus,
-  Info,
-  CheckCircle,
-  Lightbulb,
-} from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import '../PublicPages.css';
 
 const ManageCategories = () => {
@@ -20,85 +12,60 @@ const ManageCategories = () => {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const getHeaders = () => ({
-    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-  });
-
   // שליפת קטגוריות מנתיב האדמין כדי לקבל את האובייקטים המלאים (key, label)
-  const fetchCategories = useCallback(
-    async (isManualRefresh = false) => {
-      if (!isManualRefresh && loading === false && categories.length > 0)
-        return;
-      try {
-        setLoading(true);
-        const token = localStorage.getItem('token');
-        const res = await axios.get(
-          'http://localhost:5000/api/admin/categories',
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        // ה-Backend מחזיר אובייקט עם שדה categories
-        setCategories(res.data.categories || []);
-      } catch (err) {
-        console.error('Failed to fetch categories', err);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [categories.length, loading]
-  );
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/api/admin/categories');
+      setCategories(res.data?.categories || res.data?.data || []);
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err.friendlyMessage || 'טעינת קטגוריות נכשלה',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (user && hasPermission('categories.manage')) {
       fetchCategories();
     }
-  }, [user, hasPermission]); // שימוש ב-user ו-hasPermission כתלויות יציבות
+  }, [user, hasPermission, fetchCategories]);
 
   const handleAddCategory = async (e) => {
     e.preventDefault();
     if (!newCategoryLabel.trim()) return;
 
-    // יצירת KEY אוטומטי מה-Label (למשל: "Jewelry" -> "jewelry")
     const generatedKey = newCategoryLabel
       .trim()
       .toLowerCase()
       .replace(/\s+/g, '-');
 
     try {
-      await axios.post(
-        'http://localhost:5000/api/admin/categories',
-        {
-          key: generatedKey, // חובה לפי ה-Backend
-          label: newCategoryLabel.trim(), // חובה לפי ה-Backend
-        },
-        getHeaders()
-      );
-      await fetchCategories(true); // זה יעקוף את ה-if ויביא נתונים חדשים
+      await api.post('/api/admin/categories', {
+        key: generatedKey,
+        label: newCategoryLabel.trim(),
+      });
+
       setMessage({ type: 'success', text: 'הקטגוריה נוספה בהצלחה!' });
       setNewCategoryLabel('');
       await fetchCategories();
-      fetchCategories();
       setTimeout(() => setMessage({ type: '', text: '' }), 4000);
     } catch (err) {
       const serverMsg = err.response?.data?.message;
-      setMessage({
-        type: 'error',
-        text: getFriendlyError(serverMsg),
-      });
+      setMessage({ type: 'error', text: getFriendlyError(serverMsg) });
     }
   };
 
   const handleDeleteCategory = async (catKey) => {
-    if (!window.confirm(`האם אתה בטוח שברצונך למחוק קטגוריה זו?`)) return;
+    if (!window.confirm('האם אתה בטוח שברצונך למחוק קטגוריה זו?')) return;
 
     try {
-      await axios.delete(
-        `http://localhost:5000/api/admin/categories/${catKey}`,
-        getHeaders()
-      );
-      await fetchCategories(true); // זה יעקוף את ה-if ויביא נתונים חדשים
-      fetchCategories();
-
+      await api.delete(`/api/admin/categories/${catKey}`);
       setMessage({ type: 'success', text: 'הקטגוריה הוסרה בהצלחה' });
+      await fetchCategories();
     } catch (err) {
       const serverMsg = err.response?.data?.message;
       alert(getFriendlyError(serverMsg));

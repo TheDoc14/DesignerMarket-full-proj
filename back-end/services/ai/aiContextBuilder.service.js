@@ -5,12 +5,12 @@ const MAX_ATTACHMENTS = 10;
 const MAX_IMAGES = 3;
 const MAX_CONTEXT_CHARS = 30000;
 
-function clamp(text) {
+const clamp = (text) => {
   const t = (text || '').trim();
   return t.length > MAX_CONTEXT_CHARS ? t.slice(0, MAX_CONTEXT_CHARS) + '…' : t;
 }
 
-function buildProjectTextContext(project, reviews, fileTexts) {
+const buildProjectTextContext= (project, reviews, fileTexts) => {
   const lines = [];
 
   lines.push(`PROJECT TITLE: ${project.title || ''}`);
@@ -38,7 +38,7 @@ function buildProjectTextContext(project, reviews, fileTexts) {
   return clamp(lines.join('\n'));
 }
 
-function extractProjectImages(project, baseUrl) {
+const extractProjectImages= (project, baseUrl) => {
   const urls = [];
 
   const files = Array.isArray(project.files) ? project.files : [];
@@ -55,7 +55,7 @@ function extractProjectImages(project, baseUrl) {
   return [...new Set(urls)].slice(0, MAX_IMAGES);
 }
 
-function extractProjectFiles(project) {
+const extractProjectFiles= (project) => {
   const files = [];
 
   const arr = Array.isArray(project.files) ? project.files : [];
@@ -73,7 +73,7 @@ function extractProjectFiles(project) {
   return files.slice(0, MAX_ATTACHMENTS);
 }
 
-async function buildFullProjectContext({ project, reviews, baseUrl }) {
+const buildFullProjectContext= async({ project, reviews, baseUrl })=> {
   const imageUrls = extractProjectImages(project, baseUrl);
 
   const files = extractProjectFiles(project);

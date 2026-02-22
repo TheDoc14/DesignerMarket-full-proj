@@ -1,7 +1,7 @@
 //back-end/middleware/aiDailyQuota.middleware.js
 const { countAiCallsToday, getDailyLimit } = require('../services/ai/aiQuota.service');
 
-async function aiDailyQuota(req, _res, next) {
+const aiDailyQuota = async(req, _res, next) => {
   try {
     const userId = req.user?._id || req.user?.id;
     if (!userId) throw new Error('User not authenticated');

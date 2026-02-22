@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
+import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
-import projectDefault from '../DefaultPics/projectDefault.png';
 // הוסיפי את Plus ו-Star לתוך הרשימה
-import { Image, FileText, X, Star, Plus, Tag } from 'lucide-react';
+import { FileText, X, Star, Plus, Tag } from 'lucide-react';
 const AddProject = () => {
   const { hasPermission, user, loading: permissionLoading } = usePermission();
 
@@ -28,17 +27,9 @@ const AddProject = () => {
   // 1. עדכון הנתיב ל-api/admin/categories
   const fetchCategories = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
       // הוספת /admin לנתיב ושימוש ב-Token כי הראוט מוגן
-      const res = await axios.get(
-        'http://localhost:5000/api/admin/categories',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      // השרת מחזיר אובייקט עם שדה categories
-      const categoriesData = res.data.categories || [];
+      const res = await api.get('/api/admin/categories');
+      const categoriesData = res.data?.categories || res.data?.data || [];
       setCategories(categoriesData);
 
       // בחירת קטגוריה ראשונה כברירת מחדל
@@ -58,7 +49,7 @@ const AddProject = () => {
     if (user?.paypalEmail) {
       setFormData((prev) => ({ ...prev, paypalEmail: user.paypalEmail }));
     }
-  }, [user?.id, fetchCategories]);
+  }, [user, fetchCategories]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -113,7 +104,6 @@ const AddProject = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
       const data = new FormData();
 
       // 1. הוספת השדות הרגילים
@@ -126,11 +116,8 @@ const AddProject = () => {
       data.append('mainImageIndex', mainImageIndex);
       files.forEach((file) => data.append('files', file));
 
-      await axios.post('http://localhost:5000/api/projects', data, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
-        },
+      await api.post('/api/projects', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       alert('הפרויקט הועלה בהצלחה!');
       // אופציונלי: איפוס הטופס או ניווט דף
