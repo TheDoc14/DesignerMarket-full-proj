@@ -78,10 +78,14 @@ const registerUser = async (req, res, next) => {
 
     await user.save();
     try {
-      await sendVerificationEmail({
-        to: user.email,
-        token: verificationToken,
-      });
+      // אחרי יצירת המשתמש (user)
+      if (!user?.email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+      await sendVerificationEmail(
+        user.email,
+        verificationToken,
+      );
     } catch (err) {
       console.error('❌ Verification email failed:', err?.message || err);
       // לא זורקים שגיאה

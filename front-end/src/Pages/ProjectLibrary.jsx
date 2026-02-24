@@ -91,7 +91,6 @@ const ProjectLibrary = () => {
     setActiveProject(null);
   };
 
-
   if (loading) return <div className="loader">טוען את ספריית הפרויקטים...</div>;
 
   return (

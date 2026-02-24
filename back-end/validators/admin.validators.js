@@ -37,13 +37,13 @@ const allowedPermsSet = new Set(Object.values(PERMS || {}));
 const adminListUsersQuery = [
   ...searchQuery,
   query('role')
-    .optional()
+    .optional({ checkFalsy: true })
     .custom(keySlug)
     .withMessage('role must be lowercase slug: a-z 0-9 -')
     .bail()
     .custom(roleKeyExists),
   query('approved')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['true', 'false'])
     .withMessage('approved must be true or false'),
   ...pageLimitQuery,

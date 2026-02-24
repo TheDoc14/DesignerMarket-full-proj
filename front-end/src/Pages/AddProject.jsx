@@ -28,7 +28,7 @@ const AddProject = () => {
   const fetchCategories = useCallback(async () => {
     try {
       // הוספת /admin לנתיב ושימוש ב-Token כי הראוט מוגן
-      const res = await api.get('/api/admin/categories');
+      const res = await api.get('/api/categories');
       const categoriesData = res.data?.categories || res.data?.data || [];
       setCategories(categoriesData);
 

@@ -28,7 +28,7 @@ const EditProject = () => {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const res = await api.get('/api/admin/categories');
+      const res = await api.get('/api/categories');
       setCategories(res.data?.categories || res.data?.data || []);
     } catch (err) {
       console.error('Failed to load categories');

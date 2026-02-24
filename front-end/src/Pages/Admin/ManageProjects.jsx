@@ -51,7 +51,7 @@ const ManageProjects = () => {
 
   // 3. Effect שרץ רק כשנתוני המשתמש או הפילטרים משתנים באמת
   useEffect(() => {
-    if (!permissionLoading && currentUser?.id && hasPermission('users.read')) {
+    if (currentUser?.id && hasPermission('admin.panel.access')) {
       fetchProjects();
     }
   }, [
