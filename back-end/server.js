@@ -27,6 +27,7 @@ const orderRoutes = require('./routes/order.routes');
 const businessRoutes = require('./routes/business.routes');
 const aiRoutes = require('./routes/ai.routes');
 const aiChatsRoutes = require('./routes/aiChats.routes');
+const categoriesRoutes = require('./routes/categories.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 const { requestIdMiddleware } = require('./middleware/requestId.middleware');
 const { ensureBaseRoles } = require('./utils/bootstrapRbac.utils');
@@ -93,6 +94,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/business', businessRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ai-chats', aiChatsRoutes);
+app.use('/api/categories', categoriesRoutes);
 
 app.get('/api/test', (req, res) => {
   res.status(200).json({ message: 'API is working fine 🚀' });

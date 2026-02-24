@@ -17,15 +17,16 @@ const createTransporter = () => {
  *  send confirmation email
  */
 const sendVerificationEmail = async (to, token) => {
+  if (!to) throw new Error('Email send failed: missing recipient (to)');
+
   const transporter = createTransporter();
   const link = `${process.env.CLIENT_URL}/verify-email?token=${token}`;
 
   await transporter.sendMail({
-    from: `"DesignerMarket" <${process.env.SMTP_FROM}>`,
+    from: `"DesignerMarket" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
     to,
     subject: 'אימות כתובת אימייל',
-    html: `<p>לחצו על הקישור כדי לאמת את כתובת המייל שלכם:</p>
-           <a href="${link}">${link}</a>`,
+    html: `<p>לחצו על הקישור כדי לאמת את כתובת המייל שלכם:</p><a href="${link}">${link}</a>`,
   });
 };
 
