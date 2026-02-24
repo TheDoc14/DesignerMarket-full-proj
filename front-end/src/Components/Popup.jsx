@@ -34,13 +34,20 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     price: project?.price || 0,
   });
 
-  // --- Logic Helpers ---
-  const isOwner =
-    currentUser &&
-    (String(currentUser.id) === String(project?.createdBy?._id) ||
-      String(currentUser.id) === String(project?.createdBy));
+  const safeReviews = Array.isArray(reviews) ? reviews.filter(Boolean) : [];
 
-  const canEdit = isOwner || hasPermission('projects.edit');
+  // --- Logic Helpers ---
+  const currentUserId = String(currentUser?._id || currentUser?.id || '');
+  const createdById = String(
+    project?.createdBy?._id || project?.createdBy || ''
+  );
+
+  const isOwner = !!currentUserId && !!createdById && currentUserId === createdById;
+
+  const canUseAi = isOwner && hasPermission('ai.consult');
+
+  // אצלך כתוב projects.edit אבל בבאק שלך זה projects.update
+  const canEdit = isOwner || hasPermission('projects.update');
 
   const showFeedback = (type, msg) => {
     setFeedback({ type, msg });
@@ -49,12 +56,12 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const fetchReviews = useCallback(async () => {
     setReviewsLoading(true);
     try {
-      // בדרך כלל ב-Backend כזה, השליפה היא לפי query parameter
-      // במקום ה-URL הישן שגרם ל-404
-      const res = await api.get(`/api/reviews`, { params: { projectId } });
-      setReviews(res.data.data || []);
+      const res = await api.get('/api/reviews', { params: { projectId } });
+      const list = res.data?.reviews || res.data?.data || res.data || [];
+      setReviews(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
+      setReviews([]);
     } finally {
       setReviewsLoading(false);
     }
@@ -64,14 +71,26 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     e.preventDefault();
     if (!isLoggedIn) return showFeedback('error', 'עליך להתחבר כדי להגיב');
 
+    const projectIdSafe = project?._id || project?.id;
+    const ratingNum = Number(newReview.rating);
+    const textVal = (newReview.comment || '').trim();
+
+    if (!projectIdSafe) return showFeedback('error', 'חסר מזהה פרויקט');
+    if (!ratingNum || ratingNum < 1 || ratingNum > 5)
+      return showFeedback('error', 'בחר דירוג בין 1 ל-5');
+    if (!textVal) return showFeedback('error', 'נא לכתוב תגובה');
+
     try {
       const res = await api.post('/api/reviews', {
-        projectId,
-        rating: newReview.rating,
-        text: newReview.comment,
+        projectId: projectIdSafe,
+        rating: ratingNum,
+        text: textVal,
       });
 
-      setReviews((prev) => [res.data.data, ...prev]);
+      const created = res.data?.review || res.data?.data || res.data;
+      if (created)
+        setReviews((prev) => [created, ...(Array.isArray(prev) ? prev : [])]);
+
       setNewReview({ rating: 5, comment: '' });
       showFeedback('success', 'התגובה נוספה בהצלחה!');
     } catch (err) {
@@ -327,114 +346,144 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
 
             {/* --- חלק 3: אזור תגובות --- */}
             <div className="reviews-section">
-              <h3>💬 תגובות משתמשים ({reviews.length})</h3>
+              <h3>💬 תגובות משתמשים ({safeReviews.length})</h3>
 
-              {/* טופס הוספה (רק אם מחובר) */}
-              {isLoggedIn && (
+              {reviewsLoading && (
+                <p className="loading-spinner">טוען תגובות...</p>
+              )}
+
+              {/* טופס הוספת תגובה */}
+              {isLoggedIn ? (
                 <form onSubmit={handleAddReview} className="add-review-form">
-                  <div className="reviews-list">
-                    {reviews.map((rev) => (
-                      <div key={rev._id} className="review-card">
-                        <div className="review-header">
-                          <strong>{rev.userId?.username || 'משתמש'}</strong>
-                          <span>⭐ {rev.rating}</span>
-                        </div>
-                        <p>{rev.text}</p>
-                      </div>
-                    ))}
+                  <div className="rating-row">
+                    <label>דירוג:</label>
+                    <select
+                      value={newReview.rating}
+                      onChange={(e) =>
+                        setNewReview((prev) => ({
+                          ...prev,
+                          rating: Number(e.target.value),
+                        }))
+                      }
+                    >
+                      {[5, 4, 3, 2, 1].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+
                   <textarea
                     placeholder="כתוב תגובה..."
                     value={newReview.comment}
                     onChange={(e) =>
-                      setNewReview({ ...newReview, comment: e.target.value })
+                      setNewReview((prev) => ({
+                        ...prev,
+                        comment: e.target.value,
+                      }))
                     }
                     required
                   />
+
                   <button type="submit" className="submit-review-btn">
                     פרסם תגובה
                   </button>
                 </form>
+              ) : (
+                <p className="no-reviews">כדי לכתוב תגובה – צריך להתחבר.</p>
               )}
 
-              {/* רשימת התגובות הקיימות */}
+              {/* רשימת תגובות */}
               <div className="reviews-list">
-                {reviews.length === 0 ? (
+                {!reviewsLoading && safeReviews.length === 0 ? (
                   <p className="no-reviews">אין עדיין תגובות לפרויקט זה.</p>
                 ) : (
-                  reviews.map((rev) => (
-                    <div key={rev._id} className="review-card">
-                      <div className="review-header">
-                        <strong>{rev.userId?.username || 'משתמש'}</strong>
-                        <span className="review-rating">⭐ {rev.rating}</span>
+                  safeReviews.map((rev, idx) => {
+                    const reviewer = rev?.userId || rev?.user; // תומך בשני מבנים
+                    const reviewerName = reviewer?.username || 'משתמש';
+                    const revId = rev?._id || rev?.id || `rev-${idx}`;
+                    const rating = Number(rev?.rating || 0);
+
+                    return (
+                      <div key={revId} className="review-card">
+                        <div className="review-header">
+                          <strong>{reviewerName}</strong>
+                          <span className="review-rating">⭐ {rating}</span>
+                        </div>
+
+                        <p className="review-text">{rev?.text || ''}</p>
+
+                        {rev?.createdAt && (
+                          <small>
+                            {new Date(rev.createdAt).toLocaleDateString(
+                              'he-IL'
+                            )}
+                          </small>
+                        )}
                       </div>
-                      <p className="review-text">{rev.text}</p>
-                      <small>
-                        {new Date(rev.createdAt).toLocaleDateString('he-IL')}
-                      </small>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
-          </div>
-
-          {/* כפתור עריכה לבעלים */}
-          <div className="popup-footer">
-            {canEdit && (
-              <button
-                className="edit-trigger-btn"
-                onClick={() => setIsEditing(true)}
-              >
-                ✏️ עריכה
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* סיידבר AI - מופיע רק לבעלים */}
-        {
-          <aside className="ai-sidebar">
-            <div className="ai-sidebar-header">
-              <h3>🤖 סוכן AI</h3>
-              <p>ייעוץ עבור "{project.title}"</p>
-            </div>
-
-            <div className="ai-content-area">
-              <div className="ai-chat-messages">
-                {aiMessages.map((msg) => (
-                  <div key={msg._id} className={`chat-bubble ${msg.role}`}>
-                    {msg.content}
-                  </div>
-                ))}
-                {loading && (
-                  <div className="ai-loading">הסוכן מעבד נתונים...</div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-            </div>
-
-            <div className="ai-sidebar-footer">
-              <div className="ai-quota-info">
-                <small>נותרו {aiQuota.remaining} שאילתות</small>
-              </div>
-              <div className="ai-input-wrapper">
-                <textarea
-                  value={userQuery}
-                  onChange={(e) => setUserQuery(e.target.value)}
-                  placeholder="שאל משהו..."
-                />
+            {/* כפתור עריכה לבעלים */}
+            <div className="popup-footer">
+              {canEdit && (
                 <button
-                  onClick={handleSendAiMessage}
-                  className="ai-send-btn"
-                  disabled={loading}
+                  className="edit-trigger-btn"
+                  onClick={() => setIsEditing(true)}
                 >
-                  שלח
+                  ✏️ עריכה
                 </button>
-              </div>
+              )}
             </div>
-          </aside>
-        }
+          </div>
+
+          {/* סיידבר AI - מופיע רק לבעלים */}
+          {canUseAi && (
+            <aside className="ai-sidebar">
+              <div className="ai-sidebar-header">
+                <h3>🤖 סוכן AI</h3>
+                <p>ייעוץ עבור "{project.title}"</p>
+              </div>
+
+              <div className="ai-content-area">
+                <div className="ai-chat-messages">
+                  {aiMessages.map((msg) => (
+                    <div key={msg._id} className={`chat-bubble ${msg.role}`}>
+                      {msg.content}
+                    </div>
+                  ))}
+                  {loading && (
+                    <div className="ai-loading">הסוכן מעבד נתונים...</div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              </div>
+
+              <div className="ai-sidebar-footer">
+                <div className="ai-quota-info">
+                  <small>נותרו {aiQuota.remaining} שאילתות</small>
+                </div>
+                <div className="ai-input-wrapper">
+                  <textarea
+                    value={userQuery}
+                    onChange={(e) => setUserQuery(e.target.value)}
+                    placeholder="שאל משהו..."
+                  />
+                  <button
+                    onClick={handleSendAiMessage}
+                    className="ai-send-btn"
+                    disabled={loading}
+                  >
+                    שלח
+                  </button>
+                </div>
+              </div>
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   );

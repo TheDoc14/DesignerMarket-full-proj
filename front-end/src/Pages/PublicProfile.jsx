@@ -17,7 +17,7 @@ import './PublicPages.css';
 
 const PublicProfile = () => {
   const { userId } = useParams();
-  const {  loading: permissionLoading } = usePermission();
+  const { loading: permissionLoading } = usePermission();
 
   const [profile, setProfile] = useState(null);
   const [userProjects, setUserProjects] = useState([]);
@@ -60,7 +60,6 @@ const PublicProfile = () => {
     );
 
   return (
-    
     <div className="profile-page-wrapper" dir="rtl">
       {/* באנר עליון */}
       <div className="profile-top-banner"></div>
@@ -106,7 +105,7 @@ const PublicProfile = () => {
                   Object.entries(profile.social).map(([platform, url]) =>
                     url ? (
                       <a
-                        key={`${platform}-${url}`}   // ✅ key יציב וייחודי
+                        key={`${platform}-${url}`} // ✅ key יציב וייחודי
                         href={url}
                         target="_blank"
                         rel="noreferrer"
@@ -127,7 +126,10 @@ const PublicProfile = () => {
           <h2 className="portfolio-grid-title">תיק עבודות</h2>
           <div className="projects-display-grid">
             {userProjects.map((project, idx) => (
-              <div key={project._id || project.id || idx} className="minimal-project-card">
+              <div
+                key={project._id || project.id || idx}
+                className="minimal-project-card"
+              >
                 <div
                   className="card-visual-part"
                   onClick={() => openProjectModal(project)}

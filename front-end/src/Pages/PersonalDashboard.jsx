@@ -12,6 +12,7 @@ const PersonalDashboard = () => {
   // --- Hooks & Auth ---
   const { user, login, logout } = useAuth();
   const {
+    hasPermission,
     loading: permissionLoading,
     user: currentUser,
   } = usePermission();
@@ -77,6 +78,10 @@ const PersonalDashboard = () => {
       }
       console.log(res.data.data);
     } catch (err) {
+      if (err.response?.status === 403) {
+        setAiHistory([]);
+        return;
+      }
       console.error('Failed to fetch AI history', err);
     } finally {
       setHistoryLoading(false);
@@ -133,10 +138,21 @@ const PersonalDashboard = () => {
   }, [user?.id, permissionLoading, fetchDashboardData]);
 
   useEffect(() => {
-    if (isOwnProfile && user?.id) {
+    if (
+      isOwnProfile &&
+      user?.id &&
+      !permissionLoading &&
+      hasPermission('ai.consult')
+    ) {
       fetchMyAiHistory();
     }
-  }, [isOwnProfile, user?.id, fetchMyAiHistory]);
+  }, [
+    isOwnProfile,
+    user?.id,
+    permissionLoading,
+    hasPermission,
+    fetchMyAiHistory,
+  ]);
 
   // --- Handlers ---
 
