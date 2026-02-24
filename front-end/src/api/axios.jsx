@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getFriendlyError } from '../Constants/errorMessages';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
 });
 
 // Request: מוסיף Authorization אם יש token
