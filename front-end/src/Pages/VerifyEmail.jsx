@@ -1,14 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const ranRef = useRef(false);
+
   const [status, setStatus] = useState('loading');
   const [msg, setMsg] = useState('מבצע אימות...');
 
   useEffect(() => {
+    if (ranRef.current) return; // ✅ מונע ריצה כפולה ב-StrictMode
+    ranRef.current = true;
+
     const verify = async () => {
       const token = searchParams.get('token');
 
@@ -23,12 +28,12 @@ const VerifyEmail = () => {
       try {
         await Promise.all([
           api.get('/api/auth/verify-email', { params: { token } }),
-          delay(3000),
+          delay(1000), // לא חייב 3 שניות, אבל תשאיר אם אתה רוצה UX
         ]);
 
         setStatus('success');
         setMsg('המייל אומת בהצלחה! מעביר להתחברות...');
-        setTimeout(() => navigate('/login'), 2000);
+        setTimeout(() => navigate('/login'), 1500);
       } catch (err) {
         setStatus('error');
         setMsg(
