@@ -52,11 +52,21 @@ const ManageReviews = () => {
   }, []);
 
   useEffect(() => {
-  if (!permissionLoading && currentUser?.id && hasPermission('reviews.manage')) {
-    fetchProjectsNames();
-    fetchReviews();
-  }
-}, [permissionLoading, currentUser?.id, hasPermission, fetchProjectsNames, fetchReviews]);
+    if (
+      !permissionLoading &&
+      currentUser?.id &&
+      hasPermission('reviews.manage')
+    ) {
+      fetchProjectsNames();
+      fetchReviews();
+    }
+  }, [
+    permissionLoading,
+    currentUser?.id,
+    hasPermission,
+    fetchProjectsNames,
+    fetchReviews,
+  ]);
 
   // 2. תיקון קריטי: שליפת ה-ID הנכון (_id)
   const handleStartEdit = (review) => {
@@ -110,11 +120,16 @@ const ManageReviews = () => {
           }
         >
           <option value="">כל הפרויקטים</option>
-          {projectsList.map((p) => (
-            <option key={p._id} value={p._id}>
-              {p.title}
-            </option>
-          ))}
+          {projectsList.map((p, idx) => {
+            const id = p?._id || p?.id;
+            const key = id ? `proj-${id}` : `proj-idx-${idx}`; // ✅ תמיד ייחודי
+
+            return (
+              <option key={key} value={id || ''}>
+                {p?.title || `Project ${idx + 1}`}
+              </option>
+            );
+          })}
         </select>
       </div>
 
