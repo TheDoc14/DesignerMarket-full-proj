@@ -12,6 +12,7 @@ const app = express();
 const helmet = require('helmet');
 const mongoSanitize = require('@exortek/express-mongo-sanitize');
 const isProd = process.env.NODE_ENV === 'production';
+const path = require('path');
 if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
 }
@@ -99,6 +100,17 @@ app.use('/api/categories', categoriesRoutes);
 app.get('/api/test', (req, res) => {
   res.status(200).json({ message: 'API is working fine 🚀' });
 });
+// ✅ Serve React build in production
+if (isProd) {
+  const buildPath = path.join(__dirname, '..', 'front-end', 'build');
+
+  app.use(express.static(buildPath));
+
+  // SPA fallback: any non-API route returns index.html
+  app.get(/^\/(?!api).*/, (req, res) => {
+    return res.sendFile(path.join(buildPath, 'index.html'));
+  });
+}
 
 /**
  * ✅ 404 handler
