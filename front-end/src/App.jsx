@@ -45,7 +45,7 @@ function App() {
   if (!reCaptchaKey) {
     console.warn('Missing REACT_APP_RECAPTCHA_SITE_KEY');
   }
-
+  console.log('DEBUG: Key is:', process.env.REACT_APP_RECAPTCHA_SITE_KEY);
   return (
     <div className="App">
       <Accessibility />

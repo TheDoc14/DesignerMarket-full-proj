@@ -264,21 +264,7 @@ body {
 }
 
 /* כפתורים יוקרתיים */
-.primary-btn,
-.profile-save-btn,
-.reset-search-btn,
-.btn-export {
-  width: 100%;
-  background: var(--teal-gradient);
-  color: white;
-  padding: 15px;
-  border-radius: 12px;
-  border: none;
-  font-weight: 800;
-  cursor: pointer;
-  transition: 0.3s;
-  box-shadow: 0 5px 15px rgba(0, 109, 119, 0.2);
-}
+
 
 .primary-btn:hover {
   filter: brightness(1.1);
@@ -621,24 +607,8 @@ body {
 }
 
 /* כפתור שליחה */
-.submit-project-btn,
-.btn-export {
-  background: var(--teal-gradient);
-  color: white;
-  padding: 16px;
-  border-radius: 12px;
-  border: none;
-  font-weight: 800;
-  font-size: 1.1rem;
-  cursor: pointer;
-  transition: 0.3s;
-  margin-top: 20px;
-}
 
-.submit-project-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
+
 
 @media (max-width: 600px) {
 
@@ -1781,4 +1751,36 @@ html {
   .modal-info-side {
     padding: 25px;
   }
+}
+
+.searching-opacity {
+  opacity: 0.6;
+  pointer-events: none;
+  /* מונע לחיצות בזמן טעינה */
+  transition: opacity 0.2s ease;
+}
+
+.mini-spinner {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: pulse 1s infinite;
+}
+
+.primary-btn,
+.profile-save-btn,
+.reset-search-btn,
+.btn-export,
+.submit-project-btn,
+.btn-export {
+  background: var(--teal-gradient) !important;
+  color: white;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 109, 119, 0.2);
+  transition: all 0.3s;
 }

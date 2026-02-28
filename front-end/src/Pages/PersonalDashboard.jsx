@@ -87,17 +87,15 @@ const PersonalDashboard = () => {
       setHistoryLoading(false);
     }
   }, []);
-
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       setLoading(true);
-      // 1. שליפת פרופיל אישי
-      const profileRes = await api.get('/api/profile/me');
-      setProjects(profileRes.data.projects || []);
+      const myId = String(user.id || user._id);
 
-      // עדכון ה-formData עם נתוני המשתמש שחזרו
+      // 1. שליפת פרופיל
+      const profileRes = await api.get('/api/profile/me');
       if (profileRes.data.user) {
         const u = profileRes.data.user;
         setFormData((prev) => ({
@@ -113,22 +111,55 @@ const PersonalDashboard = () => {
         }));
       }
 
-      // 2. שליפת פרויקטים לרכישות
+      // 2. שליפת כל הפרויקטים
       const projectsRes = await api.get('/api/projects');
       const allProjects =
-        projectsRes.data?.projects || projectsRes.data?.data || [];
-      const purchased = allProjects.filter((p) => {
-        const isOwner = p.createdBy === user.id || p.createdBy?._id === user.id;
-        return !isOwner && Array.isArray(p.files) && p.files.length > 0;
+        projectsRes.data?.projects ||
+        projectsRes.data?.data ||
+        projectsRes.data ||
+        [];
+
+      // 3. פרויקטים שיצרתי
+      const myOwn = allProjects.filter((p) => {
+        const creatorId = p.createdBy?._id || p.createdBy?.id || p.createdBy;
+        return String(creatorId) === myId;
       });
+
+      // 4. פרויקטים שלא יצרתי - בדיקה אם רכשתי
+      const notMine = allProjects.filter((p) => {
+        const creatorId = p.createdBy?._id || p.createdBy?.id || p.createdBy;
+        return String(creatorId) !== myId;
+      });
+
+      // ✅ שליפת כל פרויקט בנפרד - הבאק מחזיר files רק אם רכשת
+      const purchasedResults = await Promise.allSettled(
+        notMine.map((p) => {
+          const pId = p._id || p.id;
+          return api.get(`/api/projects/${pId}`);
+        })
+      );
+
+      const purchased = purchasedResults
+        .filter((r) => r.status === 'fulfilled')
+        .map((r) => r.value.data?.project || r.value.data?.data || r.value.data)
+        .filter((p) => {
+          // ✅ הבאק מחזיר files (כולל קבצים לא-תמונות) רק לקונה/בעלים/אדמין
+          const hasSourceFiles =
+            Array.isArray(p?.files) &&
+            p.files.some(
+              (f) => f.fileType !== 'image' && f.fileType !== 'video'
+            );
+          return hasSourceFiles;
+        });
+
+      setProjects(myOwn);
       setPurchasedProjects(purchased);
     } catch (err) {
       console.error('Dashboard data fetch failed', err);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
-
+  }, [user]);
   // --- Effects ---
 
   useEffect(() => {
@@ -248,6 +279,27 @@ const PersonalDashboard = () => {
       logout();
     } catch (err) {
       alert('מחיקת החשבון נכשלה');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('האם אתה בטוח שברצונך למחוק את הפרויקט לצמיתות?'))
+      return;
+
+    try {
+      setSaving(true);
+      // קריאה ל-API המחיקה (וודאי שזה הנתיב אצלך ב-Backend)
+      await api.delete(`/api/projects/${projectId}`);
+
+      // עדכון ה-State המקומי כדי להסיר את הפרויקט מהמסך
+      setProjects((prev) => prev.filter((p) => (p._id || p.id) !== projectId));
+
+      alert('הפרויקט נמחק בהצלחה');
+    } catch (err) {
+      console.error('Delete project failed', err);
+      alert(err.response?.data?.message || 'שגיאה במחיקת הפרויקט');
     } finally {
       setSaving(false);
     }
@@ -419,16 +471,42 @@ const PersonalDashboard = () => {
             🚀 הפרויקטים שלי ({projects.length})
           </h3>
           {projects.length > 0 ? (
-            projects.map((p) => (
-              <div key={p.id || p._id} className="management-item">
-                <span>{p.title}</span>
-              </div>
-            ))
+            <div className="my-projects-list">
+              {projects.map((p) => {
+                const pId = p.id || p._id;
+                return (
+                  <div
+                    key={pId}
+                    className="management-item personal-project-card"
+                  >
+                    <div
+                      className="item-info"
+                      onClick={() => setSelectedProject(p)}
+                      style={{ cursor: 'pointer', flex: 1 }}
+                    >
+                      <span className="item-title">{p.title} 🔍</span>
+                    </div>
+                    <div className="item-actions">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // מונע את פתיחת הפופאפ כשלוחצים על המחיקה
+                          handleDeleteProject(pId);
+                        }}
+                        className="btn-delete-action"
+                        title="מחק פרויקט"
+                        disabled={saving}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
-            <p>טרם יצרת פרויקטים.</p>
+            <p>טרם פרסמת פרויקטים.</p>
           )}
         </div>
-
         <div className="management-section">
           <h3 className="section-title">📦 פרויקטים שרכשתי</h3>
           {purchasedProjects.length > 0 ? (
@@ -542,6 +620,17 @@ const PersonalDashboard = () => {
           project={selectedProject}
           onClose={() => setSelectedProject(null)}
           isLoggedIn={true}
+          onUpdate={(updatedProject) => {
+            // עדכון הפרויקט ברשימה המקומית מיד לאחר העריכה
+            setProjects((prev) =>
+              prev.map((p) =>
+                (p._id || p.id) === (updatedProject._id || updatedProject.id)
+                  ? { ...p, ...updatedProject }
+                  : p
+              )
+            );
+            setSelectedProject(null); // סגירת הפופאפ
+          }}
         />
       )}
     </div>
