@@ -1,3 +1,4 @@
+// validators/categories.validators.js
 const { query } = require('express-validator');
 
 const listCategoriesQuery = [

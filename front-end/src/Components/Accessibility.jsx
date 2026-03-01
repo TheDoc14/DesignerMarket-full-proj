@@ -1,3 +1,4 @@
+// /src/Components/Accessibility.jsx
 import { useState } from 'react';
 
 const Accessibility = () => {

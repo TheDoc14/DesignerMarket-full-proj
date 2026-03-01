@@ -1,4 +1,4 @@
-// src/constants/errorMessages.js
+// src/Constants/errorMessages.js
 
 export const ERROR_TRANSLATIONS = {
   // === אימות והתחברות (Auth & JWT) ===

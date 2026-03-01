@@ -1,3 +1,4 @@
+// src/Constants/permissions.js
 export const PERMISSION_LABELS = {
   'admin.panel.access': 'גישה לפאנל ניהול',
   'business.panel.access': 'צפייה בדשבורד ניהול עסקי',
