@@ -63,11 +63,34 @@ const UserApproval = () => {
   };
 
   const handleViewDocument = async (documentUrl, username) => {
+    // 1. בדיקת הרשאות בצד הלקוח
     if (!hasPermission('files.approvalDocs.read')) {
       alert('אין לך הרשאה לצפות במסמכים');
       return;
     }
-    // ... לוגיקת הורדה (כפי שהייתה קודם) ...
+
+    try {
+      // 2. קריאה לשרת לקבלת הקובץ כ-Blob (מדיה גולמית)
+      // אנחנו משתמשים ב-responseType: 'blob' כדי לטפל בקבצי תמונה/PDF
+      const response = await api.get(documentUrl, {
+        responseType: 'blob',
+      });
+
+      // 3. יצירת URL זמני עבור הקובץ שהתקבל
+      const file = new Blob([response.data], {
+        type: response.headers['content-type'],
+      });
+      const fileURL = URL.createObjectURL(file);
+
+      // 4. פתיחת הקובץ בלשונית חדשה
+      window.open(fileURL, '_blank');
+
+      // (אופציונלי) ניקוי ה-URL מהזיכרון לאחר זמן מה
+      setTimeout(() => URL.revokeObjectURL(fileURL), 60000);
+    } catch (err) {
+      console.error('Failed to view document:', err);
+      alert('שגיאה בטעינת המסמך. וודא שהקובץ קיים בשרת.');
+    }
   };
 
   // אבטחת גישה ברמת העמוד

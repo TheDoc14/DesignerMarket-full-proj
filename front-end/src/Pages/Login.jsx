@@ -12,6 +12,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
 
   // שינוי 1: שליפת פונקציית ה-login מה-AuthContext
   const { login } = useAuth();
@@ -21,6 +22,33 @@ const Login = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleResendEmail = async () => {
+    try {
+      setLoading(true);
+
+      // 1. חובה להפיק טוקן קאפצ'ה גם כאן
+      if (!executeRecaptcha) {
+        setError('שירות האבטחה אינו זמין כרגע');
+        return;
+      }
+      const gToken = await executeRecaptcha('resend_verification');
+
+      // 2. שליחת האימייל + הטוקן לשרת
+      await api.post('/api/auth/resend-verification', {
+        email: formData.email,
+        captchaToken: gToken, // הוספת הטוקן שהוולידטור דורש
+      });
+
+      setError('מייל אימות נשלח שוב בהצלחה!');
+      setShowResend(false);
+    } catch (err) {
+      console.error('Resend error:', err.response?.data);
+      setError(err.response?.data?.message || 'שגיאה בשליחת המייל');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -60,8 +88,10 @@ const Login = () => {
         'User not found.': 'משתמש זה אינו קיים במערכת.',
         'Internal Server Error': 'יש לנו תקלה בשרת, אנחנו כבר מטפלים בזה.',
       };
-
-      if (msg === 'Your account is awaiting admin approval.') {
+      if (msg === 'Email verification required.') {
+        setShowResend(true); // הצגת הכפתור
+        setError(errorTranslations[msg]);
+      } else if (msg === 'Your account is awaiting admin approval.') {
         setError('חשבונך ממתין לאישור מנהל מערכת.');
       } else {
         setError(
@@ -85,7 +115,35 @@ const Login = () => {
             className={`message-box ${error.includes('ממתין') ? 'pending-message' : 'error-message'}`}
           >
             {error.includes('ממתין') ? '⏳ ' : '⚠️ '}
-            <span>{error}</span>
+            <span>
+              {error && (
+                <div
+                  className={`message-box ${error.includes('ממתין') ? 'pending-message' : 'error-message'}`}
+                >
+                  <span>{error}</span>
+
+                  {/* כאן מתווסף הכפתור במידה וצריך אימות */}
+                  {showResend && (
+                    <div style={{ marginTop: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        className="link-btn" // תני לזה קלאס של קישור או כפתור קטן
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'blue',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        לחץ כאן לשליחת מייל אימות חדש
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </span>
           </div>
         )}
         <form onSubmit={handleSubmit}>
