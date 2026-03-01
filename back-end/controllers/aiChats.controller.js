@@ -13,6 +13,36 @@ const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
 
 // ----------------------------------------------------
+// helpers
+// ----------------------------------------------------
+const isPubliclyReachableUrl = (url) => {
+  try {
+    if (!url) return false;
+
+    const str = String(url).trim();
+    if (!str) return false;
+
+    // רק http/https
+    if (!/^https?:\/\//i.test(str)) return false;
+
+    const u = new URL(str);
+    const host = (u.hostname || '').toLowerCase();
+
+    // חסימת localhost / loopback
+    if (host === 'localhost' || host === '127.0.0.1') return false;
+
+    // חסימת רשתות פנימיות נפוצות
+    if (/^10\./.test(host)) return false;
+    if (/^192\.168\./.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return false;
+
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+
+// ----------------------------------------------------
 // Create Chat
 // ----------------------------------------------------
 const createChat = async (req, res, next) => {
@@ -123,7 +153,14 @@ const addMessageWithAI = async (req, res, next) => {
         ? `הקשר פרויקט (כולל קבצים/ביקורות):\n${textContext}\n\nשאלת המשתמש:\n${content.trim()}`
         : `Project context (including files/reviews):\n${textContext}\n\nUser question:\n${content.trim()}`;
 
-    const input = toOpenAIMessages(history, systemText, userText, imageUrls);
+    // ----------------------------------------------------
+    // NOTE: OpenAI חייב לקבל image_url נגיש ציבורית.
+    // בלוקאל (localhost / IP פנימי) זה יגרום לכשל 502.
+    // לכן מסננים URLs לא ציבוריים ומשאירים טקסט בלבד.
+    // ----------------------------------------------------
+    const safeImageUrls = (imageUrls || []).filter(isPubliclyReachableUrl);
+
+    const input = toOpenAIMessages(history, systemText, userText, safeImageUrls);
 
     const safetyIdentifier = String(ownerId);
     const aiResult = await callDesignConsultationAI({
