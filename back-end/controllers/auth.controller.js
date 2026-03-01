@@ -77,19 +77,8 @@ const registerUser = async (req, res, next) => {
     });
 
     await user.save();
-    try {
-      // אחרי יצירת המשתמש (user)
-      if (!user?.email) {
-        return res.status(400).json({ message: 'Email is required' });
-      }
-      await sendVerificationEmail(
-        user.email,
-        verificationToken,
-      );
-    } catch (err) {
-      console.error('❌ Verification email failed:', err?.message || err);
-      // לא זורקים שגיאה
-    }
+    
+    await sendVerificationEmail(user.email, verificationToken);
 
     return res.status(201).json({
       message: 'Registered successfully. Check your email for verification link.',
