@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
-import { PERMS } from '../../Constants/permissions.jsx';
+import { PERMS, PERMISSION_LABELS } from '../../Constants/permissions.jsx';
 import { getFriendlyError } from '../../Constants/errorMessages';
 import {
   Shield,
@@ -22,6 +22,7 @@ const ManageRoles = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newRoleData, setNewRoleData] = useState({ key: '', label: '' });
+  const [dynamicPermissions, setDynamicPermissions] = useState([]);
 
   // הפרדת משתני טעינה למניעת הבהובים
   const [isPageLoading, setIsPageLoading] = useState(true);
@@ -34,31 +35,64 @@ const ManageRoles = () => {
 
   const groupedPermissions = useMemo(() => {
     const groups = {
-      'ניהול משתמשים': allAvailablePermissions.filter(
+      'ניהול משתמשים': dynamicPermissions.filter(
         (p) => p.includes('users') || p.includes('roles')
       ),
-      'פרויקטים ותוכן': allAvailablePermissions.filter(
+      'פרויקט ותוכן': dynamicPermissions.filter(
         (p) =>
           p.includes('projects') ||
           p.includes('categories') ||
           p.includes('reviews')
       ),
-      'ניהול עסקי וכספים': allAvailablePermissions.filter(
+      'ניהול עסקי וכספים': dynamicPermissions.filter(
         (p) =>
           p.includes('business') || p.includes('stats') || p.includes('orders')
       ),
-      'מערכת ו-AI': allAvailablePermissions.filter(
+      'מערכת ו-AI': dynamicPermissions.filter(
         (p) => p.includes('admin.panel') || p.includes('ai')
+      ),
+      'אחר (הרשאות חדשות)': dynamicPermissions.filter(
+        (p) =>
+          !p.includes('users') &&
+          !p.includes('roles') &&
+          !p.includes('projects') &&
+          !p.includes('categories') &&
+          !p.includes('reviews') &&
+          !p.includes('business') &&
+          !p.includes('stats') &&
+          !p.includes('orders') &&
+          !p.includes('admin.panel') &&
+          !p.includes('ai')
       ),
     };
     return groups;
-  }, [allAvailablePermissions]);
+  }, [dynamicPermissions]);
 
   // פונקציית טעינה יציבה
+  // בתוך ManageRoles.jsx - החליפי את החלקים הרלוונטיים:
+
+  // 1. נגדיר state להרשאות הדינמיות
+
+  // 2. עדכון פונקציית fetchRoles
   const fetchRoles = useCallback(async () => {
     try {
+      setIsPageLoading(true);
       const res = await api.get('/api/admin/roles');
-      setRoles(res.data?.roles || res.data?.data || []);
+      const rolesList = res.data?.roles || res.data?.data || [];
+      setRoles(rolesList);
+
+      // לוגיקה דינמית: איסוף כל ההרשאות הייחודיות מכל התפקידים שקיימים ב-DB
+      const extractedPerms = new Set();
+      rolesList.forEach((role) => {
+        if (Array.isArray(role.permissions)) {
+          role.permissions.forEach((p) => extractedPerms.add(p));
+        }
+      });
+
+      // הוספת הרשאות ה-Constants כגיבוי למקרה שהן עוד לא משויכות לאף תפקיד
+      Object.values(PERMS).forEach((p) => extractedPerms.add(p));
+
+      setDynamicPermissions(Array.from(extractedPerms).sort());
     } catch (err) {
       console.error('Failed to fetch roles', err);
     } finally {
@@ -120,17 +154,29 @@ const ManageRoles = () => {
   };
 
   const handleSavePermissions = async () => {
-    if (!selectedRole?.key) return;
+    if (!selectedRole?.key || isSubmitting) return;
+
     try {
+      setIsSubmitting(true);
+      setMessage({ type: '', text: '' });
+
       const res = await api.put(`/api/admin/roles/${selectedRole.key}`, {
         permissions: selectedRole.permissions,
         label: selectedRole.label,
       });
-      if (res.data?.role) setSelectedRole(res.data.role);
 
+      // עדכון הרשימה הכללית כדי שהשינוי ישתקף ב-Sidebar
+      setRoles((prev) =>
+        prev.map((r) => (r.key === selectedRole.key ? res.data.role : r))
+      );
+
+      setMessage({ type: 'success', text: 'השינויים נשמרו בהצלחה!' });
+
+      // העלמת ההודעה אחרי 3 שניות
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {
-      setMessage({ type: 'error', text: 'השמירה נכשלה' });
+      console.error('Save error:', err);
+      setMessage({ type: 'error', text: 'השמירה נכשלה. נסי שוב.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -147,6 +193,29 @@ const ManageRoles = () => {
 
   if (permissionLoading || isPageLoading)
     return <div className="loader">טוען...</div>;
+
+  const handleDeleteRole = async (roleKey) => {
+    if (
+      !window.confirm(
+        'האם אתה בטוח שברצונך למחוק את התפקיד? פעולה זו אינה הפיכה.'
+      )
+    )
+      return;
+
+    try {
+      setIsSubmitting(true);
+      await api.delete(`/api/admin/roles/${roleKey}`);
+
+      setMessage({ type: 'success', text: 'התפקיד נמחק בהצלחה' });
+      setSelectedRole(null); // ניקוי הבחירה
+      await fetchRoles(); // רענון הרשימה
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'שגיאה במחיקת התפקיד';
+      setMessage({ type: 'error', text: getFriendlyError(errorMsg) });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="admin-container roles-dashboard" dir="rtl">
@@ -198,7 +267,17 @@ const ManageRoles = () => {
                   <h2>עריכת הרשאות: {selectedRole.label}</h2>
                   <span className="badge-key">{selectedRole.key}</span>
                 </div>
+
                 <div className="editor-actions">
+                  {!selectedRole.isSystem && (
+                    <button
+                      className="btn-delete-role"
+                      onClick={() => handleDeleteRole(selectedRole.key)}
+                      disabled={isSubmitting}
+                    >
+                      <X size={18} /> מחיקת תפקיד
+                    </button>
+                  )}
                   <button className="btn-save" onClick={handleSavePermissions}>
                     <Save size={18} /> שמור שינויים
                   </button>
@@ -239,7 +318,9 @@ const ManageRoles = () => {
                                   <AlertCircle size={16} />
                                 )}
                               </div>
-                              <span className="perm-name">{perm}</span>
+                              <span className="perm-name">
+                                {PERMISSION_LABELS[perm] || perm}
+                              </span>{' '}
                             </div>
                           ))}
                         </div>

@@ -929,6 +929,7 @@
     margin-top: 4px;
 }
 
+
 .btn-create-submit {
     width: 100%;
     padding: 14px;
@@ -1152,4 +1153,43 @@
             opacity: 1;
         }
     }
+}
+
+.btn-link,
+.btn-approve-action {
+    background: var(--teal-gradient) !important;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 109, 119, 0.2);
+    transition: all 0.3s;
+}
+
+.btn-delete-role {
+    background: #fff1f0;
+    color: #cf1322;
+    border: 1px solid #ffa39e;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    margin-left: 10px;
+    /* מרווח מכפתור השמור */
+}
+
+.btn-delete-role:hover {
+    background: #cf1322;
+    color: white;
+}
+
+.btn-delete-role:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
