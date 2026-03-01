@@ -1,3 +1,4 @@
+//src/Pages/VerifyEmail.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';

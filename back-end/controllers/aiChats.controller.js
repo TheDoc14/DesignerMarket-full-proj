@@ -1,3 +1,4 @@
+// controllers/aiChats.controller.js
 const AiChat = require('../models/AiChat.model');
 const AiMessage = require('../models/AiMessage.model');
 const AiUsageLog = require('../models/AiUsageLog.model');
