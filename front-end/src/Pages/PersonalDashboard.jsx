@@ -77,7 +77,6 @@ const PersonalDashboard = () => {
           remaining: Number(quota.remaining) || 0,
         });
       }
-      console.log(res.data.data);
     } catch (err) {
       if (err.response?.status === 403) {
         setAiHistory([]);
@@ -109,7 +108,13 @@ const PersonalDashboard = () => {
           country: u.country || '',
           paypalEmail: u.paypalEmail || '',
           social: u.social || prev.social,
+          phone: u.phone || '',
+          birthDate: u.birthDate ? u.birthDate.split('T')[0] : '',
+          profileImage: u.profileImage,
         }));
+        if (u.profileImage) {
+          setProfileImagePreview(u.profileImage);
+        }
       }
 
       // 2. שליפת כל הפרויקטים
@@ -340,6 +345,7 @@ const PersonalDashboard = () => {
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/*"
+            value={formData.profileImage ? undefined : ''} // כדי לאפשר בחירה חוזרת באותו קובץ
             style={{ display: 'none' }}
           />
         </div>
@@ -512,7 +518,10 @@ const PersonalDashboard = () => {
           <h3 className="section-title">📦 פרויקטים שרכשתי</h3>
           {purchasedProjects.length > 0 ? (
             purchasedProjects.map((p) => (
-              <div key={p._id} className="management-item purchased-card">
+              <div
+                key={p._id || p.id}
+                className="management-item purchased-card"
+              >
                 <div
                   className="item-info"
                   onClick={() => setSelectedProject(p)}
