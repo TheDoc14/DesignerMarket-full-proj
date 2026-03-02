@@ -261,7 +261,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
       });
 
       const updated = res.data.project || res.data.data;
-      console.log('updated after PUT:', updated);
 
       // ✅ אם הועלתה תמונה חדשה - נמצא אותה ב-media ונעדכן mainImageId
       // ✅ אם הועלתה תמונה חדשה - נמצא אותה ב-media ונעדכן mainImageId
@@ -423,7 +422,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     try {
       let currentChatId = chatId;
       if (!currentChatId) {
-        console.log('Sending to chat:', currentChatId);
         const chatRes = await api.post('/api/ai-chats', {
           projectId,
           title: `ייעוץ עבור ${project.title}`,
@@ -508,9 +506,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
               )}
 
               <div className="popup-creator-info">
-                <span>
-                  יוצר: {project.creatorName || project.createdBy?.username}
-                </span>
                 <button
                   onClick={() =>
                     navigate(
@@ -878,11 +873,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
                     const canDeleteReview = isReviewOwner || isAdmin;
 
                     // שורת דיבאג - פתחי את ה-Console (F12) כדי לראות אם ה-IDs תואמים
-                    if (editingReviewId === null) {
-                      console.log(
-                        `Review ${revId}: OwnerID=${reviewerId}, CurrentUserID=${currentUserId}, Match=${isReviewOwner}`
-                      );
-                    }
 
                     const canManageReview = isReviewOwner || isAdmin;
 
