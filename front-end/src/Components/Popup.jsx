@@ -10,6 +10,8 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const [existingFiles, setExistingFiles] = useState(project?.files || []);
   const [newFiles, setNewFiles] = useState([]); // קבצים נוספים להעלאה
   const { hasPermission, user: currentUser } = usePermission();
+  const [alreadyPurchased, setAlreadyPurchased] = useState(false);
+
   const [currentMainImageId, setCurrentMainImageId] = useState(
     project?.mainImageId || ''
   );
@@ -713,88 +715,114 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
             <div className="popup-sections-divider" />
             <div className="purchase-and-reviews-container">
               {/* --- חלק 2: אזור רכישה (PayPal) --- */}
-              {!isOwner && project.price > 0 && (
+              {!isOwner && project.price > 0 && !alreadyPurchased && (
                 <div className="paypal-button-container">
-                  {/* החליפי את כל מה שבתוך paypal-button-container בקוד הזה: */}
-                  {!isOwner && project.price > 0 && (
-                    <div className="paypal-purchase-section">
-                      <h4>💳 רכישת רישיון לפרויקט</h4>
-                      <div className="paypal-button-container">
-                        <PayPalButtons
-                          style={{ layout: 'horizontal', height: 45 }}
-                          createOrder={async () => {
-                            try {
-                              const res = await api.post(
-                                '/api/orders/paypal/create',
-                                { projectId }
-                              );
-                              return res.data.order.paypalOrderId;
-                            } catch (err) {
-                              if (err.response?.status === 409) {
-                                const existingOrderId =
-                                  err.response.data.details?.orderId;
+                  <div className="paypal-purchase-section">
+                    <h4>💳 רכישת רישיון לפרויקט</h4>
+                    <div className="paypal-button-container">
+                      <PayPalButtons
+                        style={{ layout: 'horizontal', height: 45 }}
+                        createOrder={async () => {
+                          try {
+                            const res = await api.post(
+                              '/api/orders/paypal/create',
+                              { projectId }
+                            );
+                            return res.data.order.paypalOrderId;
+                          } catch (err) {
+                            // ✅ אם כבר נרכש - עצור את הטיסה כאן
+                            if (err.response?.status === 409) {
+                              const msg = err.response.data?.message || '';
+                              if (
+                                String(msg).toLowerCase().includes('already')
+                              ) {
+                                // דגול שכבר קנה ועצור את PayPal SDK
+                                setAlreadyPurchased(true);
+                                showFeedback(
+                                  'info',
+                                  '✅ כבר רכשת את הפרויקט הזה.'
+                                );
+                                throw new Error('ALREADY_PURCHASED');
+                              }
 
-                                // ✅ מבטלים את ההזמנה הישנה ומנסים שוב
-                                if (existingOrderId) {
-                                  try {
-                                    await api.post(
-                                      `/api/orders/${existingOrderId}/cancel`
-                                    );
-                                    // ניסיון שני אחרי הביטול
-                                    const retry = await api.post(
-                                      '/api/orders/paypal/create',
-                                      { projectId }
-                                    );
-                                    return retry.data.order.paypalOrderId;
-                                  } catch (retryErr) {
-                                    showFeedback(
-                                      'error',
-                                      'לא ניתן לאפס את ההזמנה הקיימת. נסה שוב מאוחר יותר.'
-                                    );
-                                    throw retryErr;
-                                  }
+                              // אם זה עדיין סוג שונה של 409, נסה ביטול והזמנה חדשה
+                              const existingOrderId =
+                                err.response.data.details?.orderId;
+
+                              if (existingOrderId) {
+                                try {
+                                  await api.post(
+                                    `/api/orders/${existingOrderId}/cancel`
+                                  );
+                                  const retry = await api.post(
+                                    '/api/orders/paypal/create',
+                                    { projectId }
+                                  );
+                                  return retry.data.order.paypalOrderId;
+                                } catch (retryErr) {
+                                  showFeedback(
+                                    'error',
+                                    'לא ניתן לאפס את ההזמנה הקיימת. נסה שוב מאוחר יותר.'
+                                  );
+                                  throw retryErr;
                                 }
                               }
-                              showFeedback(
-                                'error',
-                                err.response?.data?.message ||
-                                  'שגיאה ביצירת הזמנה'
-                              );
-                              throw err;
                             }
-                          }}
-                          onApprove={async (data) => {
-                            // ✅ הסרנו את actions.order.capture() - PayPal SDK עושה זאת לבד לפני onApprove
-                            try {
-                              await api.post('/api/orders/paypal/capture', {
-                                paypalOrderId: data.orderID,
-                              });
-                              showFeedback(
-                                'success',
-                                '✅ הרכישה הושלמה! הקבצים זמינים להורדה.'
-                              );
-                              setTimeout(() => window.location.reload(), 2000);
-                            } catch (err) {
-                              const msg =
-                                err.response?.data?.message ||
-                                'שגיאה בעיבוד התשלום';
-                              showFeedback(
-                                'error',
-                                `התשלום עבר בפייפאל אך אירעה שגיאה: ${msg}. פנה לתמיכה.`
-                              );
-                            }
-                          }}
-                          onError={(err) => {
-                            console.error('PayPal Error:', err);
+
+                            showFeedback(
+                              'error',
+                              err.response?.data?.message ||
+                                'שגיאה ביצירת הזמנה'
+                            );
+                            throw err;
+                          }
+                        }}
+                        onApprove={async (data) => {
+                          try {
+                            await api.post('/api/orders/paypal/capture', {
+                              paypalOrderId: data.orderID,
+                            });
+                            showFeedback(
+                              'success',
+                              '✅ הרכישה הושלמה! הקבצים זמינים להורדה.'
+                            );
+                            setAlreadyPurchased(true);
+                            setTimeout(() => window.location.reload(), 2000);
+                          } catch (err) {
+                            const msg =
+                              err.response?.data?.message ||
+                              'שגיאה בעיבוד התשלום';
+                            showFeedback(
+                              'error',
+                              `התשלום עבר בפייפאל אך אירעה שגיאה: ${msg}. פנה לתמיכה.`
+                            );
+                          }
+                        }}
+                        onError={(err) => {
+                          console.error('PayPal Error:', err);
+                          // אל תציג שגיאה עם ALREADY_PURCHASED
+                          if (!String(err).includes('ALREADY_PURCHASED')) {
                             showFeedback(
                               'error',
                               'חלה שגיאה בתקשורת מול פייפאל'
                             );
-                          }}
-                        />
-                      </div>
+                          }
+                        }}
+                      />
                     </div>
-                  )}
+                  </div>
+                </div>
+              )}
+
+              {/* אם כבר קנה - הצג הודעת הצלחה */}
+              {!isOwner && alreadyPurchased && (
+                <div className="paypal-purchase-section">
+                  <div className="success-message-box">
+                    <p>
+                      ✅ <strong>כבר רכשת את הפרויקט הזה!</strong>
+                    </p>
+                    <p>גש לקטע קבצים כדי להוריד את הקבצים שלך.</p>
+                  </div>
                 </div>
               )}
             </div>
