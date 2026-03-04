@@ -62,32 +62,41 @@ const UserApproval = () => {
     }
   };
 
+  // UserApproval.jsx - עדכון פונקציית הצפייה
   const handleViewDocument = async (documentUrl, username) => {
-    if (!hasPermission('files.approvalDocs.read')) {
-      alert('אין לך הרשאה לצפות במסמכים');
-      return;
-    }
-
     try {
-      // חלץ רק את שם הקובץ מה-URL המלא
-      let filename = documentUrl;
-      if (documentUrl.includes('/approvalDocuments/')) {
-        filename = documentUrl.split('/approvalDocuments/')[1];
-      }
+      // 1. חילוץ שם הקובץ מהנתיב המלא שנשמר ב-DB
+      const rawFilename = documentUrl.split('/').pop();
 
+      // 2. פענוח תווים מיוחדים (כמו עברית) לפני השליחה
+      const filename = rawFilename;
+
+      // 3. קריאה לשרת - שימי לב לנתיב המדויק
+      // אנחנו מוסיפים /files/ כי ככה ה-Backend הגדיר את הראוטים שלו
       const response = await api.get(
-        `/approvalDocuments/${encodeURIComponent(filename)}`,
+        `api/files/approvalDocuments/${filename}`,
         {
-          responseType: 'blob',
+          responseType: 'blob', // קריטי כדי לקבל קובץ ולא טקסט
         }
       );
 
-      const url = window.URL.createObjectURL(response.data);
-      window.open(url, '_blank');
-      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+      // 4. יצירת לינק זמני לצפייה בקובץ
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type'],
+      });
+      const url = window.URL.createObjectURL(blob);
+
+      // פתיחה בחלון חדש
+      const newWindow = window.open(url, '_blank');
+      if (!newWindow) {
+        alert('הדפדפן חסם את הפופ-אפ, אנא אפשרי הצגת פופ-אפים');
+      }
+
+      // ניקוי זיכרון אחרי 10 שניות
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
     } catch (err) {
-      alert('שגיאה בטעינת המסמך');
-      console.error(err);
+      console.error('Download error:', err);
+      alert('שגיאה בטעינת המסמך. וודאי שהקובץ קיים בשרת.');
     }
   };
   // אבטחת גישה ברמת העמוד
