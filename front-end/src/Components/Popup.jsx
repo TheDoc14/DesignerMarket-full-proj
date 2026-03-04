@@ -10,6 +10,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const [existingFiles, setExistingFiles] = useState(project?.files || []);
   const [newFiles, setNewFiles] = useState([]); // קבצים נוספים להעלאה
   const { hasPermission, user: currentUser } = usePermission();
+
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
 
   const [currentMainImageId, setCurrentMainImageId] = useState(
@@ -60,6 +61,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     description: project?.description || '',
     category: project?.category || '',
     price: project?.price || 0,
+    tags: project?.tags ? project.tags.join(', ') : '', // הופך מערך למחרוזת עם פסיקים
   });
   // --- 1. הגדרת כל ה-Hooks בראש הקומפוננטה (לפני כל if) ---
 
@@ -237,14 +239,20 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   if (!project) return null;
 
   // --- 3. פונקציות עזר (Handlers) ---
+
   const handleSaveProjectEdit = async () => {
     try {
+      const tagsArray = editData.tags
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== '');
       setLoading(true);
       const formData = new FormData();
 
       formData.append('title', editData.title);
       formData.append('description', editData.description);
       formData.append('price', editData.price);
+      formData.append('tags', JSON.stringify(tagsArray));
 
       // ✅ שולחים רק קבצים שאינם תמונות כ-existingFiles
       const nonImageFiles = existingFiles.filter(
@@ -278,6 +286,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
               headers: { 'Content-Type': 'multipart/form-data' },
             }
           );
+
           const finalProject =
             updatedMain.data.project || updatedMain.data.data;
           if (finalProject?.mainImageUrl)
@@ -549,6 +558,23 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
                           >
                             📷 החלף תמונה
                           </button>
+                          <div className="form-group">
+                            <label>תגיות (מופרדות בפסיק):</label>
+                            <input
+                              type="text"
+                              placeholder="לדוגמה: React, Fullstack, Design"
+                              value={editData.tags}
+                              onChange={(e) =>
+                                setEditData({
+                                  ...editData,
+                                  tags: e.target.value,
+                                })
+                              }
+                            />
+                            <small style={{ color: '#666' }}>
+                              הפרד בין מילים באמצעות פסיק (,)
+                            </small>
+                          </div>
                         </div>
                       </div>
 
@@ -827,7 +853,16 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
               )}
             </div>
             <div className="popup-sections-divider" />
-
+            <div className="popup-footer">
+              {canEdit && (
+                <button
+                  className="edit-trigger-btn"
+                  onClick={() => setIsEditing(true)}
+                >
+                  ✏️ עריכת פרויקט
+                </button>
+              )}
+            </div>
             {/* --- חלק 3: אזור תגובות --- */}
             <div className="reviews-section">
               <h3>💬 תגובות משתמשים ({safeReviews.length})</h3>
@@ -1008,16 +1043,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
               </div>
             </div>
             {/* כפתור עריכה לבעלים */}
-            <div className="popup-footer">
-              {canEdit && (
-                <button
-                  className="edit-trigger-btn"
-                  onClick={() => setIsEditing(true)}
-                >
-                  ✏️ עריכת פרויקט
-                </button>
-              )}
-            </div>
           </div>
         </div>
         <div className="sidebar-container">
