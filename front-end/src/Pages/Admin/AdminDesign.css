@@ -62,7 +62,10 @@
 }
 
 .form-input-search {
-    width: 800px;
+    width: 100%;
+    /* תופס את כל רוחב הקונטיינר שלו */
+    max-width: 500px;
+    /* אבל לא יותר מ-500 פיקסלים */
     flex: 2;
 }
 
@@ -142,9 +145,10 @@
 }
 
 .input-with-icon svg {
+    width: 20px;
+    /* גודל הגיוני לאייקון */
     position: absolute;
     right: 12px;
-    width: 700px;
     color: var(--admin-light);
 }
 
@@ -154,17 +158,28 @@
 }
 
 /* --- טבלאות ניהול (Admin Tables) --- */
-.table-wrapper {
+.table-wrapper,
+.table-responsive {
     background: var(--admin-white);
-    border: #006D77;
-
+    border: 1px solid var(--admin-border);
     border-radius: 20px;
-    overflow: hidden;
     box-shadow: var(--admin-shadow);
+
+    /* פתרון הגלילה */
+    width: 100%;
+    /* לא לחרוג מהקונטיינר */
+    overflow-x: auto;
+    /* להוסיף פס גלילה אופקי */
+    display: block;
+    -webkit-overflow-scrolling: touch;
+    /* גלילה חלקה בנייד */
+    margin-bottom: 20px;
 }
+
 
 .admin-table {
     width: 100%;
+    min-width: 700px;
     border-collapse: collapse;
     border: #006D77;
 }
@@ -174,6 +189,21 @@
     color: white;
     border: #006D77;
 
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px;
+    /* מבטיח שהטבלה תמיד תהיה רחבה מספיק */
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 15px 18px;
+    white-space: nowrap;
+    /* מונע מהטקסט לרדת שורה ומבטיח סדר */
+    text-align: right;
 }
 
 .admin-table th {
@@ -397,6 +427,10 @@
     width: 100%;
     border-collapse: collapse;
     text-align: right;
+    min-width: 800px;
+    /* זה מבטיח שהטבלה תמיד תהיה רחבה מספיק כדי להיות קריאה */
+    table-layout: auto;
+    /* מאפשר לעמודות להתאים את עצמן לתוכן */
 }
 
 .admin-table thead {
@@ -405,11 +439,13 @@
 }
 
 .admin-table th {
-    padding: 18px;
+    padding: 15px 18px;
     font-weight: 600;
     text-transform: uppercase;
     font-size: 0.9rem;
     letter-spacing: 0.5px;
+    white-space: nowrap;
+    text-align: right;
 }
 
 .admin-table td {
@@ -1193,4 +1229,54 @@
 .btn-delete-role:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+@media (max-width: 992px) {
+
+    .roles-grid-container,
+    .analytics-section,
+    .category-management-grid {
+        grid-template-columns: 1fr !important;
+        /* מעבר לטור אחד */
+    }
+
+    .admin-toolbar {
+        flex-direction: column;
+        /* כלים אחד מתחת לשני */
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 600px) {
+    .admin-container {
+        padding: 15px;
+        /* פחות ריווח בצדדים */
+    }
+
+    .dashboard-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .stat-card {
+        flex-direction: column;
+        /* האייקון מעל הטקסט */
+        text-align: center;
+        padding: 15px;
+    }
+
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+        /* המודאל יתפוס כמעט את כל רוחב המסך */
+    }
+}
+
+@media (max-width: 992px) {
+    .roles-nav-card {
+        position: relative;
+        /* ביטול הצמדה למעלה */
+        top: 0;
+        max-height: none;
+        margin-bottom: 20px;
+    }
 }

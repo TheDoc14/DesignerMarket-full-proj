@@ -1,5 +1,7 @@
 //src/Pages/ProjectLibrary.jsx
 import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import api from '../api/axios';
 import Popup from '../Components/Popup';
 import './PublicPages.css';
@@ -17,6 +19,7 @@ const ProjectLibrary = () => {
   const [sortBy, setSortBy] = useState('newest');
   const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
   const [currentPage, setCurrentPage] = useState(1);
+  const navigate = useNavigate();
 
   // הסרנו את ה-state של usernames כי השמות כבר מגיעים בתוך הפרויקט
 
@@ -42,15 +45,9 @@ const ProjectLibrary = () => {
 
       // אם השרת כבר מחזיר createdBy כאובייקט (populate) — זה יספיק:
 
-      const normalized = allProjects.map((p) => ({
-        ...p,
+      setProjects(allProjects);
 
-        creatorName: p.createdBy?.username || p.creatorName || 'משתמש',
-      }));
-
-      setProjects(normalized);
-
-      setDisplayList(normalized);
+      setDisplayList(allProjects);
     } catch (err) {
       console.error('טעינת הנתונים נכשלה:', err);
     } finally {
@@ -167,13 +164,18 @@ const ProjectLibrary = () => {
 
               <div className="card-info">
                 <h3>{project.title}</h3>
-
-                <div className="card-creator">
-                  <span>👤</span>
-                  {/* שימוש בשם המעצב שנמצא בתהליך ההתאמה */}
-                  <span>{project.creatorName}</span>{' '}
+                <div className="card-creator-info">
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/profile/${project.createdBy?._id || project.createdBy}`
+                      )
+                    }
+                    className="view-public-profile-btn"
+                  >
+                    לפרופיל היוצר ←
+                  </button>
                 </div>
-
                 <div className="card-footer">
                   <div className="card-rating">
                     <span>

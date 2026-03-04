@@ -21,17 +21,25 @@ body {
   /* ריווח קבוע עבור ה-Navbar */
 }
 
+
+
+
 /* --- פריסה כללית ומיכלים --- */
 .about-container,
 .catalog-container,
 .profile-container,
 .user-page-container {
+  width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 20px;
   direction: rtl;
   animation: fadeIn 0.5s ease-in;
+  box-sizing: border-box;
+  /* מבטיח שהפדינג לא יגדיל את רוחב האלמנט */
+
 }
+
 
 /* --- דף אודות (About) --- */
 .hero {
@@ -73,7 +81,7 @@ body {
 
 .form-grid-3 {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   /* 3 עמודות שוות */
   gap: 20px;
 }
@@ -406,13 +414,7 @@ body {
   margin-top: 40px;
 }
 
-/* רספונסיביות לניידים */
-@media (max-width: 992px) {
-  .form-grid-3 {
-    grid-template-columns: repeat(2, 1fr);
-    /* 2 עמודות בטאבלט */
-  }
-}
+
 
 .profile-preview-img {
   width: 100%;
@@ -698,7 +700,7 @@ body {
 /* KPI Cards */
 .manager-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   /* 3 טורים במחשב */
   gap: 25px;
   margin-bottom: 30px;
@@ -1774,7 +1776,8 @@ html {
 .reset-search-btn,
 .btn-export,
 .submit-project-btn,
-.btn-export {
+.btn-export,
+.link-btn {
   background: var(--teal-gradient) !important;
   color: white;
   border: none;
@@ -1784,4 +1787,53 @@ html {
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 109, 119, 0.2);
   transition: all 0.3s;
+}
+
+/* --- טאבלטים (מתחת ל-992px) --- */
+@media (max-width: 992px) {
+  .hero h1 {
+    font-size: 2.2rem;
+    /* הקטנת טקסטים גדולים */
+  }
+
+  .profile-management-grid {
+    grid-template-columns: 1fr;
+    /* מעבר משני טורים לטור אחד */
+  }
+}
+
+/* --- מובייל (מתחת ל-768px) --- */
+@media (max-width: 768px) {
+  .catalog-header {
+    flex-direction: column;
+    /* כותרת וחיפוש אחד מתחת לשני */
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .catalog-toolbar {
+    width: 100%;
+    flex-direction: column;
+    /* שדה חיפוש וסינון אחד מתחת לשני */
+  }
+
+  .catalog-search-input {
+    width: 100%;
+    /* החיפוש יתפוס את כל הרוחב */
+  }
+
+  .profile-header-card {
+    padding: 20px;
+  }
+
+  .header-flex-container {
+    flex-direction: column;
+    /* תמונת פרופיל מעל הטקסט */
+    text-align: center;
+  }
+
+  /* התאמת טפסים למובייל */
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
