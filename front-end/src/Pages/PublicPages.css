@@ -1776,7 +1776,8 @@ html {
 .reset-search-btn,
 .btn-export,
 .submit-project-btn,
-.btn-export {
+.btn-export,
+.link-btn {
   background: var(--teal-gradient) !important;
   color: white;
   border: none;

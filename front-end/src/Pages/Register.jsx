@@ -62,11 +62,7 @@ const Register = () => {
       if (formData.approvalDocument) {
         dataToSend.append('approvalDocument', formData.approvalDocument);
       }
-
-      await api.post('/api/auth/register', dataToSend, {
-        // חשוב: FormData
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post('/api/auth/register', dataToSend);
 
       setSuccess(true);
     } catch (err) {

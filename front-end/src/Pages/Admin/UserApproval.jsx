@@ -1,4 +1,3 @@
-//src/Pages/Admin/UserApproval.jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
@@ -64,36 +63,33 @@ const UserApproval = () => {
   };
 
   const handleViewDocument = async (documentUrl, username) => {
-    // 1. בדיקת הרשאות בצד הלקוח
     if (!hasPermission('files.approvalDocs.read')) {
       alert('אין לך הרשאה לצפות במסמכים');
       return;
     }
 
     try {
-      // 2. קריאה לשרת לקבלת הקובץ כ-Blob (מדיה גולמית)
-      // אנחנו משתמשים ב-responseType: 'blob' כדי לטפל בקבצי תמונה/PDF
-      const response = await api.get(documentUrl, {
-        responseType: 'blob',
-      });
+      // חלץ רק את שם הקובץ מה-URL המלא
+      let filename = documentUrl;
+      if (documentUrl.includes('/approvalDocuments/')) {
+        filename = documentUrl.split('/approvalDocuments/')[1];
+      }
 
-      // 3. יצירת URL זמני עבור הקובץ שהתקבל
-      const file = new Blob([response.data], {
-        type: response.headers['content-type'],
-      });
-      const fileURL = URL.createObjectURL(file);
+      const response = await api.get(
+        `/approvalDocuments/${encodeURIComponent(filename)}`,
+        {
+          responseType: 'blob',
+        }
+      );
 
-      // 4. פתיחת הקובץ בלשונית חדשה
-      window.open(fileURL, '_blank');
-
-      // (אופציונלי) ניקוי ה-URL מהזיכרון לאחר זמן מה
-      setTimeout(() => URL.revokeObjectURL(fileURL), 60000);
+      const url = window.URL.createObjectURL(response.data);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
     } catch (err) {
-      console.error('Failed to view document:', err);
-      alert('שגיאה בטעינת המסמך. וודא שהקובץ קיים בשרת.');
+      alert('שגיאה בטעינת המסמך');
+      console.error(err);
     }
   };
-
   // אבטחת גישה ברמת העמוד
   if (permissionLoading)
     return <div className="loader">בודק הרשאות אבטחה...</div>;
