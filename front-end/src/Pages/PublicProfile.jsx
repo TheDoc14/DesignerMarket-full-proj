@@ -1,30 +1,31 @@
-//src/Pages/PublicProfile.jsx
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
-import { PayPalButtons } from '@paypal/react-paypal-js';
-import ReactDOM from 'react-dom';
+// 1. ייבוא קומפוננטת הפופאפ המלאה
+import Popup from '../Components/Popup';
 import {
   MapPin,
   Calendar,
   Package,
-  X,
-  Star,
   ChevronLeft,
   ExternalLink,
+  Star,
 } from 'lucide-react';
 import './PublicPages.css';
 
 const PublicProfile = () => {
   const { userId } = useParams();
-  const { loading: permissionLoading } = usePermission();
+  const { loading: permissionLoading, user: currentUser } = usePermission();
 
   const [profile, setProfile] = useState(null);
   const [userProjects, setUserProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
+
+  // בדיקה פשוטה אם המשתמש מחובר (נדרש עבור תגובות בפופאפ)
+  const isLoggedIn = !!currentUser;
 
   const fetchUserData = useCallback(async () => {
     try {
@@ -62,7 +63,6 @@ const PublicProfile = () => {
 
   return (
     <div className="profile-page-wrapper" dir="rtl">
-      {/* באנר עליון */}
       <div className="profile-top-banner"></div>
 
       <div className="profile-main-content">
@@ -106,7 +106,7 @@ const PublicProfile = () => {
                   Object.entries(profile.social).map(([platform, url]) =>
                     url ? (
                       <a
-                        key={`${platform}-${url}`} // ✅ key יציב וייחודי
+                        key={`${platform}-${url}`}
                         href={url}
                         target="_blank"
                         rel="noreferrer"
@@ -144,7 +144,7 @@ const PublicProfile = () => {
                   <div className="card-meta-row">
                     <div className="rating-pill">
                       <Star size={12} fill="#ffc107" color="#ffc107" />
-                      <span>0.0</span>
+                      <span>{project.averageRating || '0.0'}</span>
                     </div>
                     <button
                       onClick={() => openProjectModal(project)}
@@ -160,79 +160,26 @@ const PublicProfile = () => {
         </section>
       </div>
 
-      {/* שימוש ב-Portal להצגת המודאל מחוץ להיררכיה הרגילה */}
-      {selectedProject &&
-        ReactDOM.createPortal(
-          <div className="project-modal-overlay" onClick={closeModal}>
-            <div
-              className="project-modal-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button className="modal-close-btn" onClick={closeModal}>
-                <X size={24} />
-              </button>
-
-              <div className="modal-body-grid">
-                <div className="modal-image-side">
-                  <img
-                    src={selectedProject.mainImageUrl || '/project-default.png'}
-                    alt={selectedProject.title}
-                  />
-                </div>
-
-                <div className="modal-info-side">
-                  <header className="modal-header-info">
-                    {/* שליפת הקטגוריה באופן דינמי מהפרויקט הנבחר */}
-                    <span className="modal-category-tag">
-                      {selectedProject.category?.name ||
-                        selectedProject.category ||
-                        'כללי'}
-                    </span>
-                    <h2>{selectedProject.title}</h2>
-                    <div className="modal-price-display">
-                      ₪{selectedProject.price}
-                    </div>
-                  </header>
-
-                  <div className="modal-description-area">
-                    <p>
-                      {selectedProject.description ||
-                        'אין תיאור זמין לפרויקט זה.'}
-                    </p>
-                  </div>
-
-                  <div className="modal-footer-actions">
-                    <div className="payment-container">
-                      <p className="payment-label">רכישה מאובטחת:</p>
-                      <PayPalButtons
-                        style={{
-                          layout: 'vertical',
-                          shape: 'rect',
-                          height: 45,
-                        }}
-                        createOrder={(data, actions) => {
-                          return actions.order.create({
-                            purchase_units: [
-                              {
-                                amount: {
-                                  value: selectedProject.price.toString(),
-                                },
-                                description: selectedProject.title,
-                              },
-                            ],
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-    </div> // סגירת ה-div של ה-profile-page-wrapper
-  ); // סגירת ה-return
-}; // סגירת הקומפוננטה
+      {/* 2. שימוש בקומפוננטת ה-Popup המשותפת במקום ה-Portal המקומי */}
+      {selectedProject && (
+        <Popup
+          project={selectedProject}
+          onClose={closeModal}
+          isLoggedIn={isLoggedIn}
+          onUpdate={(updatedProject) => {
+            // עדכון הפרויקט ברשימה המקומית במידה ובוצע שינוי
+            setUserProjects((prev) =>
+              prev.map((p) =>
+                (p._id || p.id) === (updatedProject._id || updatedProject.id)
+                  ? updatedProject
+                  : p
+              )
+            );
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
 export default PublicProfile;

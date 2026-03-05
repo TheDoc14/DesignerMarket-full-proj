@@ -44,6 +44,69 @@ const AddProject = () => {
       console.error('Failed to load categories', err);
     }
   }, []);
+  const HE_VALIDATION_MAP = {
+    // title
+    'Title is required': 'חובה להזין שם פרויקט.',
+    'Title must be between 2 and 80 characters':
+      'שם הפרויקט חייב להיות בין 2 ל־80 תווים.',
+
+    // description
+    'Description is too long': 'התיאור ארוך מדי (מקסימום 5000 תווים).',
+
+    // price
+    'Price is required': 'חובה להזין מחיר.',
+    'Price must be a valid number': 'המחיר חייב להיות מספר תקין וחיובי.',
+
+    // category
+    'category must be a string': 'קטגוריה חייבת להיות טקסט.',
+    'Invalid category': 'הקטגוריה שנבחרה לא קיימת במערכת.',
+
+    // mainImageIndex
+    'mainImageIndex is required': 'חובה לבחור תמונה ראשית.',
+    'mainImageIndex must be a non-negative integer':
+      'בחירת תמונה ראשית אינה תקינה.',
+  };
+
+  const translateBackendError = (err) => {
+    // 1) אם הבק מחזיר מערך שגיאות של express-validator
+    const errorsArr =
+      err?.response?.data?.errors ||
+      err?.response?.data?.details ||
+      err?.response?.data?.error?.errors;
+
+    if (Array.isArray(errorsArr) && errorsArr.length > 0) {
+      // express-validator לרוב מחזיר { msg, param, ... }
+      const first = errorsArr[0];
+      const msg = first?.msg || first?.message || '';
+      const param = first?.param;
+
+      // תרגום לפי msg
+      if (msg && HE_VALIDATION_MAP[msg]) return HE_VALIDATION_MAP[msg];
+
+      // fallback לפי param (במקרה שה-msg משתנה)
+      if (param === 'title') return 'בדוק את שם הפרויקט (2–80 תווים).';
+      if (param === 'description')
+        return 'בדוק את התיאור (מקסימום 5000 תווים).';
+      if (param === 'price') return 'בדוק את המחיר (חובה מספר תקין).';
+      if (param === 'category') return 'בדוק את הקטגוריה שנבחרה.';
+      if (param === 'mainImageIndex') return 'חובה לבחור תמונה ראשית (תמונה).';
+
+      return 'יש שגיאה באחד השדות. בדוק את הטופס.';
+    }
+
+    // 2) אם הבק מחזיר message בודד
+    const msg = err?.response?.data?.message || err?.message;
+    if (msg && HE_VALIDATION_MAP[msg]) return HE_VALIDATION_MAP[msg];
+
+    // 3) fallback כללי
+    const status = err?.response?.status;
+    if (status === 400) return 'הנתונים שנשלחו לא תקינים. בדוק את הטופס.';
+    if (status === 401) return 'אין לך הרשאה לבצע פעולה זו. התחבר מחדש.';
+    if (status === 403) return 'אין לך הרשאה להעלות פרויקט.';
+    if (status >= 500) return 'שגיאת שרת. נסה שוב בעוד רגע.';
+
+    return 'שגיאה בהעלאה.';
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -94,6 +157,17 @@ const AddProject = () => {
     setTags(tags.filter((_, i) => i !== indexToRemove));
   };
   const handleSubmit = async (e) => {
+    if (!formData.title.trim()) return setError('חובה להזין שם פרויקט.');
+    if (formData.title.trim().length < 2 || formData.title.trim().length > 80)
+      return setError('שם הפרויקט חייב להיות בין 2 ל־80 תווים.');
+
+    if (formData.description && formData.description.length > 5000)
+      return setError('התיאור ארוך מדי (מקסימום 5000 תווים).');
+
+    if (formData.price === '' || formData.price === null)
+      return setError('חובה להזין מחיר.');
+    if (Number.isNaN(Number(formData.price)) || Number(formData.price) < 0)
+      return setError('המחיר חייב להיות מספר תקין וחיובי.');
     e.preventDefault();
     if (
       files[mainImageIndex] &&
@@ -123,7 +197,7 @@ const AddProject = () => {
       alert('הפרויקט הועלה בהצלחה!');
       // אופציונלי: איפוס הטופס או ניווט דף
     } catch (err) {
-      setError(err.response?.data?.message || 'שגיאה בהעלאה.');
+      setError(translateBackendError(err));
     } finally {
       setLoading(false);
     }

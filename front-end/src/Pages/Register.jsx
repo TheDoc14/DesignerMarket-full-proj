@@ -68,7 +68,6 @@ const Register = () => {
     } catch (err) {
       const serverMsg = err.response?.data?.message;
       console.log('REGISTER ERROR STATUS:', err.response?.status);
-      console.log('REGISTER ERROR DATA:', err.response?.data);
 
       const errorTranslations = {
         'User already exists with this email.':
