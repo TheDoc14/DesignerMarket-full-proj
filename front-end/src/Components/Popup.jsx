@@ -10,14 +10,15 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   const [existingFiles, setExistingFiles] = useState(project?.files || []);
   const [newFiles, setNewFiles] = useState([]); // קבצים נוספים להעלאה
   const { hasPermission, user: currentUser } = usePermission();
+  const [orderStatus, setOrderStatus] = useState(null); // 'PENDING', 'PAID', וכו'
+  const navigate = useNavigate();
 
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
 
-  const [currentMainImageId, setCurrentMainImageId] = useState(
-    project?.mainImageId || ''
-  );
+  const [, setCurrentMainImageId] = useState(project?.mainImageId || '');
+  const isAdmin = hasPermission('admin');
+
   const projectId = project?._id || project?.id;
-  const navigate = useNavigate();
   const chatEndRef = useRef(null);
   const location = useLocation();
   const hasFetchedRef = useRef(false);
@@ -27,7 +28,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   );
   const currentUserId = String(currentUser?._id || currentUser?.id || '');
   const isOwner =
-    !!currentUserId && !!createdById && currentUserId === createdById;
+    (!!currentUserId && !!createdById && currentUserId) === createdById;
 
   // --- Logic Helpers ---
 
@@ -65,6 +66,29 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   });
   // --- 1. הגדרת כל ה-Hooks בראש הקומפוננטה (לפני כל if) ---
 
+  // ✅ פונקציה לבדיקת אם המשתמש כבר קנה את הפרויקט
+  // בודקת ב-existingOrder מתוך ה-project
+  const checkIfProjectPurchased = useCallback(() => {
+    if (!project) {
+      setAlreadyPurchased(false);
+      return;
+    }
+    try {
+      // בדוק אם בפרויקט יש existingOrder שהוא PAYOUT_SENT (רכישה בהצלחה)
+      if (
+        project.existingOrder &&
+        project.existingOrder.status === 'PAYOUT_SENT'
+      ) {
+        setAlreadyPurchased(true);
+      } else {
+        setAlreadyPurchased(false);
+      }
+    } catch (err) {
+      console.error('שגיאה בבדיקת רכישה:', err);
+      setAlreadyPurchased(false);
+    }
+  }, [project]);
+
   // פונקציה לשליפת קבצים מלאה מה-DB
   const fetchProjectFilesFromDB = useCallback(async () => {
     if (!projectId) return;
@@ -76,8 +100,16 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
         // ✅ מאחדים media + files לרשימה אחת לניהול
         const allFiles = [...(fullData.media || []), ...(fullData.files || [])];
         setExistingFiles(allFiles);
+        const status = fullData.existingOrder?.status || null;
+        setOrderStatus(status);
+
+        if (!status) setAlreadyPurchased(false);
+        // אם אין קבצים אבל השרת מציין שיש הזמנה קיימת (למשל PENDING)
+        if (fullData.existingOrder?.status) {
+          setOrderStatus(fullData.existingOrder.status);
+        }
+
         if (fullData.mainImageUrl) setImagePreview(fullData.mainImageUrl);
-        // ✅ שומרים את ה-mainImageId כדי לעדכן אותו בעת החלפה
         setCurrentMainImageId(fullData.mainImageId || '');
       }
     } catch (err) {
@@ -129,20 +161,61 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
 
       if (quota) {
         setAiQuota({
-          used: Number(quota.used) || 0,
-          limit: Number(quota.limit) || 20,
-          remaining: Number(quota.remaining) || 0,
+          used: parseInt(quota.used) || 0,
+          limit: parseInt(quota.limit) || 20,
+          remaining: parseInt(quota.remaining) || 0,
         });
       }
     } catch (err) {
       console.error('Failed to sync quota', err);
     }
   }, []);
+  const handleOpenFile = async (file) => {
+    const filename = file.filename || file.name || 'download.txt';
+    const fileUrl = file.url || file.fileUrl;
 
-  // פונקציה למחיקה מקומית (לפני השמירה)
-  const removeExistingFile = (fileId) => {
-    setExistingFiles((prev) => prev.filter((f) => (f._id || f.id) !== fileId));
+    if (!fileUrl) return showFeedback('error', 'כתובת קובץ חסרה');
+
+    try {
+      showFeedback('info', `מוריד את ${filename}...`);
+
+      // אנחנו משתמשים ב-api אבל מוסיפים הגדרה שתמנע מה-Interceptor לנתק אותנו
+      const response = await api.get(fileUrl, {
+        responseType: 'blob',
+        // דגל מיוחד למניעת ניתוק (וודאי שהשם תואם למה שמוגדר אצלכם ב-axios.js)
+        skipAuthRefresh: true,
+      });
+
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showFeedback('success', 'הקובץ ירד בהצלחה');
+    } catch (err) {
+      // כאן אנחנו עוצרים את הניתוק!
+      console.error('Download failed, preventing logout:', err);
+
+      // אם השרת החזיר 401/403 (מה שקורה עם הקובץ של המעצב)
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        showFeedback(
+          'error',
+          'אין לך הרשאה להוריד את קובץ המקור הזה (ייתכן שלא רכשת את הפרויקט).'
+        );
+      } else {
+        showFeedback('error', 'שגיאה בהורדת הקובץ');
+      }
+
+      // חשוב מאוד: לא לעשות throw err כדי שה-Interceptor לא יתפוס את זה
+    }
   };
+  // פונקציה למחיקה מקומית (לפני השמירה)
+
   const fetchReviews = useCallback(async () => {
     setReviewsLoading(true);
     try {
@@ -160,6 +233,14 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   useEffect(() => {
     if (projectId) fetchReviews();
   }, [projectId, fetchReviews]);
+
+  // ✅ Effect חדש: בדיקת רכישה כשהפופאפ נפתח או כשמשתנה ה-projectId
+  useEffect(() => {
+    if (isLoggedIn && !isOwner) {
+      checkIfProjectPurchased();
+    }
+  }, [projectId, currentUserId, isLoggedIn, isOwner, checkIfProjectPurchased]);
+
   // טעינה ראשונית וטיפול בלינקים מהדשבורד
   // בתוך useEffect של initPopup
   useEffect(() => {
@@ -217,7 +298,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
     setExistingFiles([]);
     setImagePreview(project?.mainImageUrl || '');
     fetchProjectFilesFromDB();
-  }, [projectId]); // בכוונה רק projectId ולא fetchProjectFilesFromDB
+  }, [projectId, project?.mainImageUrl, fetchProjectFilesFromDB]);
 
   // ✅ Effect 2: גלילה לראש בעריכה
   useEffect(() => {
@@ -233,7 +314,13 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages]);
-  if (!project) return null;
+
+  // ✅ Effect 4: בדיקת רכישה - חייב להיות לפני ה-return
+  useEffect(() => {
+    if (isLoggedIn && !isOwner && project) {
+      checkIfProjectPurchased();
+    }
+  }, [project, isLoggedIn, isOwner, checkIfProjectPurchased]);
 
   // --- 2. רק עכשיו מותר לשים את תנאי העצירה ---
   if (!project) return null;
@@ -621,7 +708,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
                         </div>
                         {/* אזור ניהול קבצים - גלוי רק ליוצר הפרויקט */}
                         {/* אזור ניהול קבצים - גלוי רק ליוצר הפרויקט במצב עריכה */}
-                        {isOwner && isEditing && (
+                        {((isOwner && isEditing) || isAdmin) && (
                           <div className="project-files-manager">
                             <h4>📁 ניהול קבצי מקור</h4>
                             <div className="files-list-admin">
@@ -635,14 +722,14 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
                                     {file.filename}
                                   </span>
                                   <div className="file-actions">
-                                    <a
-                                      href={file.url}
-                                      target="_blank"
-                                      rel="noreferrer"
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenFile(file)}
                                       className="btn-view-small"
+                                      title="פתח או הורד קובץ"
                                     >
                                       👁️
-                                    </a>
+                                    </button>
                                   </div>
                                 </div>
                               ))}
@@ -741,114 +828,98 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
             <div className="popup-sections-divider" />
             <div className="purchase-and-reviews-container">
               {/* --- חלק 2: אזור רכישה (PayPal) --- */}
-              {!isOwner && project.price > 0 && !alreadyPurchased && (
-                <div className="paypal-button-container">
-                  <div className="paypal-purchase-section">
-                    <h4>💳 רכישת רישיון לפרויקט</h4>
-                    <div className="paypal-button-container">
-                      <PayPalButtons
-                        style={{ layout: 'horizontal', height: 45 }}
-                        createOrder={async () => {
-                          try {
-                            const res = await api.post(
-                              '/api/orders/paypal/create',
-                              { projectId }
+              {/* ✅ מציגים כפתורי PayPal רק אם:
+                   1. המשתמש לא בעלים של הפרויקט (!isOwner)
+                   2. המשתמש עדיין לא קנה את הפרויקט (!alreadyPurchased)
+                   3. המחיר גדול מ-0 (project.price > 0)
+              */}
+              {!isOwner && !alreadyPurchased && project.price > 0 && (
+                <div className="paypal-purchase-section">
+                  {/* מקרה: כפתורי תשלום */}
+                  <div className="paypal-button-container">
+                    <h4>
+                      {/* בדיקה אם יש הזמנה קיימת שאינה מבוטלת/גמורה */}
+                      {orderStatus &&
+                      !['CANCELED', 'COMPLETED', 'PAID'].includes(orderStatus)
+                        ? '⏳ המשך הזמנה קיימת'
+                        : '💳 רכישת הפרויקט'}
+                    </h4>
+                    <PayPalButtons
+                      style={{
+                        layout: 'vertical',
+                        shape: 'rect',
+                        height: 45,
+                      }}
+                      createOrder={async () => {
+                        try {
+                          const res = await api.post(
+                            '/api/orders/paypal/create',
+                            { projectId }
+                          );
+                          return res.data.order.paypalOrderId;
+                        } catch (err) {
+                          if (err.response?.status === 409) {
+                            // אם השרת מחזיר 409, נעדכן את הסטטוס להמשך הזמנה
+                            setOrderStatus('PENDING');
+                            showFeedback(
+                              'info',
+                              'קיימת הזמנה פתוחה לפרויקט זה. ניתן להמשיך בתשלום.'
                             );
-                            return res.data.order.paypalOrderId;
-                          } catch (err) {
-                            // ✅ אם כבר נרכש - עצור את הטיסה כאן
-                            if (err.response?.status === 409) {
-                              const msg = err.response.data?.message || '';
-                              if (
-                                String(msg).toLowerCase().includes('already')
-                              ) {
-                                // דגול שכבר קנה ועצור את PayPal SDK
-                                setAlreadyPurchased(true);
-                                showFeedback(
-                                  'info',
-                                  '✅ כבר רכשת את הפרויקט הזה.'
-                                );
-                                throw new Error('ALREADY_PURCHASED');
-                              }
 
-                              // אם זה עדיין סוג שונה של 409, נסה ביטול והזמנה חדשה
-                              const existingOrderId =
-                                err.response.data.details?.orderId;
-
-                              if (existingOrderId) {
-                                try {
-                                  await api.post(
-                                    `/api/orders/${existingOrderId}/cancel`
-                                  );
-                                  const retry = await api.post(
-                                    '/api/orders/paypal/create',
-                                    { projectId }
-                                  );
-                                  return retry.data.order.paypalOrderId;
-                                } catch (retryErr) {
-                                  showFeedback(
-                                    'error',
-                                    'לא ניתן לאפס את ההזמנה הקיימת. נסה שוב מאוחר יותר.'
-                                  );
-                                  throw retryErr;
-                                }
-                              }
+                            // אם השרת מחזיר את ה-ID הקיים בתוך ה-Error:
+                            if (err.response.data?.details?.paypalOrderId) {
+                              return err.response.data.details.paypalOrderId;
                             }
+                            throw new Error('PENDING_ORDER');
+                          }
+                          throw err;
+                        }
+                      }}
+                      onApprove={async (data) => {
+                        try {
+                          setLoading(true);
+                          const res = await api.post(
+                            '/api/orders/paypal/capture',
+                            { paypalOrderId: data.orderID }
+                          );
 
-                            showFeedback(
-                              'error',
-                              err.response?.data?.message ||
-                                'שגיאה ביצירת הזמנה'
-                            );
-                            throw err;
+                          if (
+                            res.data.order.status === 'PAYOUT_SENT' ||
+                            res.data.order.status === 'PAID'
+                          ) {
+                            showFeedback('success', '✅ רכישה הושלמה בהצלחה!');
+
+                            // רענן את הדף כדי שייטען את existingOrder החדש מהשרת
+                            setTimeout(() => {
+                              window.location.reload();
+                            }, 1500);
                           }
-                        }}
-                        onApprove={async (data) => {
-                          try {
-                            await api.post('/api/orders/paypal/capture', {
-                              paypalOrderId: data.orderID,
-                            });
-                            showFeedback(
-                              'success',
-                              '✅ הרכישה הושלמה! הקבצים זמינים להורדה.'
-                            );
-                            setAlreadyPurchased(true);
-                            setTimeout(() => window.location.reload(), 2000);
-                          } catch (err) {
-                            const msg =
-                              err.response?.data?.message ||
-                              'שגיאה בעיבוד התשלום';
-                            showFeedback(
-                              'error',
-                              `התשלום עבר בפייפאל אך אירעה שגיאה: ${msg}. פנה לתמיכה.`
-                            );
-                          }
-                        }}
-                        onError={(err) => {
-                          console.error('PayPal Error:', err);
-                          // אל תציג שגיאה עם ALREADY_PURCHASED
-                          if (!String(err).includes('ALREADY_PURCHASED')) {
-                            showFeedback(
-                              'error',
-                              'חלה שגיאה בתקשורת מול פייפאל'
-                            );
-                          }
-                        }}
-                      />
-                    </div>
+                        } catch (err) {
+                          showFeedback(
+                            'error',
+                            err.friendlyMessage || 'שגיאה בהשלמת התשלום'
+                          );
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      onError={() => {
+                        showFeedback('error', 'שגיאה בתשלום PayPal');
+                      }}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* אם כבר קנה - הצג הודעת הצלחה */}
-              {!isOwner && alreadyPurchased && (
-                <div className="paypal-purchase-section">
-                  <div className="success-message-box">
-                    <p>
-                      ✅ <strong>כבר רכשת את הפרויקט הזה!</strong>
-                    </p>
-                    <p>גש לקטע קבצים כדי להוריד את הקבצים שלך.</p>
-                  </div>
+              {/* הודעת הצלחה - מציגה רק אם כבר קנה */}
+              {alreadyPurchased && (
+                <div className="success-message-box purchased-alert">
+                  <p>
+                    ✅ <strong>רכשת את הפרויקט בעבר!</strong>
+                  </p>
+                  <p>
+                    תוכל לצפות בקבצי המקור שלו באיזור האישי שלך. תודה על התמיכה!
+                  </p>
                 </div>
               )}
             </div>
@@ -929,11 +1000,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
 
                     // בדיקה האם את היוצרת (המרנו את שניהם למחרוזת כדי למנוע בעיות טיפוסים)
                     const isReviewOwner = reviewerId === currentUserId;
-                    const isAdmin = hasPermission('admin');
-                    const showEditBtn = isReviewOwner || isAdmin;
-                    // כפתור עריכה יוצג רק לבעלים (לפי חוקי ה-Backend שלך)
-                    // כפתור מחיקה יוצג לבעלים או לאדמין
-                    const canDeleteReview = isReviewOwner || isAdmin;
 
                     // שורת דיבאג - פתחי את ה-Console (F12) כדי לראות אם ה-IDs תואמים
 
@@ -1070,18 +1136,26 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn }) => {
 
               <div className="ai-sidebar-footer">
                 <div className="ai-quota-info">
-                  <small>נותרו {aiQuota.remaining} שאילתות</small>
+                  {/* שימוש ב-aiQuota.remaining מה-state */}
+                  <small>
+                    {aiQuota.remaining > 0
+                      ? `נותרו לך ${aiQuota.remaining} שאילתות`
+                      : 'ניצלת את כל המכסה להיום'}
+                  </small>
                 </div>
                 <div className="ai-input-wrapper">
                   <textarea
                     value={userQuery}
                     onChange={(e) => setUserQuery(e.target.value)}
                     placeholder="שאל משהו..."
+                    disabled={aiQuota.remaining === 0 || loading} // חסימת קלט אם אין מכסה
                   />
                   <button
                     onClick={handleSendAiMessage}
                     className="ai-send-btn"
-                    disabled={loading}
+                    disabled={
+                      loading || !userQuery.trim() || aiQuota.remaining === 0
+                    }
                   >
                     שלח
                   </button>

@@ -19,9 +19,9 @@ const About = () => {
       {/* --- Hero Section --- */}
       <section className="hero">
         <div className="badge">מהפכת העיצוב התעשייתי</div>
+        <h1>Designer Market </h1>
         <h1>
-          Designer Market: הופכים{' '}
-          <span className="highlight">יצירה לקריירה</span>
+          <span className="highlight"> הופכים יצירה לקריירה</span>
         </h1>
         <p className="hero-subtitle">
           הפלטפורמה המקצועית הראשונה בישראל המיועדת לסטודנטים לעיצוב תעשייתי.
