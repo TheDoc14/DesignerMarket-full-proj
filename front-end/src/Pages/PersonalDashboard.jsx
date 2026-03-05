@@ -87,6 +87,7 @@ const PersonalDashboard = () => {
       setHistoryLoading(false);
     }
   }, []);
+
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
 
@@ -133,8 +134,8 @@ const PersonalDashboard = () => {
 
       // 4. פרויקטים שלא יצרתי - בדיקה אם רכשתי
       const notMine = allProjects.filter((p) => {
-        const creatorId = p.createdBy?._id || p.createdBy?.id || p.createdBy;
-        return String(creatorId) !== myId;
+        const buyerId = p.buyerId || p.buyer?._id || p.buyer?.id;
+        return String(buyerId) !== myId;
       });
 
       // ✅ שליפת כל פרויקט בנפרד - הבאק מחזיר files רק אם רכשת
@@ -144,6 +145,25 @@ const PersonalDashboard = () => {
           return api.get(`/api/projects/${pId}`);
         })
       );
+
+      const createdResults = await Promise.allSettled(
+        myOwn.map((p) => {
+          const pId = p._id || p.id;
+          return api.get(`/api/projects/${pId}`);
+        })
+      );
+      const created = createdResults
+        .filter((r) => r.status === 'fulfilled')
+        .map((r) => r.value.data?.project || r.value.data?.data || r.value.data)
+        .filter((p) => {
+          // ✅ הבאק מחזיר files (כולל קבצים לא-תמונות) רק לקונה/בעלים/אדמין
+          const hasSourceFiles =
+            Array.isArray(p?.files) &&
+            p.files.some(
+              (f) => f.fileType !== 'image' && f.fileType !== 'video'
+            );
+          return hasSourceFiles;
+        });
 
       const purchased = purchasedResults
         .filter((r) => r.status === 'fulfilled')
@@ -158,7 +178,7 @@ const PersonalDashboard = () => {
           return hasSourceFiles;
         });
 
-      setProjects(myOwn);
+      setProjects(created);
       setPurchasedProjects(purchased);
     } catch (err) {
       console.error('Dashboard data fetch failed', err);
