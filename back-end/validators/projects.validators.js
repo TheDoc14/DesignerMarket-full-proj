@@ -86,9 +86,13 @@ const updateProjectValidators = [
   body('mainImageId').optional().isMongoId().withMessage('Invalid mainImageId'),
 ];
 
+// /api/projects/:id/files/:fileId
+const fileIdParam = mongoIdParam('fileId', 'Invalid file id');
+
 module.exports = {
   projectIdParam,
   listProjectsQuery,
   createProjectValidators,
   updateProjectValidators,
+  fileIdParam,
 };

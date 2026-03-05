@@ -11,10 +11,10 @@ const ok = (res, { status = 200, message = 'OK', data = null, meta = undefined }
   if (meta !== undefined) payload.meta = meta;
 
   return res.status(status).json(payload);
-}
+};
 
 const noContent = (res) => {
   return res.status(204).send();
-}
+};
 
 module.exports = { ok, noContent };

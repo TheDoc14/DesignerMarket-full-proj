@@ -3,6 +3,9 @@ const Order = require('../models/Order.model');
 const Project = require('../models/Project.model');
 const User = require('../models/Users.models');
 const { createPaypalOrder, capturePaypalOrder, sendPayout } = require('../utils/paypal.utils');
+const { ok } = require('../utils/response.utils');
+const { getPaging, toSort } = require('../utils/query.utils');
+const { buildMeta } = require('../utils/meta.utils');
 
 const PLATFORM_FEE_PERCENT = Number(process.env.PLATFORM_FEE_PERCENT || 0); // אפשר 0 אם ויתרת
 const PENDING_TTL_MIN = Number(process.env.ORDER_PENDING_TTL_MIN || 30);
@@ -267,10 +270,93 @@ const cancelMyPendingOrder = async (req, res, next) => {
   }
 };
 
+// ----------------------------------------------------
+// List My Orders (Buyer history)
+// GET /api/orders/my?status=&projectId=&page=&limit=&sortBy=&order=
+// ----------------------------------------------------
+const listMyOrders = async (req, res, next) => {
+  try {
+    const buyerId = req.user.id;
+
+    // Pagination
+    const { page, limit, skip } = getPaging(req.query, 20);
+
+    // Filters
+    const filter = { buyerId };
+
+    // status filter (optional)
+    if (req.query.status) {
+      filter.status = String(req.query.status).trim().toUpperCase();
+    }
+
+    // project filter (optional)
+    if (req.query.projectId) {
+      filter.projectId = String(req.query.projectId).trim();
+    }
+
+    // Sorting
+    const sort = toSort(
+      req.query.sortBy,
+      req.query.order,
+      ['createdAt', 'updatedAt', 'status', 'amountTotal'],
+      'createdAt'
+    );
+
+    // Query
+    const [items, total] = await Promise.all([
+      Order.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .populate('projectId', 'title price isSold isPublished')
+        .lean(),
+      Order.countDocuments(filter),
+    ]);
+
+    // Shape response (clean + stable)
+    const data = (items || []).map((o) => ({
+      id: String(o._id),
+      status: o.status,
+      currency: o.currency,
+      amountTotal: o.amountTotal,
+      platformFee: o.platformFee,
+      sellerAmount: o.sellerAmount,
+
+      paypalOrderId: o.paypalOrderId || '',
+      paypalCaptureId: o.paypalCaptureId || '',
+
+      canceledAt: o.canceledAt || null,
+      canceledReason: o.canceledReason || '',
+
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+
+      project: o.projectId
+        ? {
+            id: String(o.projectId._id),
+            title: o.projectId.title,
+            price: o.projectId.price,
+            isPublished: o.projectId.isPublished,
+            isSold: o.projectId.isSold,
+          }
+        : null,
+    }));
+
+    return ok(res, {
+      message: 'My orders fetched',
+      data,
+      meta: buildMeta(total, page, limit),
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   paypalCreateOrder,
   paypalCaptureOrder,
   paypalReturn,
   paypalCancel,
   cancelMyPendingOrder,
+  listMyOrders,
 };
