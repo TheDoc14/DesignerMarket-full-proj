@@ -77,7 +77,7 @@ const registerUser = async (req, res, next) => {
     });
 
     await user.save();
-    
+
     await sendVerificationEmail(user.email, verificationToken);
 
     return res.status(201).json({

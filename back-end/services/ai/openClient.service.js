@@ -12,14 +12,14 @@ const createOpenAIClient = () => {
   if (!apiKey) throw new Error('OPENAI_API_KEY is missing in environment variables');
 
   return new OpenAI({ apiKey });
-}
+};
 
 /**
  * callDesignConsultationAI({ messages, language, safetyIdentifier })
  * - מקבל מערך הודעות (system/user/assistant) ומחזיר טקסט תשובה.
  * - משתמש ב-Responses API (ה-API הראשי כיום בספריית Node הרשמית).
  */
-const callDesignConsultationAI = async({ messages, language, safetyIdentifier }) => {
+const callDesignConsultationAI = async ({ messages, language, safetyIdentifier }) => {
   const client = createOpenAIClient();
 
   const model = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
@@ -71,7 +71,7 @@ const callDesignConsultationAI = async({ messages, language, safetyIdentifier })
   } finally {
     clearTimeout(timeout);
   }
-}
+};
 
 module.exports = {
   callDesignConsultationAI,

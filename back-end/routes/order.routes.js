@@ -9,6 +9,7 @@ const {
   paypalCancel,
   paypalReturn,
   cancelMyPendingOrder,
+  listMyOrders,
 } = require('../controllers/order.controller');
 const {
   createPaypalOrderValidators,
@@ -54,5 +55,9 @@ router.get('/paypal/cancel', paypalCancel);
 // POST /api/orders/:id/cancel
 // משתמשים יכולים לבטל הזמנות שהם יצרו, בתנאי שהן עדיין במצב "pending" (לא הושלמו).
 router.post('/:id/cancel', authMiddleware, cancelMyPendingOrder);
+
+// GET /api/orders/my
+// מחזיר היסטוריית רכישות (buyer) עם פילטרים/מיון/פגינציה
+router.get('/my', authMiddleware, listMyOrders);
 
 module.exports = router;
