@@ -15,6 +15,6 @@ const requestIdMiddleware = (req, res, next) => {
   res.setHeader('X-Request-Id', requestId);
 
   return next();
-}
+};
 
 module.exports = { requestIdMiddleware };

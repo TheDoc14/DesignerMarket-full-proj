@@ -15,13 +15,13 @@ const getTodayWindow = () => {
   end.setHours(23, 59, 59, 999);
 
   return { start, end };
-}
+};
 
 /**
  * countAiCallsToday(userId)
  * סופר כמה קריאות AI המשתמש עשה היום.
  */
-const countAiCallsToday = async(userId) => {
+const countAiCallsToday = async (userId) => {
   const { start, end } = getTodayWindow();
 
   const count = await AiUsageLog.countDocuments({
@@ -30,7 +30,7 @@ const countAiCallsToday = async(userId) => {
   });
 
   return count;
-}
+};
 
 /**
  * getDailyLimit()
@@ -39,7 +39,7 @@ const countAiCallsToday = async(userId) => {
 const getDailyLimit = () => {
   const n = Number(process.env.AI_DAILY_LIMIT || 20);
   return Number.isFinite(n) && n > 0 ? n : 20;
-}
+};
 
 module.exports = {
   countAiCallsToday,

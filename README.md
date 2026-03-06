@@ -35,6 +35,8 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - Safe serializers that prevent leaking sensitive fields
 - Secure file access with explicit public vs protected routes
 - Purchase-based access control (files unlock only after successful payment)
+- AI module: rich project context (reviews + extracted file text + images) with quota + usage logging
+
 
 ---
 
@@ -67,7 +69,9 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - React Router
 - Context API
 - Formik (forms)
-- Styled/custom CSS (project UI)
+- Custom CSS/styling
+- Uses the backend as a single deployment target (backend serves the React build in production)
+- Branding: favicons + updated `public/index.html` metadata (tab icon, title)
 
 ---
 
@@ -83,7 +87,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 - Register / Login
 - Email verification + resend verification
 - Forgot password + reset password
-- JWT-based auth + RBAC permissions
+- JWT-based auth + dynamic RBAC permissions
 - Rate limiting on auth flows
 - Helmet security headers + CORS handling
 - Google reCAPTCHA V3 protection on auth endpoints (`register`, `login`, `forgot-password`, `reset-password`, `resend-verification`)
@@ -100,6 +104,7 @@ Full-stack marketplace for industrial design students/designers to showcase and 
   - Owner/Admin see additional content
 - Listing supports filtering + pagination + sorting + meta
 - Safe serializers to prevent leaking sensitive fields
+- **Delete a single project file** (image/file) without deleting the whole project
 
 #### Reviews
 - CRUD reviews
@@ -134,22 +139,24 @@ Full-stack marketplace for industrial design students/designers to showcase and 
 ### AI Chats (OpenAI)
 - Create AI chat per project (stored in MongoDB)
 - Continue conversations (messages history)
-- AI context builder sends **project description + reviews + extracted file text + up to 3 image URLs**
+- AI context builder sends :
+  - **project description + reviews**
+  - **extracted text from uploaded project files (TXT/PDF/DOCX, etc.)**
+  - **up to 3 image URLs**
 - Guardrails: RBAC permission (`AI_CONSULT`) + rate limiting + daily quota (`AI_DAILY_LIMIT`)
 - Usage logging (`AiUsageLog`) for stats/auditing (tokens/latency/outcome)
 
 ### Orders / Purchases (PayPal)
-- Create PayPal order → returns approve link
-- Capture payment → persists order status in DB
-- Seller payout handling
+- Create PayPal order → PayPal approve flow → capture payment → persists order in DB
 - Purchase-based access control: **buyers unlock protected project files**
 - Hardening:
   - Prevent double capture / idempotency guard
   - Prevent self-purchase
   - Prevent duplicate pending orders
-  - Return/Cancel endpoints to avoid “stuck purchase” cases:
-    - `/orders/paypal/return`
-    - `/orders/paypal/cancel`
+- Return/Cancel endpoints to avoid “stuck purchase” cases:
+  - `/orders/paypal/return`
+  - `/orders/paypal/cancel`
+- **Buyer purchase history endpoint** (`/orders/my`) with pagination/filtering
 
 ---
 
@@ -219,9 +226,9 @@ npm run lint:fix     # eslint --fix
 npm run format       # prettier --write
 npm run format:check # prettier --check
 ```
-## NOTE:
-- Backend runs on: http://localhost:5000
-- Frontend runs on: http://localhost:3000
+> [!NOTE]
+> - Backend runs on: http://localhost:5000
+> - Frontend runs on: http://localhost:3000
 
 ---
 
@@ -301,6 +308,9 @@ AI_DAILY_LIMIT=20
 OPENAI_TIMEOUT_MS=20000
 
 ```
+> [!IMPORTANT]
+> - `REACT_APP_*` variables are read at build time (`npm run build`) only.
+> - In production (backend serves frontend), the recommended approach is same-origin API calls `(/api/...`) unless you intentionally deploy frontend separately.
 ---
 
 ## API Overview (Backend)
@@ -325,6 +335,7 @@ OPENAI_TIMEOUT_MS=20000
 - `POST /projects`
 - `PUT /projects/:id`
 - `DELETE /projects/:id`
+- `DELETE /projects/:id/files/:fileId`
 
 ### Reviews
 - `GET /reviews` (pagination + meta)
@@ -373,6 +384,7 @@ OPENAI_TIMEOUT_MS=20000
 - `GET /orders/paypal/return`
 - `GET /orders/paypal/cancel`
 - `POST /orders/:id/cancel`
+- `GET /orders/my` (filtering + pagination + meta)
 
 ### AI (OpenAI)
 - `POST /ai-chats`

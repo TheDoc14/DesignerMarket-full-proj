@@ -11,9 +11,9 @@ const MAX_TEXT_CHARS = 12000; // כדי לא להציף את ה-LLM
 const clampText = (text) => {
   const cleaned = (text || '').replace(/\s+/g, ' ').trim();
   return cleaned.length > MAX_TEXT_CHARS ? cleaned.slice(0, MAX_TEXT_CHARS) + '…' : cleaned;
-}
+};
 
-const readLimitedBuffer = async(filePath) => {
+const readLimitedBuffer = async (filePath) => {
   const stat = await fs.stat(filePath);
   if (stat.size > MAX_FILE_BYTES) {
     // לא נכשיל, פשוט נחתוך כדי שהדמו לא ייפול
@@ -21,13 +21,13 @@ const readLimitedBuffer = async(filePath) => {
     return buf.subarray(0, MAX_FILE_BYTES);
   }
   return fs.readFile(filePath);
-}
+};
 
 /**
  * extractTextFromLocalFile(filePath)
  * תומך: pdf, docx, txt/markdown
  */
-const extractTextFromLocalFile = async(filePath) => {
+const extractTextFromLocalFile = async (filePath) => {
   const ext = path.extname(filePath).toLowerCase();
   const contentType = mime.lookup(ext) || '';
 
@@ -56,7 +56,7 @@ const extractTextFromLocalFile = async(filePath) => {
 
   // פורמטים אחרים (zip, psd, וכו') — נחזיר מטה-דאטה במקום טקסט
   return '';
-}
+};
 
 module.exports = {
   extractTextFromLocalFile,

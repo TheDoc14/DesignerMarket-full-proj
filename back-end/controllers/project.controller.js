@@ -361,10 +361,77 @@ const deleteProject = async (req, res, next) => {
   }
 };
 
+/**
+ * 🗑️ deleteProjectFile
+ * מוחק קובץ ספציפי מתוך פרויקט (רק owner או admin).
+ * חשוב:
+ * - אם מוחקים את תמונת ה-main (mainImageId) חייבים לבחור תמונת main חלופית.
+ * - מבצע best-effort למחיקת הקובץ הפיזי מה-uploads.
+ */
+const deleteProjectFile = async (req, res, next) => {
+  try {
+    const { id, fileId } = req.params;
+
+    // 1) שליפת הפרויקט ובדיקת קיום
+    const p = await Project.findById(id).populate('createdBy', '_id role');
+    if (!p) throw new Error('Project not found');
+
+    // 2) בדיקת הרשאה: owner/admin בלבד
+    const isAdmin = req.user.role === ROLES.ADMIN;
+    const isOwner = String(p.createdBy._id) === String(req.user.id);
+    if (!isAdmin && !isOwner) throw new Error('Access denied');
+
+    // 3) מציאת הקובץ המבוקש בתוך files[]
+    const filesArr = Array.isArray(p.files) ? p.files : [];
+    const target = filesArr.find((f) => String(f._id) === String(fileId));
+    if (!target) throw new Error('File not found in project');
+
+    // 4) אם מוחקים את תמונת ה-main -> לבחור main חלופי
+    const isMainImage = String(p.mainImageId) === String(fileId);
+
+    if (isMainImage) {
+      const nextMain = filesArr.find(
+        (f) => f.fileType === 'image' && String(f._id) !== String(fileId)
+      );
+
+      // אין תמונה חלופית -> לא מאפשרים מחיקה כי mainImageId required בסכמה
+      if (!nextMain) throw new Error('Cannot delete main image (no alternative image exists)');
+
+      p.mainImageId = nextMain._id;
+    }
+
+    // 5) מחיקה פיזית (best-effort) לפי URL שנשמר אצלכם ב-path
+    if (target.path) {
+      try {
+        deleteUploadByFileUrl(String(target.path));
+      } catch (_err) {
+        // best-effort cleanup
+      }
+    }
+
+    // 6) הסרת הקובץ מהמערך ושמירה
+    p.files = filesArr.filter((f) => String(f._id) !== String(fileId));
+
+    await p.save();
+
+    // 7) החזרה מסוריאלייז
+    const viewer = { id: req.user.id, role: req.user.role };
+    const data = pickProjectPublic(p, { req, viewer });
+
+    return res.status(200).json({
+      message: 'Project file deleted successfully',
+      project: data,
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
+
 module.exports = {
   createProject,
   getAllProjects,
   getProjectById,
   updateProject,
   deleteProject,
+  deleteProjectFile,
 };

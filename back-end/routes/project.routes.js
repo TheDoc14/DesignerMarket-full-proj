@@ -7,6 +7,7 @@ const {
   getProjectById,
   updateProject,
   deleteProject,
+  deleteProjectFile,
 } = require('../controllers/project.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { tryAuth } = require('../middleware/tryAuth.middleware');
@@ -19,6 +20,7 @@ const {
   listProjectsQuery,
   createProjectValidators,
   updateProjectValidators,
+  fileIdParam,
 } = require('../validators/projects.validators');
 /**
  * 🧩 Projects Routes
@@ -61,6 +63,18 @@ router.put(
   updateProjectValidators, // מכיל גם id אבל זה בסדר
   validate,
   updateProject
+);
+
+// DELETE /api/projects/:id/files/:fileId
+// מחיקת קובץ ספציפי מתוך פרויקט: owner/admin בלבד
+router.delete(
+  '/:id/files/:fileId',
+  authMiddleware,
+  permitPerm(PERMS.PROJECTS_UPDATE),
+  projectIdParam,
+  fileIdParam,
+  validate,
+  deleteProjectFile
 );
 
 // DELETE /api/projects/:id

@@ -128,7 +128,11 @@ const addMessageWithAI = async (req, res, next) => {
 
     // חשוב: נשלח baseUrl כדי לבנות image URLs תקינים
     const baseUrl = req.publicBaseUrl || process.env.PUBLIC_BASE_URL || '';
-    const { textContext, imageUrls } = await buildFullProjectContext({ project, reviews, baseUrl });
+    const { textContext, imageUrls, imageDataUrls } = await buildFullProjectContext({
+      project,
+      reviews,
+      baseUrl,
+    });
 
     const userMsg = await AiMessage.create({
       chatId,
@@ -154,11 +158,14 @@ const addMessageWithAI = async (req, res, next) => {
         : `Project context (including files/reviews):\n${textContext}\n\nUser question:\n${content.trim()}`;
 
     // ----------------------------------------------------
-    // NOTE: OpenAI חייב לקבל image_url נגיש ציבורית.
-    // בלוקאל (localhost / IP פנימי) זה יגרום לכשל 502.
-    // לכן מסננים URLs לא ציבוריים ומשאירים טקסט בלבד.
+    // NOTE:
+    // 1) Prefer data URLs (base64) for our images => no external fetch issues
+    // 2) Fallback to publicly reachable URLs
     // ----------------------------------------------------
-    const safeImageUrls = (imageUrls || []).filter(isPubliclyReachableUrl);
+    const safeImageUrls =
+      Array.isArray(imageDataUrls) && imageDataUrls.length
+        ? imageDataUrls
+        : (imageUrls || []).filter(isPubliclyReachableUrl);
 
     const input = toOpenAIMessages(history, systemText, userText, safeImageUrls);
 
