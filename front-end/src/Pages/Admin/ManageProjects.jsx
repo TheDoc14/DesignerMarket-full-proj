@@ -136,7 +136,7 @@ const ManageProjects = () => {
   return (
     <div className="admin-container">
       <header className="admin-header">
-        <h1>🛠️ פאנל ניהול פרויקטים</h1>
+        <h1> 🛠️ניהול פרויקטים</h1>
         <p>צפייה, אישור, עריכה או הסרה של תכנים מהפלטפורמה</p>
       </header>
 

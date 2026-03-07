@@ -2,9 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
+import { useNavigate } from 'react-router-dom'; // וודאי שזה מותקן
 // הוסיפי את Plus ו-Star לתוך הרשימה
 import { FileText, X, Star, Plus, Tag } from 'lucide-react';
-const AddProject = () => {
+const AddProject = ({ project }) => {
   const { hasPermission, user, loading: permissionLoading } = usePermission();
 
   const [formData, setFormData] = useState({
@@ -14,7 +15,9 @@ const AddProject = () => {
     category: '', // מתחיל ריק ומתעדכן מהשרת
     paypalEmail: '',
   });
-
+  const navigate = useNavigate(); // הוספה כאן
+  const [existingFiles, setExistingFiles] = useState(project?.files || []);
+  const [newFiles, setNewFiles] = useState([]); // קבצים נוספים להעלאה
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
   const [categories, setCategories] = useState([]); // רשימת קטגוריות דינמית
@@ -66,7 +69,43 @@ const AddProject = () => {
     'mainImageIndex must be a non-negative integer':
       'בחירת תמונה ראשית אינה תקינה.',
   };
+  const handleOpenFile = async (file) => {
+    const filename = file.filename || file.name || 'download.txt';
+    const fileUrl = file.url || file.fileUrl;
 
+    if (!fileUrl) return window.alert('כתובת קובץ חסרה');
+
+    try {
+      window.alert(`מוריד את ${filename}...`);
+
+      const response = await api.get(fileUrl, {
+        responseType: 'blob',
+        skipAuthRefresh: true,
+      });
+
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      window.alert('הקובץ ירד בהצלחה');
+    } catch (err) {
+      console.error('Download failed, preventing logout:', err);
+
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        window.alert(
+          'אין לך הרשאה להוריד את קובץ המקור הזה (ייתכן שלא רכשת את הפרויקט).'
+        );
+      } else {
+        window.alert('שגיאה בהורדת הקובץ');
+      }
+    }
+  };
   const translateBackendError = (err) => {
     // 1) אם הבק מחזיר מערך שגיאות של express-validator
     const errorsArr =
@@ -156,47 +195,60 @@ const AddProject = () => {
   const removeTag = (indexToRemove) => {
     setTags(tags.filter((_, i) => i !== indexToRemove));
   };
+
   const handleSubmit = async (e) => {
+    e.preventDefault(); // חשוב: להעביר להתחלה כדי למנוע ריענון דף בשגיאות ולידציה
+    setError(null);
+
+    // 1. ולידציות בסיסיות
     if (!formData.title.trim()) return setError('חובה להזין שם פרויקט.');
     if (formData.title.trim().length < 2 || formData.title.trim().length > 80)
       return setError('שם הפרויקט חייב להיות בין 2 ל־80 תווים.');
 
-    if (formData.description && formData.description.length > 5000)
-      return setError('התיאור ארוך מדי (מקסימום 5000 תווים).');
-
     if (formData.price === '' || formData.price === null)
       return setError('חובה להזין מחיר.');
-    if (Number.isNaN(Number(formData.price)) || Number(formData.price) < 0)
-      return setError('המחיר חייב להיות מספר תקין וחיובי.');
-    e.preventDefault();
-    if (
-      files[mainImageIndex] &&
-      !files[mainImageIndex].type.startsWith('image/')
-    ) {
-      setError('הקובץ הראשי חייב להיות תמונה!');
-      return;
+
+    // 2. בדיקת קבצים - משתמשים ב-newFiles כי זה מה שמתעדכן ב-JSX
+    if (newFiles.length === 0) {
+      return setError('חובה להעלות לפחות קובץ אחד.');
+    }
+
+    // 3. בדיקה שהתמונה הראשית היא אכן תמונה
+    const mainFile = newFiles[mainImageIndex];
+    if (mainFile && !mainFile.type.startsWith('image/')) {
+      return setError(
+        'הקובץ שנבחר כתמונה ראשית חייב להיות מסוג תמונה (JPG/PNG/etc).'
+      );
     }
 
     setLoading(true);
     try {
       const data = new FormData();
 
-      // 1. הוספת השדות הרגילים
-      Object.keys(formData).forEach((key) => data.append(key, formData[key]));
+      // הוספת שדות הטופס
+      Object.keys(formData).forEach((key) => {
+        data.append(key, formData[key]);
+      });
 
-      // 2. התיקון: הוספת התגיות (הן היו חסרות כאן!)
-      // אנחנו הופכים את המערך למחרוזת מופרדת בפסיקים
+      // הוספת תגיות כמחרוזת
       data.append('tags', tags.join(','));
 
+      // הוספת אינדקס תמונה ראשית
       data.append('mainImageIndex', mainImageIndex);
-      files.forEach((file) => data.append('files', file));
 
-      await api.post('/api/projects', data, {
+      // הוספת הקבצים מהמערך הנכון
+      newFiles.forEach((file) => {
+        data.append('files', file);
+      });
+
+      const response = await api.post('/api/projects', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       alert('הפרויקט הועלה בהצלחה!');
-      // אופציונלי: איפוס הטופס או ניווט דף
+      navigate('/projects');
     } catch (err) {
+      console.error('Upload error:', err.response?.data);
       setError(translateBackendError(err));
     } finally {
       setLoading(false);
@@ -286,54 +338,106 @@ const AddProject = () => {
           </div>
         </div>
 
-        <div className="file-upload-section">
-          <label className="upload-dropzone">
-            <Plus size={24} />
-            <span>לחץ להוספת תמונות וקבצים (עד 10)</span>
-            <input type="file" multiple onChange={handleFileChange} hidden />
-          </label>
+        <div className="project-files-manager">
+          <h4>📁 ניהול קבצי מקור ותמונות</h4>
+          <div className="files-grid-preview">
+            {newFiles.map((file, idx) => {
+              const isImage = file.type.startsWith('image/');
+              const isMain = mainImageIndex === idx;
 
-          {/* גריד קבצים מתוקן - מונע פריצה של העיצוב */}
-          <div className="files-preview-wrapper">
-            {previews.map((src, index) => (
-              <div
-                key={index}
-                className={`file-card ${mainImageIndex === index ? 'is-main' : ''}`}
-              >
-                <button
-                  type="button"
-                  className="delete-file"
-                  onClick={() => removeFile(index)}
-                >
-                  <X size={14} />
-                </button>
-
+              return (
                 <div
-                  className="file-content"
-                  onClick={() => setMainImageIndex(index)}
+                  key={`new-${idx}`}
+                  className={`file-preview-card ${isMain ? 'main-selected' : ''}`}
                 >
-                  {src !== 'document' ? (
-                    <img src={src} alt="preview" className="img-fit" />
-                  ) : (
-                    <div className="doc-placeholder">
-                      <FileText size={32} />
-                      <span>{files[index]?.name}</span>
-                    </div>
-                  )}
-                </div>
-
-                {mainImageIndex === index && (
-                  <div className="main-label">
-                    <Star size={10} /> תמונה ראשית
+                  {/* תצוגה מקדימה - אם זו תמונה מציגים אותה, אם לא מציגים אייקון מסמך */}
+                  <div className="preview-content">
+                    {isImage ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt="preview"
+                        className="img-thumb"
+                      />
+                    ) : (
+                      <FileText size={40} className="doc-icon" />
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
 
+                  <div className="preview-actions">
+                    {/* כפתור בחירה כתמונה ראשית - פעיל רק אם זה קובץ תמונה */}
+                    {isImage && (
+                      <button
+                        type="button"
+                        className={`main-toggle-btn ${isMain ? 'active' : ''}`}
+                        onClick={() => setMainImageIndex(idx)}
+                        title={isMain ? 'תמונה ראשית' : 'קבע כתמונה ראשית'}
+                      >
+                        <Star
+                          size={16}
+                          fill={isMain ? 'currentColor' : 'none'}
+                        />
+                      </button>
+                    )}
+
+                    {/* כפתור מחיקה */}
+                    <button
+                      type="button"
+                      className="remove-file-btn"
+                      onClick={() => {
+                        const updatedFiles = newFiles.filter(
+                          (_, i) => i !== idx
+                        );
+                        setNewFiles(updatedFiles);
+                        if (mainImageIndex === idx) setMainImageIndex(0);
+                        else if (mainImageIndex > idx)
+                          setMainImageIndex((prev) => prev - 1);
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                  <span className="file-name-tag">{file.name}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <label className="btn-add-files">
+            <Plus size={18} /> הוסף קבצים (תמונות, ZIP, PDF...)
+            <input
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) =>
+                setNewFiles([...newFiles, ...Array.from(e.target.files)])
+              }
+            />
+          </label>
+        </div>
+        {!formData.paypalEmail && (
+          <div className="note-container">
+            <div className="note">
+              <p>
+                ⚠️ <strong>שים לב:</strong> לא הגדרת כתובת PayPal לקבלת תשלומים.
+              </p>
+              <p>עליך להגדיר אימייל תקין כדי שתוכל למכור את הפרויקט.</p>
+              <button
+                type="button"
+                className="profile-link-btn"
+                onClick={() => navigate('/PersonalDashboard')} // וודאי שזה הנתיב הנכון אצלך
+              >
+                להגדרת תשלומים בפרופיל האישי
+              </button>
+            </div>
+          </div>
+        )}
         {error && <div className="error-banner">{error}</div>}
-        <button type="submit" className="submit-btn" disabled={loading}>
+
+        <button
+          type="submit"
+          className="submit-btn"
+          disabled={loading || !formData.paypalEmail} // חוסם את הכפתור אם אין מייל
+        >
           {loading ? 'מעלה...' : 'פרסם פרויקט'}
         </button>
       </form>

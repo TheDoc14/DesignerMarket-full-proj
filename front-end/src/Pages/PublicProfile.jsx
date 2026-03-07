@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
+import defaultUserPic from '../DefaultPics/userDefault.jpg';
+
 // 1. ייבוא קומפוננטת הפופאפ המלאה
 import Popup from '../Components/Popup';
 import {
@@ -75,7 +77,7 @@ const PublicProfile = () => {
           <div className="header-flex-container">
             <div className="profile-avatar-area">
               <img
-                src={profile?.profileImage || '/default-avatar.png'}
+                src={profile?.profileImage || defaultUserPic}
                 alt={profile?.username}
                 className="profile-img-main"
               />

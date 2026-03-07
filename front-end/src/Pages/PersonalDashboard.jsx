@@ -7,6 +7,8 @@ import { usePermission } from '../Hooks/usePermission.jsx';
 import defaultUserPic from '../DefaultPics/userDefault.jpg';
 import { useAuth } from '../Context/AuthContext';
 import Popup from '../Components/Popup';
+import { useAiQuota } from '../Hooks/useAiQuota.jsx';
+import { useSharedProject } from '../Hooks/useSharedProject.jsx';
 import './PublicPages.css';
 
 const PersonalDashboard = () => {
@@ -19,17 +21,20 @@ const PersonalDashboard = () => {
   } = usePermission();
   const { userId } = useParams();
   const fileInputRef = useRef(null);
+  const myId = String(user.id || user._id);
 
   // --- States ---
+  const { aiQuota, setAiQuota, fetchAiQuota, decrementQuota } = useAiQuota();
+  const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [projects, setProjects] = useState([]);
   const [purchasedProjects, setPurchasedProjects] = useState([]);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const { selectedProject, setSelectedProject, updateProject } =
+    useSharedProject();
   const [aiHistory, setAiHistory] = useState([]);
-  const [aiQuota, setAiQuota] = useState({ used: 0, limit: 20, remaining: 20 });
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -64,17 +69,22 @@ const PersonalDashboard = () => {
     try {
       setHistoryLoading(true);
       const res = await api.get('/api/ai-chats');
-
-      // עדכון היסטוריית הצ'אטים
       setAiHistory(res.data.data || []);
 
-      // שליפת המכסה מתוך ה-meta של התגובה
-      const quota = res.data.meta?.quota || res.data.meta?.dailyQuota;
-      if (quota) {
+      const meta = res.data.meta;
+      if (meta) {
+        // שימוש בחישוב הידני גם כאן כדי להבטיח אחידות
+        const totalUsed = Number(meta.total) || 0;
+        const dailyLimit = Number(meta.limit) || 20;
+
+        // אם השרת לא שלח remaining, אנחנו מחשבים אותו (20 - 1 = 19)
+        const calculatedRemaining =
+          meta.quota?.remaining ?? Math.max(0, dailyLimit - totalUsed);
+
         setAiQuota({
-          used: Number(quota.used) || 0,
-          limit: Number(quota.limit) || 20,
-          remaining: Number(quota.remaining) || 0,
+          used: totalUsed,
+          limit: dailyLimit,
+          remaining: calculatedRemaining,
         });
       }
     } catch (err) {
@@ -95,8 +105,10 @@ const PersonalDashboard = () => {
       setLoading(true);
       const myId = String(user.id || user._id);
 
-      // 1. שליפת פרופיל
+      // 1. שליפת פרופיל ופרויקטים במקביל לשיפור ביצועים
       const profileRes = await api.get('/api/profile/me');
+
+      // 2. עיבוד נתוני פרופיל
       if (profileRes.data.user) {
         const u = profileRes.data.user;
         setFormData((prev) => ({
@@ -113,75 +125,90 @@ const PersonalDashboard = () => {
           birthDate: u.birthDate ? u.birthDate.split('T')[0] : '',
           profileImage: u.profileImage,
         }));
-        if (u.profileImage) {
-          setProfileImagePreview(u.profileImage);
-        }
+        if (u.profileImage) setProfileImagePreview(u.profileImage);
       }
 
-      // 2. שליפת כל הפרויקטים
       const projectsRes = await api.get('/api/projects');
       const allProjects =
         projectsRes.data?.projects ||
         projectsRes.data?.data ||
         projectsRes.data ||
         [];
+      let myOrders = [];
+      try {
+        const ordersRes = await api.get('/api/orders/my');
 
-      // 3. פרויקטים שיצרתי
+        // Extract orders from various response structures
+        if (Array.isArray(ordersRes.data)) {
+          myOrders = ordersRes.data;
+        } else if (ordersRes.data?.data && Array.isArray(ordersRes.data.data)) {
+          myOrders = ordersRes.data.data;
+        } else if (
+          ordersRes.data?.orders &&
+          Array.isArray(ordersRes.data.orders)
+        ) {
+          myOrders = ordersRes.data.orders;
+        }
+
+        myOrders = myOrders.filter((order) => {
+          const status = String(order.status || '').toUpperCase();
+          return ['PAID', 'PAYOUT_SENT'].includes(status);
+        });
+      } catch (err) {
+        console.warn('⚠️ Could not fetch orders:', err.message);
+        myOrders = [];
+      }
+
+      const purchasedProjectIds = new Set(
+        myOrders
+          .map((order) => {
+            const projectObj = order.project;
+            const id = projectObj?.id || projectObj?._id || projectObj;
+            return String(id || '').trim();
+          })
+          .filter(Boolean)
+      );
+
+      // 5. הפרדה: פרויקטים שיצרתי vs פרויקטים שרכשתי
       const myOwn = allProjects.filter((p) => {
         const creatorId = p.createdBy?._id || p.createdBy?.id || p.createdBy;
         return String(creatorId) === myId;
       });
 
-      // 4. פרויקטים שלא יצרתי - בדיקה אם רכשתי
-      const notMine = allProjects.filter((p) => {
-        const buyerId = p.buyerId || p.buyer?._id || p.buyer?.id;
-        return String(buyerId) !== myId;
+      const purchased = allProjects.filter((p) => {
+        const pId = String(p._id || p.id || '').trim();
+        return purchasedProjectIds.has(pId);
       });
 
-      // ✅ שליפת כל פרויקט בנפרד - הבאק מחזיר files רק אם רכשת
-      const purchasedResults = await Promise.allSettled(
-        notMine.map((p) => {
-          const pId = p._id || p.id;
-          return api.get(`/api/projects/${pId}`);
-        })
-      );
-
+      // 6. שליפת פרטים מלאים של פרויקטים (עם files)
       const createdResults = await Promise.allSettled(
         myOwn.map((p) => {
           const pId = p._id || p.id;
           return api.get(`/api/projects/${pId}`);
         })
       );
-      const created = createdResults
+
+      const purchasedResults = await Promise.allSettled(
+        purchased.map((p) => {
+          const pId = p._id || p.id;
+          return api.get(`/api/projects/${pId}`);
+        })
+      );
+
+      const createdProjects = createdResults
         .filter((r) => r.status === 'fulfilled')
         .map((r) => r.value.data?.project || r.value.data?.data || r.value.data)
-        .filter((p) => {
-          // ✅ הבאק מחזיר files (כולל קבצים לא-תמונות) רק לקונה/בעלים/אדמין
-          const hasSourceFiles =
-            Array.isArray(p?.files) &&
-            p.files.some(
-              (f) => f.fileType !== 'image' && f.fileType !== 'video'
-            );
-          return hasSourceFiles;
-        });
+        .filter(Boolean);
 
-      const purchased = purchasedResults
+      const purchasedProjects = purchasedResults
         .filter((r) => r.status === 'fulfilled')
         .map((r) => r.value.data?.project || r.value.data?.data || r.value.data)
-        .filter((p) => {
-          // ✅ הבאק מחזיר files (כולל קבצים לא-תמונות) רק לקונה/בעלים/אדמין
-          const hasSourceFiles =
-            Array.isArray(p?.files) &&
-            p.files.some(
-              (f) => f.fileType !== 'image' && f.fileType !== 'video'
-            );
-          return hasSourceFiles;
-        });
+        .filter(Boolean);
 
-      setProjects(created);
-      setPurchasedProjects(purchased);
+      setProjects(createdProjects);
+      setPurchasedProjects(purchasedProjects);
     } catch (err) {
-      console.error('Dashboard data fetch failed', err);
+      console.error('❌ Dashboard data fetch failed', err);
     } finally {
       setLoading(false);
     }
@@ -193,24 +220,39 @@ const PersonalDashboard = () => {
       fetchDashboardData();
     }
   }, [user?.id, permissionLoading, fetchDashboardData]);
-
   useEffect(() => {
-    if (
-      isOwnProfile &&
-      user?.id &&
-      !permissionLoading &&
-      hasPermission('ai.consult')
-    ) {
-      fetchMyAiHistory();
+    if (user && !permissionLoading) {
+      console.log(
+        '%c=== USER & PERMISSIONS DEBUG ===',
+        'color: blue; font-size: 14px; font-weight: bold'
+      );
+      console.log('User object:', user);
+      console.log('User role:', user?.role);
+      console.log('User ID:', user?.id || user?._id);
+      console.log('Has AI permission:', hasPermission('ai.consult'));
+      console.log('%c=== END DEBUG ===', 'color: blue');
+    }
+  }, [user, permissionLoading, hasPermission]);
+  useEffect(() => {
+    if (isOwnProfile && user?.id && !permissionLoading) {
+      // בדוק את ההרשאה בתוך הEffect, לא בdependency
+      const hasAiPermission = hasPermission('ai.consult');
+
+      if (hasAiPermission) {
+        console.log('✅ Fetching AI history...');
+        fetchMyAiHistory();
+      } else {
+        console.log('⚠️ No AI permission - skipping');
+        setAiHistory([]); // אפס את ההיסטוריה
+      }
     }
   }, [
     isOwnProfile,
     user?.id,
     permissionLoading,
-    hasPermission,
     fetchMyAiHistory,
+    // ❌ הסר את hasPermission מכאן!
   ]);
-
   // --- Handlers ---
 
   const handleChange = (e) =>
@@ -288,10 +330,10 @@ const PersonalDashboard = () => {
         res.data?.user || res.data?.data?.user,
         localStorage.getItem('token')
       );
-      setMessage({ type: 'success', text: 'הפרופיל עודכן בהצלחה!' });
+      alert('הפרופיל עודכן בהצלחה!');
       window.scrollTo(0, 0);
     } catch (err) {
-      setMessage({ type: 'error', text: 'עדכון הפרופיל נכשל' });
+      alert('עדכון הפרופיל נכשל, אנא וודא שמילאת את כל השדות הנדרשים כראוי.');
     } finally {
       setSaving(false);
     }
@@ -330,12 +372,20 @@ const PersonalDashboard = () => {
       setSaving(false);
     }
   };
+  const handleManualQuotaUpdate = useCallback(() => {
+    setAiQuota((prev) => ({
+      ...prev,
+      used: prev.used + 1,
+      remaining: Math.max(0, prev.remaining - 1),
+    }));
+  }, []);
 
   // --- Render ---
   if (permissionLoading || loading)
     return <div className="loading-state">טוען נתונים...</div>;
   if (!user)
     return <div className="error-container">עליך להתחבר כדי לצפות בדף זה.</div>;
+  // פונקציה לעדכון ידני של המכסה ב-Dashboard כדי למנוע קפיצה חזרה ל-20
 
   return (
     <div className="profile-container" dir="rtl">
@@ -359,20 +409,26 @@ const PersonalDashboard = () => {
             <div className="image-overlay">
               <span>החלף תמונה</span>
             </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              value={formData.profileImage ? undefined : ''} // כדי לאפשר בחירה חוזרת באותו קובץ
+              style={{ display: 'none' }}
+            />
+            <div className={`role-badge-floating ${user?.role}`}>
+              {user?.role}
+            </div>
           </div>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            value={formData.profileImage ? undefined : ''} // כדי לאפשר בחירה חוזרת באותו קובץ
-            style={{ display: 'none' }}
-          />
         </div>
 
+        <p className="note">שים לב - השדות המסומנים * הם שדות חובה</p>
         <div className="form-grid-3">
           <div className="form-group">
             <label>שם משתמש</label>
+            <span className="required-star">*</span>
+
             <input
               className="form-input"
               name="username"
@@ -382,6 +438,8 @@ const PersonalDashboard = () => {
           </div>
           <div className="form-group">
             <label>שם פרטי</label>
+            <span className="required-star">*</span>
+
             <input
               className="form-input"
               name="firstName"
@@ -391,6 +449,8 @@ const PersonalDashboard = () => {
           </div>
           <div className="form-group">
             <label>שם משפחה</label>
+            <span className="required-star">*</span>
+
             <input
               className="form-input"
               name="lastName"
@@ -462,6 +522,8 @@ const PersonalDashboard = () => {
           </div>
           <div className="form-group ">
             <label>תאריך לידה</label>
+            <span className="required-star">*</span>
+
             <input
               className="form-input"
               name="birthDate"
@@ -562,76 +624,59 @@ const PersonalDashboard = () => {
           )}
         </div>
       </div>
-
-      <section className="profile-ai-history">
-        <h3 className="section-title">📜 היסטוריית ייעוץ AI</h3>
-        {historyLoading ? (
-          <p>טוען שיחות...</p>
-        ) : aiHistory.length > 0 ? (
-          <div className="ai-chats-grid">
-            {aiHistory.map((chat) => {
-              const targetProject = chat.projectId;
-              const pId = chat.projectId?._id || chat.projectId;
-              const linkedProject = projects.find(
-                (p) => (p._id || p.id) === pId
-              );
-              const projectId = targetProject?._id || targetProject; // תמיכה גם אם זה אובייקט וגם אם זה ID בלבד
-              const projectTitle = targetProject?.title || 'פרויקט ללא שם';
-              const displayTitle =
-                linkedProject?.title ||
-                chat.projectId?.title ||
-                'פרויקט ללא שם';
-
-              return (
-                <div key={chat._id} className="ai-chat-card">
-                  <div className="chat-card-header">
-                    <h4>{chat.title || `ייעוץ עבור ${projectTitle}`}</h4>
-                    <span className="chat-date">
-                      {new Date(chat.createdAt).toLocaleDateString('he-IL')}
-                    </span>
-                  </div>
-
-                  {/* הצגת כותרת הפרויקט - אם targetProject קיים, הוא לא יציג "הוסר" */}
-                  <p>
-                    פרויקט: <strong>{displayTitle}</strong>
-                  </p>
-                  <button
-                    className="view-chat-btn"
-                    onClick={() => {
-                      // 1. מציאת אובייקט הפרויקט המלא מתוך רשימת הפרויקטים שלך
-                      const projectToOpen = projects.find(
-                        (p) => (p._id || p.id) === projectId
-                      );
-
-                      if (projectToOpen) {
-                        // 2. עדכון ה-chatId בתוך הפרויקט לפני הפתיחה
-                        const updatedProject = {
-                          ...projectToOpen,
-                          initialChatId: chat._id,
-                        };
-
-                        // 3. פתיחת הפופאפ עם הפרויקט הנכון
-                        setSelectedProject(updatedProject);
-                      } else {
-                        // אם הפרויקט לא ברשימה הכללית, נפתח אותו כאובייקט מינימלי
+      {}
+      {hasPermission('ai.consult') && (
+        <section className="profile-ai-history">
+          <h3 className="section-title">📜 היסטוריית ייעוץ AI</h3>
+          {historyLoading ? (
+            <p>טוען שיחות...</p>
+          ) : aiHistory.length > 0 ? (
+            <div className="ai-chats-grid">
+              {aiHistory.map((chat) => {
+                const targetProject = chat.projectId;
+                const pId = chat.projectId?._id || chat.projectId;
+                const linkedProject = [...projects, ...purchasedProjects].find(
+                  (p) => String(p._id || p.id) === String(pId)
+                );
+                const projectId = targetProject?._id || targetProject; // תמיכה גם אם זה אובייקט וגם אם זה ID בלבד
+                const projectTitle = targetProject?.title || 'פרויקט ללא שם';
+                const displayTitle =
+                  linkedProject?.title || chat.title || 'פרויקט כללי';
+                return (
+                  <div key={chat._id} className="ai-chat-card">
+                    <div className="chat-card-header">
+                      <h4>{chat.title}</h4>
+                      <span className="chat-date">
+                        {new Date(chat.createdAt).toLocaleDateString('he-IL')}
+                      </span>
+                    </div>
+                    <p>
+                      פרויקט: <strong>{displayTitle}</strong>
+                    </p>
+                    <button
+                      className="view-chat-btn"
+                      onClick={() => {
+                        // העברת הפרויקט המלא יחד עם ה-ID של הצ'אט כדי שהפופאפ יידע מה לטעון
                         setSelectedProject({
-                          ...chat.projectId,
+                          ...(linkedProject || {
+                            _id: pId,
+                            title: displayTitle,
+                          }),
                           initialChatId: chat._id,
                         });
-                      }
-                    }}
-                  >
-                    צפה בשיחה ←
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p>עדיין לא התייעצת עם ה- AI לגבי הפרויקטים שלך.</p>
-        )}
-      </section>
-
+                      }}
+                    >
+                      צפה בשיחה ←
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p>עדיין לא התייעצת עם ה- AI לגבי הפרויקטים שלך.</p>
+          )}
+        </section>
+      )}
       {user?.role !== 'admin' && (
         <div className="profile-danger-zone">
           <h3>מחיקת חשבון לצמיתות</h3>
@@ -650,17 +695,9 @@ const PersonalDashboard = () => {
           project={selectedProject}
           onClose={() => setSelectedProject(null)}
           isLoggedIn={true}
-          onUpdate={(updatedProject) => {
-            // עדכון הפרויקט ברשימה המקומית מיד לאחר העריכה
-            setProjects((prev) =>
-              prev.map((p) =>
-                (p._id || p.id) === (updatedProject._id || updatedProject.id)
-                  ? { ...p, ...updatedProject }
-                  : p
-              )
-            );
-            setSelectedProject(null); // סגירת הפופאפ
-          }}
+          externalAiQuota={aiQuota}
+          onAiUpdate={() => decrementQuota()}
+          onUpdate={updateProject} // ← זה בודל את selectedProject ישירות!
         />
       )}
     </div>

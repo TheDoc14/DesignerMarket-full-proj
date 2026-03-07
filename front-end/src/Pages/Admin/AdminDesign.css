@@ -288,7 +288,7 @@
     color: #fff;
 }
 
-.role-badge.systemmanager {
+.role-badge.businessmanager {
     background: blue;
     color: #fff;
 }
@@ -857,22 +857,22 @@
 /* --- כפתורים --- */
 .add-role-btn,
 .btn-save,
-.btn-create-submit {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #4f46e5;
+.btn-create-submit,
+.btn-publish {
+    background: var(--teal-gradient) !important;
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 10px;
-    font-weight: 600;
+    padding: 12px 25px;
+    border-radius: 12px;
+    font-weight: 700;
     cursor: pointer;
-    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(0, 109, 119, 0.2);
+    transition: all 0.3s;
 }
 
 .add-role-btn:hover,
-.btn-save:hover {
+.btn-save:hover,
+.btn-publish {
     background: #4338ca;
     transform: translateY(-1px);
 }

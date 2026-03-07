@@ -72,7 +72,7 @@ const AdminDashboard = () => {
         <div className="stat-card">
           <div>סה"כ משתמשים</div>
           <div>{stats.usersTotal}</div>
-          <small>מנהלי מערכת, סטודנטים, מעצבים ולקוחות</small>
+          <small>מנהלי מערכת, מנהלים עסקיים, סטודנטים, מעצבים ולקוחות</small>
         </div>
         <div className="stat-card">
           <div>פרויקטים באתר</div>

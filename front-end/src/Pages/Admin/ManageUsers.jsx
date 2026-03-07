@@ -134,7 +134,7 @@ const ManageUsers = () => {
     <div className="admin-container" dir="rtl">
       <header className="dashboard-header">
         <h1>
-          <UserCog className="line" size={30} /> ניהול משתמשים
+          <UserCog size={30} /> ניהול משתמשים
         </h1>
         <p>עדכון תפקידים, אישור חשבונות וניהול הרשאות צוות</p>
       </header>
