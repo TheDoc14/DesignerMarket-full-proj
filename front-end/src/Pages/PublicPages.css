@@ -1003,7 +1003,6 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1397,7 +1396,8 @@ body {
 .link-btn,
 .btn-download-action,
 .btn-delete-action,
-.submit-btn {
+.submit-btn,
+.view-chat-btn {
   background: var(--teal-gradient) !important;
   color: white;
   border: none;
