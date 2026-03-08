@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
+import { UserCog } from 'lucide-react';
 import { usePermission } from '../../Hooks/usePermission.jsx';
 import './AdminDesign.css';
 
+/*The UserApproval page is a specialized administrative module designed to vet new registrants, particularly those applying for Designer or Student roles.
+ *Since these roles require verification (such as diploma uploads or student IDs),
+ *this page serves as a secure gatekeeper where administrators can review supporting documents before granting full access to the platform.
+ */
 const UserApproval = () => {
   const {
     hasPermission,
@@ -10,31 +15,31 @@ const UserApproval = () => {
     loading: permissionLoading,
   } = usePermission();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false); // התחלה מ-false
-
-  // שימוש ב-Ref כדי לוודא שלא נכנסים ללולאה אינסופית
+  const [loading, setLoading] = useState(false);
+  //Uses a React Ref to ensure the data is only fetched once per component mount.
+  // This prevents redundant network requests and potential infinite loops that state-based triggers might cause.
   const isInitialFetched = useRef(false);
-
+  //Queries the /api/admin/users endpoint specifically with the parameter { approved: false }.
   const fetchUsers = useCallback(async () => {
-    // אם כבר טוען או שכבר שלפנו נתונים - אל תעשה כלום
-    if (loading || isInitialFetched.current) return;
+    if (isInitialFetched.current) return;
 
     try {
       setLoading(true);
       const res = await api.get('/api/admin/users', {
         params: { approved: false },
       });
-      setUsers(res.data?.users || res.data?.data || []);
-      isInitialFetched.current = true; // סימון שהשליפה הצליחה
+
+      const data = res.data?.users || res.data?.data || [];
+      setUsers(data);
+      isInitialFetched.current = true;
     } catch (err) {
       console.error('Error fetching users', err);
     } finally {
       setLoading(false);
     }
-  }, [loading]); // תלות מינימלית בלבד
+  }, []);
 
   useEffect(() => {
-    // התנאי הקריטי: מריצים רק אם ההרשאות מוכנות, המשתמש מורשה, וטרם שלפנו נתונים
     if (
       !permissionLoading &&
       currentUser?.id &&
@@ -44,7 +49,8 @@ const UserApproval = () => {
       fetchUsers();
     }
   }, [currentUser?.id, permissionLoading, hasPermission, fetchUsers]);
-
+  //Sends a PUT request to update the user's status. Upon success, the user is
+  //removed from the local state list (filtering them out of the "Pending" view) to provide immediate visual confirmation.
   const handleApprove = async (userId) => {
     if (!hasPermission('users.approve')) {
       alert('אין לך הרשאה לאשר משתמשים');
@@ -61,45 +67,35 @@ const UserApproval = () => {
       alert('שגיאה בתהליך האישור');
     }
   };
-
-  // UserApproval.jsx - עדכון פונקציית הצפייה
-  const handleViewDocument = async (documentUrl, username) => {
+  //This function handles the complex task of fetching private files.
+  const handleViewDocument = async (documentUrl, username, role) => {
     try {
-      // 1. חילוץ שם הקובץ מהנתיב המלא שנשמר ב-DB
       const rawFilename = documentUrl.split('/').pop();
-
-      // 2. פענוח תווים מיוחדים (כמו עברית) לפני השליחה
-      const filename = rawFilename;
-
-      // 3. קריאה לשרת - שימי לב לנתיב המדויק
-      // אנחנו מוסיפים /files/ כי ככה ה-Backend הגדיר את הראוטים שלו
       const response = await api.get(
-        `api/files/approvalDocuments/${filename}`,
-        {
-          responseType: 'blob', // קריטי כדי לקבל קובץ ולא טקסט
-        }
+        `api/files/approvalDocuments/${rawFilename}`,
+        { responseType: 'blob' }
       );
 
-      // 4. יצירת לינק זמני לצפייה בקובץ
       const blob = new Blob([response.data], {
-        type: response.headers['content-type'],
+        type: response.headers['content-type'] || 'application/octet-stream',
       });
       const url = window.URL.createObjectURL(blob);
+      const extension = rawFilename.split('.').pop();
+      const customFileName = `DesignerMarket_${username}-${role}.${extension}`;
 
-      // פתיחה בחלון חדש
-      const newWindow = window.open(url, '_blank');
-      if (!newWindow) {
-        alert('הדפדפן חסם את הפופ-אפ, אנא אפשרי הצגת פופ-אפים');
-      }
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = customFileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-      // ניקוי זיכרון אחרי 10 שניות
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
     } catch (err) {
       console.error('Download error:', err);
-      alert('שגיאה בטעינת המסמך. וודאי שהקובץ קיים בשרת.');
+      alert('לא ניתן למצוא את הקובץ בשרת. ייתכן שיש בעיית קידוד בשם הקובץ.');
     }
   };
-  // אבטחת גישה ברמת העמוד
   if (permissionLoading)
     return <div className="loader">בודק הרשאות אבטחה...</div>;
   if (!hasPermission('admin.panel.access')) {
@@ -108,9 +104,12 @@ const UserApproval = () => {
 
   return (
     <div className="admin-container" dir="rtl">
-      <h2 className="admin-header">אישור משתמשים חדשים</h2>
-      <p>ניהול בקשות הצטרפות של מעצבים וסטודנטים למערכת Designer Market.</p>
-
+      <header className="dashboard-header">
+        <h1>
+          <UserCog size={30} /> אישור משתמשים
+        </h1>{' '}
+        <p>ניהול בקשות הצטרפות של מעצבים וסטודנטים למערכת Designer Market.</p>
+      </header>
       {loading && users.length === 0 ? (
         <div className="fetching-msg">טוען נתונים מהשרת...</div>
       ) : (
@@ -140,7 +139,11 @@ const UserApproval = () => {
                         {u.approvalDocument ? (
                           <button
                             onClick={() =>
-                              handleViewDocument(u.approvalDocument, u.username)
+                              handleViewDocument(
+                                u.approvalDocument,
+                                u.username,
+                                u.role
+                              )
                             }
                             className="btn-link"
                           >

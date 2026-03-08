@@ -1,4 +1,3 @@
-// /src/Components/Navbar.jsx
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../Context/AuthContext';
@@ -18,13 +17,20 @@ import {
 } from 'lucide-react';
 import './componentStyle.css';
 
+/**
+ * Navbar Component
+ * The navbar component serves as the primary navigation hub for the application.
+ * It features a responsive design consisting of a fixed top bar and a sliding sidebar (drawer) that
+ * adjusts based on the user's authentication state and specific permissions.
+ */
 const Navbar = () => {
   const { logout } = useAuth();
-  // שליפת hasPermission והמשתמש. ה-Hook הזה מסתמך על מידע מקומי ולא קורא לשרת
+  //Extracted from the usePermission custom hook.
   const { hasPermission, user } = usePermission();
+  //Controls the visibility of the sidebar. true means the menu is expanded.
   const [isOpen, setIsOpen] = useState(false);
   const closeMenu = () => setIsOpen(false);
-
+  //Executes the logout sequence.
   const handleLogout = () => {
     setIsOpen(false);
     logout();
@@ -105,7 +111,7 @@ const Navbar = () => {
               )}
             </>
           )}
-          {/* --- תפריט ניהול עסקי (Business Manager) --- */}
+          {/* --- Business Manager Menu --- */}
           {(hasPermission(PERMS.BUSINESS_PANEL_ACCESS) ||
             hasPermission('stats.read') ||
             user?.role === 'business_manager') && (
@@ -120,7 +126,7 @@ const Navbar = () => {
               </Link>
             </div>
           )}
-          {/* --- תפריט אדמין (Admin) --- */}
+          {/* --- Admin Menu --- */}
           {hasPermission('admin.panel.access') && (
             <div className="admin-section-sidebar">
               <p className="section-title">🛡️ ניהול אדמין</p>

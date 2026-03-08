@@ -1,4 +1,3 @@
-// /src/Context/AuthContext.jsx
 import {
   createContext,
   useState,
@@ -8,36 +7,27 @@ import {
 } from 'react';
 import api from '../api/axios';
 
+// The AuthContext is the core authentication and session management layer of the application.
+// It utilizes the React Context API to provide a global state for the authenticated user, their metadata,
+// and their dynamic permissions. It ensures that user data stays synchronized between the browser's local
+// storage and the server's database.
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  /**
-   *
-   * שליפת הרשאות מה-DB בזמן אמת.
-   * מכיוון שהכל דינמי, אנחנו מושכים את כל רשימת ה-Roles ומחפשים את ה-permissions
-   * של ה-role הספציפי שהגיע מהלוגין.
-   */
-
+  //Retrieves the list of granular permissions associated with a specific role directly from the database.
   const fetchDynamicPermissions = async (userRole) => {
     const isManagerial =
       userRole === 'admin' || userRole === 'business_manager';
-
     if (!isManagerial) {
       const storedUser = JSON.parse(localStorage.getItem('user'));
       return storedUser?.permissions || [];
     }
-
     try {
-      // Authorization מגיע אוטומטית מה-interceptor של api
       const res = await api.get('/api/admin/roles');
-
-      // לפי המבנה אצלכם: לפעמים roles, לפעמים data
       const allRoles = res.data?.roles || res.data?.data || res.data || [];
       const foundRole = allRoles.find((r) => r.key === userRole);
-
       return foundRole?.permissions || [];
     } catch (error) {
       console.warn('RBAC Fetch failed for role:', userRole);
@@ -45,13 +35,10 @@ export const AuthProvider = ({ children }) => {
       return storedUser?.permissions || [];
     }
   };
-
+  //Acts as a "Security Guard" on application load/refresh.
   const login = async (userData, token) => {
     localStorage.setItem('token', token);
-
-    // שליפה דינמית - אם מחר אדמין יוסיף הרשאה ב-DB, היא תופיע כאן אוטומטית
     const permissions = await fetchDynamicPermissions(userData.role);
-
     const fullUser = { ...userData, permissions };
     setUser(fullUser);
     localStorage.setItem('user', JSON.stringify(fullUser));
@@ -60,15 +47,11 @@ export const AuthProvider = ({ children }) => {
   const refreshUserData = useCallback(async () => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-
     if (token && storedUser) {
       try {
-        // קריאה לפרופיל כדי לראות אם ה-Role השתנה
         const profileRes = await api.get('/api/profile/me');
         const serverUser = profileRes.data?.user || profileRes.data?.data?.user;
-
         if (!serverUser) throw new Error('Profile response missing user');
-
         const permissions = await fetchDynamicPermissions(serverUser.role);
         const updatedUser = { ...serverUser, permissions };
         setUser(updatedUser);
@@ -83,7 +66,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     refreshUserData();
   }, [refreshUserData]);
-
+  //Terminates the session and cleans up sensitive data.
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');

@@ -1,4 +1,3 @@
-//src/Pages/Login.jsx
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
@@ -6,6 +5,12 @@ import './PublicPages.css';
 import { useAuth } from '../Context/AuthContext';
 import api from '../api/axios';
 
+/*
+ *The Login component is the primary entry point for authenticated users.
+ *It provides a secure interface for users to access their accounts while implementing several layers of security and validation.
+ *The component handles standard credential validation, account verification workflows, and administrative approval checks, all while being
+ *protected by an invisible Google reCAPTCHA v3 layer.
+ */
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
@@ -15,7 +20,6 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showResend, setShowResend] = useState(false);
 
-  // שינוי 1: שליפת פונקציית ה-login מה-AuthContext
   const { login } = useAuth();
 
   const navigate = useNavigate();
@@ -24,22 +28,18 @@ const Login = () => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
+  //Email resend logic .Displayed only when the server returns an Email verification required error.
   const handleResendEmail = async () => {
     try {
       setLoading(true);
-
-      // 1. חובה להפיק טוקן קאפצ'ה גם כאן
       if (!executeRecaptcha) {
         setError('שירות האבטחה אינו זמין כרגע');
         return;
       }
       const gToken = await executeRecaptcha('resend_verification');
-
-      // 2. שליחת האימייל + הטוקן לשרת
       await api.post('/api/auth/resend-verification', {
         email: formData.email,
-        captchaToken: gToken, // הוספת הטוקן שהוולידטור דורש
+        captchaToken: gToken,
       });
 
       setError('מייל אימות נשלח שוב בהצלחה!');
@@ -51,7 +51,7 @@ const Login = () => {
       setLoading(false);
     }
   };
-
+  //Authentication Lifecycle
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -72,14 +72,13 @@ const Login = () => {
         captchaToken: gToken,
       });
 
-      // לפי רוב המבנים אצלכם
       const data = res.data?.data || res.data;
 
       await login(data.user, data.token);
       navigate('/');
     } catch (err) {
       const msg = err.response?.data?.message;
-
+      //The component uses a local dictionary to map technical backend strings to human-readable Hebrew
       const errorTranslations = {
         'Invalid credentials.': 'האימייל או הסיסמה אינם נכונים.',
         'Email verification required.':
@@ -90,7 +89,7 @@ const Login = () => {
         'Internal Server Error': 'יש לנו תקלה בשרת, אנחנו כבר מטפלים בזה.',
       };
       if (msg === 'Email verification required.') {
-        setShowResend(true); // הצגת הכפתור
+        setShowResend(true);
         setError(errorTranslations[msg]);
       } else if (msg === 'Your account is awaiting admin approval.') {
         setError('חשבונך ממתין לאישור מנהל מערכת.');
@@ -123,20 +122,12 @@ const Login = () => {
                 >
                   <span>{error}</span>
 
-                  {/* כאן מתווסף הכפתור במידה וצריך אימות */}
                   {showResend && (
-                    <div style={{ marginTop: '10px' }}>
+                    <div className="showResent-wrapper">
                       <button
                         type="button"
                         onClick={handleResendEmail}
-                        className="link-btn" // תני לזה קלאס של קישור או כפתור קטן
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'blue',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                        }}
+                        className="link-btn"
                       >
                         לחץ כאן לשליחת מייל אימות חדש
                       </button>

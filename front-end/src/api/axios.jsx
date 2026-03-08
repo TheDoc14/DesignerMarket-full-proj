@@ -1,40 +1,33 @@
-// /src/api/axios.jsx
 import axios from 'axios';
 import { getFriendlyError } from '../Constants/errorMessages';
 
+/*This module configures a centralized Axios Instance used for all HTTP communication between the React frontend and the backend server.
+ *It leverages Interceptors to automate authentication and global error handling.
+ */
 const api = axios.create({
+  //The entry point for the API. It prioritizes the environment variable
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
 });
 
-// Request: מוסיף Authorization אם יש token
 api.interceptors.request.use((config) => {
+  //If a token exists, it attaches an Authorization header using the Bearer scheme: Bearer <token>
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Response: תרגום שגיאות + טיפול בטוקן פג תוקף
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
     const serverMsg = error.response?.data?.message;
-
-    // תרגום ידידותי
     error.friendlyMessage = getFriendlyError(serverMsg);
 
-    // ✅ טיפול בטוקן לא תקין/פג תוקף
-    if (status === 401) {
-      // מנקים סשן
+    if (status === 401 && !error.config?.skipAuthRedirect) { // ← הוסיפי את זה
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-
-      // מונעים לולאה אם כבר בלוגין
-      const isOnLogin = window.location.pathname
-        .toLowerCase()
-        .includes('login');
+      const isOnLogin = window.location.pathname.toLowerCase().includes('login');
       if (!isOnLogin) {
-        // אפשר להעביר reason כדי להציג הודעה בלוגין (אם תרצה)
         window.location.href = '/login?reason=session_expired';
       }
     }
@@ -42,5 +35,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default api;

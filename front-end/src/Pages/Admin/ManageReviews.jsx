@@ -1,4 +1,3 @@
-//src/Pages/Admin/ManageReviews.jsx
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
@@ -6,6 +5,10 @@ import { Trash2, Edit3, Save, MessageSquare } from 'lucide-react';
 import '../../App.css';
 import './AdminDesign.css';
 
+/*The ManageReviews page is an administrative module designed to monitor and moderate user-generated content, specifically project reviews and ratings.
+ *It allows administrators to ensure community interactions remain professional and accurate by providing tools to filter, edit, or remove reviews across
+ *the entire platform.
+ */
 const ManageReviews = () => {
   const {
     hasPermission,
@@ -23,8 +26,8 @@ const ManageReviews = () => {
     sortBy: 'createdAt',
     projectId: '',
   });
-
-  // 1. שליפת תגובות - שימוש בנתיב המדויק של האדמין
+  //An asynchronous function that retrieves reviews from the /api/admin/reviews endpoint.
+  // It dynamically adjusts the request based on the selected projectId filter.
   const fetchReviews = useCallback(async () => {
     if (!hasPermission('reviews.manage')) return;
     try {
@@ -69,9 +72,9 @@ const ManageReviews = () => {
     fetchReviews,
   ]);
 
-  // 2. תיקון קריטי: שליפת ה-ID הנכון (_id)
+  //Switches a specific row from "Display Mode" to "Edit Mode" by storing the review ID in editingReviewId and populating the editForm with existing data.
   const handleStartEdit = (review) => {
-    const rId = review._id || review.id; // פתרון לשגיאת undefined
+    const rId = review._id || review.id;
     setEditingReviewId(rId);
     setEditForm({
       text: review.text || '',
@@ -82,7 +85,6 @@ const ManageReviews = () => {
   const handleSaveEdit = async (reviewId) => {
     if (!reviewId) return alert('שגיאה: מזהה תגובה חסר');
     try {
-      // שליחה לנתיב הכללי של עדכון תגובות
       await api.put(`/api/reviews/${reviewId}`, editForm);
       setEditingReviewId(null);
       fetchReviews();
@@ -148,7 +150,7 @@ const ManageReviews = () => {
           <tbody>
             {!loading &&
               reviews.map((r) => {
-                const rId = r._id || r.id; // שימוש ב-Key ייחודי לכל שורה
+                const rId = r._id || r.id;
                 return (
                   <tr key={rId}>
                     <td>{r.project?.title || 'פרויקט כללי'}</td>

@@ -1,13 +1,32 @@
-// /src/Components/Accessibility.jsx
 import { useState } from 'react';
+import './componentStyle.css';
 
+/**
+ * Accessibility Component
+ * * Provides a floating user interface (widget) to improve website accessibility.
+ * It allows users to dynamically adjust the font size and toggle high-contrast
+ * mode for better readability and visual comfort. The component is pinned
+ * to the viewport, ensuring essential accessibility tools are always reachable.
+ */
 const Accessibility = () => {
+  // State to manage the visibility of the accessibility options menu
   const [isOpen, setIsOpen] = useState(false);
 
+  /**
+   * Toggles the 'high-contrast' class on the document body.
+   * This allows the application to switch between standard and
+   * high-contrast visual modes via CSS selectors.
+   */
   const toggleHighContrast = () => {
     document.body.classList.toggle('high-contrast');
   };
 
+  /**
+   * Adjusts the global font size of the application.
+   * It calculates the current computed font size of the body and
+   * updates it by the specified delta value.
+   * * @param {number} delta - The amount of pixels to add or subtract (e.g., 2 or -2).
+   */
   const changeFontSize = (delta) => {
     const currentSize = parseFloat(
       window.getComputedStyle(document.body).fontSize
@@ -16,60 +35,28 @@ const Accessibility = () => {
   };
 
   return (
-    <div
-      style={{ position: 'fixed', bottom: '20px', left: '20px', zIndex: 10001 }}
-    >
+    <div className="wrapper-accessibility">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          width: '50px',
-          height: '50px',
-          borderRadius: '50%',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '24px',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        className="button-accessibility"
       >
         ♿
       </button>
 
-      {/* תפריט אפשרויות */}
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '60px',
-            left: '0',
-            width: '220px',
-            backgroundColor: 'white',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            padding: '15px',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-          }}
-        >
-          {/* תיקון צבע הטקסט שיהיה שחור וקריא */}
-          <button onClick={() => changeFontSize(2)} style={btnStyle}>
+        <div className="option-accessiblity">
+          <button onClick={() => changeFontSize(2)} className="btnStyle">
             ➕ הגדל טקסט
           </button>
-          <button onClick={() => changeFontSize(-2)} style={btnStyle}>
+          <button onClick={() => changeFontSize(-2)} className="btnStyle">
             ➖ הקטן טקסט
           </button>
-          <button onClick={toggleHighContrast} style={btnStyle}>
+          <button onClick={toggleHighContrast} className="btnStyle">
             🌓 ניגודיות גבוהה
           </button>
           <button
             onClick={() => setIsOpen(false)}
-            style={{ ...btnStyle, backgroundColor: '#f0f0f0', color: '#333' }}
+            className="close-btn-accessiblity"
           >
             סגור
           </button>
@@ -79,16 +66,4 @@ const Accessibility = () => {
   );
 };
 
-// ועדכן את ה-btnStyle שיהיה קריא:
-const btnStyle = {
-  padding: '10px',
-  cursor: 'pointer',
-  border: '1px solid #ddd',
-  borderRadius: '6px',
-  backgroundColor: '#ffffff',
-  color: '#000000', // טקסט שחור
-  textAlign: 'right',
-  fontWeight: 'bold',
-  fontSize: '14px',
-};
 export default Accessibility;
