@@ -1,4 +1,3 @@
-//src/Pages/PersonalDashboard.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
@@ -11,6 +10,11 @@ import { useAiQuota } from '../Hooks/useAiQuota.jsx';
 import { useSharedProject } from '../Hooks/useSharedProject.jsx';
 import './PublicPages.css';
 
+/*
+ *The PersonalDashboard is a comprehensive user-centric hub that serves as the "My Account" area for all platform members.
+ *It centralizes profile management, project history, financial settings, and AI-powered tools.
+ *The dashboard dynamically adjusts its features based on the user's role (Designer, Student, or Customer) and granted permissions.
+ */
 const PersonalDashboard = () => {
   // --- Hooks & Auth ---
   const { user, login, logout } = useAuth();
@@ -21,14 +25,12 @@ const PersonalDashboard = () => {
   } = usePermission();
   const { userId } = useParams();
   const fileInputRef = useRef(null);
-  const myId = String(user.id || user._id);
 
   // --- States ---
-  const { aiQuota, setAiQuota, fetchAiQuota, decrementQuota } = useAiQuota();
-  const [allOrders, setAllOrders] = useState([]);
+  const { aiQuota, setAiQuota, decrementQuota } = useAiQuota();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [message] = useState({ type: '', text: '' });
   const [projects, setProjects] = useState([]);
   const [purchasedProjects, setPurchasedProjects] = useState([]);
   const [profileImagePreview, setProfileImagePreview] = useState(null);
@@ -63,8 +65,7 @@ const PersonalDashboard = () => {
     !userId || String(userId) === String(currentUser?.id || user?.id);
 
   // --- API Functions ---
-
-  // שליפת היסטוריית AI ומכסה מתוך ה-meta
+  //Retrieves past conversations with the AI agent. It parses the API's meta object to synchronize the daily usage quota.
   const fetchMyAiHistory = useCallback(async () => {
     try {
       setHistoryLoading(true);
@@ -73,11 +74,8 @@ const PersonalDashboard = () => {
 
       const meta = res.data.meta;
       if (meta) {
-        // שימוש בחישוב הידני גם כאן כדי להבטיח אחידות
         const totalUsed = Number(meta.total) || 0;
         const dailyLimit = Number(meta.limit) || 20;
-
-        // אם השרת לא שלח remaining, אנחנו מחשבים אותו (20 - 1 = 19)
         const calculatedRemaining =
           meta.quota?.remaining ?? Math.max(0, dailyLimit - totalUsed);
 
@@ -96,19 +94,17 @@ const PersonalDashboard = () => {
     } finally {
       setHistoryLoading(false);
     }
-  }, []);
-
+  }, [setAiQuota]);
+  //This function performs a heavy-duty synchronization across multiple domains:
+  //fetches the latest user data from /api/profile/me,Retrieves successful orders (PAID or PAYOUT_SENT) to unlock downloadable content
+  //and splits all platform projects into two distinct arrays: projects (authored by the user) and purchasedProjects (bought from others)
   const fetchDashboardData = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       setLoading(true);
       const myId = String(user.id || user._id);
-
-      // 1. שליפת פרופיל ופרויקטים במקביל לשיפור ביצועים
       const profileRes = await api.get('/api/profile/me');
-
-      // 2. עיבוד נתוני פרופיל
       if (profileRes.data.user) {
         const u = profileRes.data.user;
         setFormData((prev) => ({
@@ -127,7 +123,6 @@ const PersonalDashboard = () => {
         }));
         if (u.profileImage) setProfileImagePreview(u.profileImage);
       }
-
       const projectsRes = await api.get('/api/projects');
       const allProjects =
         projectsRes.data?.projects ||
@@ -137,8 +132,6 @@ const PersonalDashboard = () => {
       let myOrders = [];
       try {
         const ordersRes = await api.get('/api/orders/my');
-
-        // Extract orders from various response structures
         if (Array.isArray(ordersRes.data)) {
           myOrders = ordersRes.data;
         } else if (ordersRes.data?.data && Array.isArray(ordersRes.data.data)) {
@@ -168,8 +161,6 @@ const PersonalDashboard = () => {
           })
           .filter(Boolean)
       );
-
-      // 5. הפרדה: פרויקטים שיצרתי vs פרויקטים שרכשתי
       const myOwn = allProjects.filter((p) => {
         const creatorId = p.createdBy?._id || p.createdBy?.id || p.createdBy;
         return String(creatorId) === myId;
@@ -180,7 +171,6 @@ const PersonalDashboard = () => {
         return purchasedProjectIds.has(pId);
       });
 
-      // 6. שליפת פרטים מלאים של פרויקטים (עם files)
       const createdResults = await Promise.allSettled(
         myOwn.map((p) => {
           const pId = p._id || p.id;
@@ -213,6 +203,7 @@ const PersonalDashboard = () => {
       setLoading(false);
     }
   }, [user]);
+
   // --- Effects ---
 
   useEffect(() => {
@@ -220,30 +211,15 @@ const PersonalDashboard = () => {
       fetchDashboardData();
     }
   }, [user?.id, permissionLoading, fetchDashboardData]);
-  useEffect(() => {
-    if (user && !permissionLoading) {
-      console.log(
-        '%c=== USER & PERMISSIONS DEBUG ===',
-        'color: blue; font-size: 14px; font-weight: bold'
-      );
-      console.log('User object:', user);
-      console.log('User role:', user?.role);
-      console.log('User ID:', user?.id || user?._id);
-      console.log('Has AI permission:', hasPermission('ai.consult'));
-      console.log('%c=== END DEBUG ===', 'color: blue');
-    }
-  }, [user, permissionLoading, hasPermission]);
+
   useEffect(() => {
     if (isOwnProfile && user?.id && !permissionLoading) {
-      // בדוק את ההרשאה בתוך הEffect, לא בdependency
       const hasAiPermission = hasPermission('ai.consult');
 
       if (hasAiPermission) {
-        console.log('✅ Fetching AI history...');
         fetchMyAiHistory();
       } else {
-        console.log('⚠️ No AI permission - skipping');
-        setAiHistory([]); // אפס את ההיסטוריה
+        setAiHistory([]);
       }
     }
   }, [
@@ -251,10 +227,10 @@ const PersonalDashboard = () => {
     user?.id,
     permissionLoading,
     fetchMyAiHistory,
-    // ❌ הסר את hasPermission מכאן!
+    hasPermission,
   ]);
-  // --- Handlers ---
 
+  // --- Handlers ---
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -271,7 +247,7 @@ const PersonalDashboard = () => {
       setProfileImagePreview(URL.createObjectURL(file));
     }
   };
-
+  //Utilizes the jszip library to aggregate project images and source files.
   const downloadAllAsZip = async (project) => {
     const zip = new JSZip();
     const token = localStorage.getItem('token');
@@ -358,10 +334,7 @@ const PersonalDashboard = () => {
 
     try {
       setSaving(true);
-      // קריאה ל-API המחיקה (וודאי שזה הנתיב אצלך ב-Backend)
       await api.delete(`/api/projects/${projectId}`);
-
-      // עדכון ה-State המקומי כדי להסיר את הפרויקט מהמסך
       setProjects((prev) => prev.filter((p) => (p._id || p.id) !== projectId));
 
       alert('הפרויקט נמחק בהצלחה');
@@ -372,20 +345,12 @@ const PersonalDashboard = () => {
       setSaving(false);
     }
   };
-  const handleManualQuotaUpdate = useCallback(() => {
-    setAiQuota((prev) => ({
-      ...prev,
-      used: prev.used + 1,
-      remaining: Math.max(0, prev.remaining - 1),
-    }));
-  }, []);
 
   // --- Render ---
   if (permissionLoading || loading)
     return <div className="loading-state">טוען נתונים...</div>;
   if (!user)
     return <div className="error-container">עליך להתחבר כדי לצפות בדף זה.</div>;
-  // פונקציה לעדכון ידני של המכסה ב-Dashboard כדי למנוע קפיצה חזרה ל-20
 
   return (
     <div className="profile-container" dir="rtl">
@@ -414,8 +379,7 @@ const PersonalDashboard = () => {
               ref={fileInputRef}
               onChange={handleFileChange}
               accept="image/*"
-              value={formData.profileImage ? undefined : ''} // כדי לאפשר בחירה חוזרת באותו קובץ
-              style={{ display: 'none' }}
+              value={formData.profileImage ? undefined : ''}
             />
             <div className={`role-badge-floating ${user?.role}`}>
               {user?.role}
@@ -571,14 +535,13 @@ const PersonalDashboard = () => {
                     <div
                       className="item-info"
                       onClick={() => setSelectedProject(p)}
-                      style={{ cursor: 'pointer', flex: 1 }}
                     >
                       <span className="item-title">{p.title} 🔍</span>
                     </div>
                     <div className="item-actions">
                       <button
                         onClick={(e) => {
-                          e.stopPropagation(); // מונע את פתיחת הפופאפ כשלוחצים על המחיקה
+                          e.stopPropagation();
                           handleDeleteProject(pId);
                         }}
                         className="btn-delete-action"
@@ -607,7 +570,6 @@ const PersonalDashboard = () => {
                 <div
                   className="item-info"
                   onClick={() => setSelectedProject(p)}
-                  style={{ cursor: 'pointer' }}
                 >
                   <span className="item-title">{p.title} 🔍</span>
                 </div>
@@ -633,13 +595,10 @@ const PersonalDashboard = () => {
           ) : aiHistory.length > 0 ? (
             <div className="ai-chats-grid">
               {aiHistory.map((chat) => {
-                const targetProject = chat.projectId;
                 const pId = chat.projectId?._id || chat.projectId;
                 const linkedProject = [...projects, ...purchasedProjects].find(
                   (p) => String(p._id || p.id) === String(pId)
                 );
-                const projectId = targetProject?._id || targetProject; // תמיכה גם אם זה אובייקט וגם אם זה ID בלבד
-                const projectTitle = targetProject?.title || 'פרויקט ללא שם';
                 const displayTitle =
                   linkedProject?.title || chat.title || 'פרויקט כללי';
                 return (
@@ -656,7 +615,6 @@ const PersonalDashboard = () => {
                     <button
                       className="view-chat-btn"
                       onClick={() => {
-                        // העברת הפרויקט המלא יחד עם ה-ID של הצ'אט כדי שהפופאפ יידע מה לטעון
                         setSelectedProject({
                           ...(linkedProject || {
                             _id: pId,
@@ -697,7 +655,7 @@ const PersonalDashboard = () => {
           isLoggedIn={true}
           externalAiQuota={aiQuota}
           onAiUpdate={() => decrementQuota()}
-          onUpdate={updateProject} // ← זה בודל את selectedProject ישירות!
+          onUpdate={updateProject}
         />
       )}
     </div>

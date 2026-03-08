@@ -1,9 +1,13 @@
-//src/Pages/EditProject.jsx
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { usePermission } from '../Hooks/usePermission.jsx'; // שימוש ב-Hook ההרשאות המרכזי
+import { usePermission } from '../Hooks/usePermission.jsx';
 
+/*
+ *The Checkout component is the dedicated financial gateway of the platform.
+ *It handles the secure transaction process for purchasing industrial design projects.
+ *It integrates with the PayPal REST API and manages complex state transitions, such as handling existing pending orders and preventing duplicate payments.
+ */
 const Checkout = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
@@ -14,7 +18,7 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
 
-  // מפת תרגומים מלאה לפי ה-Middleware של DesignerMarket
+  //The errorTranslations object maps specific backend strings to Hebrew
   const errorTranslations = {
     'You cannot purchase your own project.': 'לא ניתן לרכוש פרויקט שאתה יצרת.',
     'Order already processed.': 'כבר רכשת את הפרויקט הזה בעבר.',
@@ -31,7 +35,7 @@ const Checkout = () => {
     'Payment provider error (capture failed).':
       'העסקה נדחתה על ידי ספק התשלום.',
   };
-
+  //Loads the projects data
   const fetchProject = useCallback(async () => {
     try {
       setLoading(true);
@@ -53,11 +57,10 @@ const Checkout = () => {
       fetchProject();
     }
   }, [projectId, user, permissionLoading, fetchProject]);
-
+  //Handle the payment according to permission and paypal rules
   const handlePayment = async (e) => {
     if (e) e.preventDefault();
 
-    // 3. הגנה נוספת ברמת הפונקציה: בדיקת הרשאת יצירת הזמנה
     if (!hasPermission('orders.create')) {
       setError('אין לך הרשאה לבצע רכישות במערכת.');
       return;
@@ -68,19 +71,14 @@ const Checkout = () => {
     const storageKey = `pending_paypal_${projectId}`;
 
     try {
-      // ניסיון 1: יצירת הזמנה חדשה (עם נטרול מסך אדום)
       const response = await api.post(
         '/api/orders/paypal/create',
         { projectId },
         { validateStatus: (status) => status < 500 }
       );
-
-      // --- טיפול יצירתי ב-409 (Conflict) ---
       if (response.status === 409) {
         const serverMsg = response.data?.message;
         setError('מזהה הזמנה קיימת. מנסה להשלים את הרכישה עבורך...');
-
-        // חיפוש מזהה תשלום ב-Storage או ב-AuthContext
         let paypalId = localStorage.getItem(storageKey);
         if (!paypalId && user?.orders) {
           const existingOrder = user.orders.find(
@@ -105,14 +103,11 @@ const Checkout = () => {
             return;
           }
         }
-
-        // אם הניסיון האוטומטי נכשל, נציג את השגיאה המתורגמת מהשרת
         setError(
           errorTranslations[serverMsg] ||
             'קיימת הזמנה פתוחה. אנא פנה לאזור האישי.'
         );
       } else if (response.status >= 400) {
-        // טיפול בשאר שגיאות ה-4xx (כמו 403 - קנייה של פרויקט עצמי)
         const serverMsg = response.data?.message;
         setError(errorTranslations[serverMsg] || 'חלה שגיאה בתהליך התשלום.');
       } else if (response.status === 200) {
@@ -144,7 +139,6 @@ const Checkout = () => {
     );
   }
 
-  // בדיקה אם למשתמש יש הרשאה לבצע הזמנות
   if (!hasPermission('orders.create')) {
     return (
       <div className="admin-container">

@@ -1,10 +1,14 @@
-//src/Pages/Admin/ManageUsers.jsx
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { UserCog, Trash2 } from 'lucide-react';
 import './AdminDesign.css';
 import { usePermission } from '../../Hooks/usePermission.jsx';
-
+/*
+ *The ManageUsers page is the central administrative interface for user account management.
+ *It provides a comprehensive view of the platform's user base, allowing administrators to monitor account statuses,
+ *search for specific users, update organizational roles, and manage account deletions.
+ *This page is essential for maintaining the security and integrity of the user community.
+ */
 const ManageUsers = () => {
   const { hasPermission, loading: permissionLoading } = usePermission();
 
@@ -16,7 +20,8 @@ const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  //The user list is fetched from /api/admin/users. To ensure performance, the search is debounced by 350ms.
+  // This prevents the server from being overwhelmed by requests as the admin types in the search bar.
   const [filters, setFilters] = useState({
     q: '',
     role: '',
@@ -25,7 +30,6 @@ const ManageUsers = () => {
     limit: 10,
   });
 
-  // ✅ טעינת roles (דינמי) – רק אם מותר
   useEffect(() => {
     if (permissionLoading) return;
     if (!canManageRoles) return;
@@ -47,7 +51,6 @@ const ManageUsers = () => {
     };
   }, [permissionLoading, canManageRoles]);
 
-  // ✅ אם נבחר role שלא קיים יותר — ננקה (כדי לא לקבל 400)
   useEffect(() => {
     if (!filters.role) return;
     if (!canManageRoles) return;
@@ -58,8 +61,6 @@ const ManageUsers = () => {
       setFilters((prev) => ({ ...prev, role: '', page: 1 }));
     }
   }, [filters.role, roles, canManageRoles]);
-
-  // ✅ טעינת users לפי filters (עם debounce)
   useEffect(() => {
     if (permissionLoading) return;
     if (!canReadUsers) return;
@@ -85,7 +86,8 @@ const ManageUsers = () => {
 
     return () => clearTimeout(t);
   }, [filters, permissionLoading, canReadUsers]);
-
+  //Allows an authorized admin to change a user's role.
+  // It includes a confirmation dialog and performs an optimistic update on the local state to ensure the UI feels responsive.
   const handleRoleUpdate = async (userId, newRole) => {
     if (!canAssignRole) {
       alert('אין לך הרשאה לשנות תפקידי משתמשים');
@@ -152,7 +154,7 @@ const ManageUsers = () => {
 
         <br />
 
-        {/* ✅ פילטר Role דינמי – רק אם יש הרשאה לקרוא roles */}
+        {/* Dynamic roles */}
         {canManageRoles && (
           <select
             name="role"
@@ -221,7 +223,7 @@ const ManageUsers = () => {
                           value={u.role}
                           onChange={(e) => handleRoleUpdate(id, e.target.value)}
                         >
-                          {/* אם התפקיד לא נמצא ברשימה */}
+                          {/* If the role is not on the list*/}
                           {canManageRoles &&
                             roles.every((r) => r.key !== u.role) && (
                               <option value={u.role}>
@@ -229,7 +231,6 @@ const ManageUsers = () => {
                               </option>
                             )}
 
-                          {/* אם אין הרשאת roles.manage אז לא נציג רשימה דינמית */}
                           {canManageRoles ? (
                             roles.map((r) => (
                               <option key={r.key} value={r.key}>
@@ -270,9 +271,7 @@ const ManageUsers = () => {
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: 16 }}>
-                    אין משתמשים להצגה לפי הסינון.
-                  </td>
+                  <td colSpan="6">אין משתמשים להצגה לפי הסינון.</td>
                 </tr>
               )}
             </tbody>

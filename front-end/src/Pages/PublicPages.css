@@ -1,8 +1,3 @@
-/* src/Pages/PublicPages.css */
-/* =========================================
-   PUBLIC PAGES - TURQUOISE PREMIUM THEME
-   ========================================= */
-
 :root {
   --teal-dark: #006D77;
   --teal-primary: #008080;
@@ -13,18 +8,23 @@
   --text-main: #2d3436;
   --text-muted: #636e72;
   --shadow-soft: 0 10px 30px rgba(0, 109, 119, 0.08);
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --text-main: #1f2937;
+  --bg-subtle: #f9fafb;
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+html {
+  overflow-y: scroll;
 }
 
 body {
   background-color: var(--bg-light);
   margin-top: 80px;
-  /* ריווח קבוע עבור ה-Navbar */
 }
 
-
-
-
-/* --- פריסה כללית ומיכלים --- */
 .about-container,
 .catalog-container,
 .profile-container,
@@ -36,12 +36,26 @@ body {
   direction: rtl;
   animation: fadeIn 0.5s ease-in;
   box-sizing: border-box;
-  /* מבטיח שהפדינג לא יגדיל את רוחב האלמנט */
+}
 
+.forgot-password-container {
+  background: var(--white);
+  padding: 50px;
+  border-radius: 25px;
+  box-shadow: var(--shadow-soft);
+  max-width: 500px;
+  margin: 0 auto;
+  text-align: center;
 }
 
 
-/* --- דף אודות (About) --- */
+.public-profile-container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 0 20px;
+  font-family: 'Assistant', sans-serif;
+}
+
 .hero {
   text-align: center;
   padding: 60px 0;
@@ -82,7 +96,6 @@ body {
 .form-grid-3 {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  /* 3 עמודות שוות */
   gap: 20px;
 }
 
@@ -108,7 +121,6 @@ body {
   transform: translateY(-10px);
 }
 
-/* --- קטלוג (Project Library) --- */
 .catalog-header {
   display: flex;
   justify-content: space-between;
@@ -127,31 +139,7 @@ body {
   border: 1px solid var(--teal-light);
   border-radius: 12px;
   background: var(--white);
-
-}
-
-.catalog-search-input {
   width: 200px;
-}
-
-.projects-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 30px;
-}
-
-.project-card {
-  background: var(--white);
-  border-radius: 20px;
-  overflow: hidden;
-  box-shadow: var(--shadow-soft);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.project-card:hover {
-  transform: scale(1.03);
-  box-shadow: 0 20px 40px rgba(0, 109, 119, 0.15);
 }
 
 .card-img-box {
@@ -179,21 +167,9 @@ body {
 .card-info {
   margin-right: 15px;
   margin-bottom: 10px;
-  ;
 }
 
-/* --- דף הרשמה והתחברות (Auth) --- */
 .auth-card {
-  background: var(--white);
-  padding: 50px;
-  border-radius: 25px;
-  box-shadow: var(--shadow-soft);
-  max-width: 500px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.forgot-password-container {
   background: var(--white);
   padding: 50px;
   border-radius: 25px;
@@ -207,7 +183,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  /* יישור לימין עבור עברית */
   gap: 15px;
   background: #fdfdfd;
   padding: 10px;
@@ -218,23 +193,18 @@ body {
 .form-group-inline label {
   min-width: 100px;
   margin-bottom: 0;
-  /* ביטול המרווח התחתון הסטנדרטי */
   color: var(--teal-dark);
   font-size: 0.9rem;
 }
 
 .form-group-inline .form-input {
   flex: 1;
-  /* האינפוט יתפוס את כל שאר השטח */
 }
 
-/* שדות שתופסים שורה מלאה (כמו ביוגרפיה) */
 .full-width {
   grid-column: 1 / -1;
-  /* נמתח מקצה לקצה של הגריד */
 }
 
-/* עיצוב מיוחד לאזור ה-PayPal */
 .paypal-highlight {
   background: rgba(0, 128, 128, 0.05);
   padding: 20px;
@@ -246,7 +216,6 @@ body {
   text-align: right;
   margin-bottom: 20px;
   display: flex;
-
 }
 
 .form-group label {
@@ -272,15 +241,11 @@ body {
   box-shadow: 0 0 0 4px rgba(0, 128, 128, 0.1);
 }
 
-/* כפתורים יוקרתיים */
-
-
 .primary-btn:hover {
   filter: brightness(1.1);
   transform: translateY(-2px);
 }
 
-/* --- אזור אישי (Personal Dashboard) --- */
 .profile-header {
   font-size: 2.5rem;
   color: var(--teal-dark);
@@ -296,7 +261,6 @@ body {
 
 .profile-image-wrapper {
   display: flex;
-  /* או flex */
   width: 150px;
   height: 150px;
   border-radius: 50%;
@@ -335,7 +299,6 @@ body {
   box-shadow: var(--shadow-soft);
 }
 
-/* --- תשלום (Checkout) --- */
 .checkout-card {
   background: white;
   padding: 40px;
@@ -351,7 +314,6 @@ body {
   margin-bottom: 30px;
 }
 
-/* --- הודעות שגיאה והצלחה --- */
 .error-message {
   background: #fee2e2;
   color: #b91c1c;
@@ -364,7 +326,6 @@ body {
   border-top: 8px solid #10b981;
 }
 
-/* --- Footer --- */
 .main-footer {
   background: var(--teal-dark);
   color: white;
@@ -392,35 +353,32 @@ body {
   margin-bottom: 10px;
 }
 
-/* אנימציות */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: scale(0.95) translateY(20px);
+
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1) translateY(0);
+
   }
 }
 
-/* ניהול פרויקטים בטורים (Side-by-Side) */
 .profile-management-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  /* שני טורים פרויקטים שלי מול רכוש */
   gap: 30px;
   margin-top: 40px;
 }
-
-
 
 .profile-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* חותך את השוליים ושומר על יחס גובה-רוחב */
   display: block;
 }
 
@@ -428,9 +386,7 @@ body {
   margin-top: 60px;
   padding: 30px;
   background: #fffcfc;
-  /* רקע לבן עם נגיעה של אדום */
   border: 2px dashed #ffcfd2;
-  /* גבול מקווקו בצבע אדום רך */
   border-radius: 20px;
   display: flex;
   justify-content: space-between;
@@ -440,7 +396,6 @@ body {
 
 .profile-danger-zone h3 {
   color: #d90429;
-  /* אדום חזק לכותרת */
   margin: 0;
   font-size: 1.2rem;
   font-weight: 800;
@@ -451,8 +406,6 @@ body {
   font-size: 0.9rem;
   margin-top: 5px;
 }
-
-/* --- דף העלאת פרויקט (Add Project) --- */
 
 .add-project-container {
   max-width: 1000px;
@@ -480,14 +433,12 @@ body {
   padding-bottom: 5px;
 }
 
-/* סידור שדות בגריד */
 .form-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
 
-/* שדרוג ה-Input וה-Textarea */
 .add-project-form input,
 .add-project-form textarea,
 .add-project-form select {
@@ -512,7 +463,6 @@ body {
   outline: none;
 }
 
-/* אזור העלאת קבצים */
 .file-upload-zone {
   border: 2px dashed var(--teal-light);
   padding: 30px;
@@ -530,10 +480,8 @@ body {
 
 .file-upload-zone input[type="file"] {
   display: none;
-  /* מחביאים את הכפתור המקורי */
 }
 
-/* גריד תצוגה מקדימה של קבצים */
 .previews-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -607,25 +555,6 @@ body {
   padding: 2px 0;
 }
 
-/* כפתור שליחה */
-
-
-
-@media (max-width: 600px) {
-
-  .form-grid-3,
-  .profile-management-grid {
-    grid-template-columns: 1fr;
-    /* עמודה אחת בנייד */
-  }
-
-  .form-group-inline {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-/* מכולת הקבצים - מגבילה את הגובה ומוסיפה גלילה במידת הצורך */
 .files-preview-wrapper {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -637,7 +566,6 @@ body {
   border-radius: 8px;
 }
 
-/* כרטיס קובץ בודד */
 .file-card {
   position: relative;
   aspect-ratio: 1;
@@ -651,7 +579,6 @@ body {
   border-color: #0984e3;
 }
 
-/* התאמת התמונה למסגרת ללא עיוות */
 .img-fit {
   width: 100%;
   height: 100%;
@@ -680,7 +607,6 @@ body {
   cursor: not-allowed;
 }
 
-/* פריסת בסיס */
 .dashboard-strategic-root {
   padding: 20px;
 }
@@ -690,81 +616,30 @@ body {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  /* מאפשר ללחצנים לרדת שורה במובייל */
   gap: 20px;
   margin-bottom: 30px;
 }
 
-/* KPI Cards */
 .manager-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  /* 3 טורים במחשב */
   gap: 25px;
   margin-bottom: 30px;
 }
 
-/* Charts Grid */
 .charts-main-layout {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  /* חלוקה לא שווה במחשב */
   gap: 25px;
   margin-bottom: 30px;
 }
 
-/* BI Panel */
 .bi-strategic-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 25px;
 }
 
-/* === Media Queries === */
-
-/* טאבלטים (מתחת ל-1024px) */
-@media (max-width: 1024px) {
-  .manager-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-    /* עוברים ל-2 טורים */
-  }
-
-  .charts-main-layout {
-    grid-template-columns: 1fr;
-    /* גרף אחד מתחת לשני */
-  }
-}
-
-/* מובייל (מתחת ל-768px) */
-@media (max-width: 768px) {
-  .strategic-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .export-btns {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    /* לחצני ייצוא אחד ליד השני */
-  }
-
-  .manager-kpi-grid,
-  .bi-strategic-grid {
-    grid-template-columns: 1fr;
-    /* הכל בטור אחד */
-  }
-
-  .dashboard-header h1 {
-    font-size: 1.8rem;
-  }
-
-  .stat-card.manager-style {
-    padding: 15px;
-  }
-}
-
-/* עיצובי עזר למחלקות החדשות */
 .primary-gradient {
   background: linear-gradient(135deg, #6c5ce7, #a29bfe);
   color: white;
@@ -785,15 +660,6 @@ body {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
-/* קונטיינר ראשי עם מרווח נשימה */
-.public-profile-container {
-  max-width: 1100px;
-  margin: 40px auto;
-  padding: 0 20px;
-  font-family: 'Assistant', sans-serif;
-}
-
-/* כותרת הפרופיל (Hero Section) */
 .profile-hero {
   background: white;
   border-radius: 24px;
@@ -804,7 +670,6 @@ body {
   transition: transform 0.3s ease;
 }
 
-/* עיצוב האוואטר - מניעת עיוות */
 .avatar-wrapper {
   position: relative;
   flex-shrink: 0;
@@ -815,12 +680,10 @@ body {
   height: 180px;
   border-radius: 50%;
   object-fit: cover;
-  /* חשוב: מונע מתיחה של התמונה */
   border: 5px solid #f8f9fa;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
 }
 
-/* תג התפקיד */
 .role-tag {
   position: absolute;
   bottom: 10px;
@@ -835,7 +698,6 @@ body {
   text-transform: capitalize;
 }
 
-/* גריד הפרויקטים - פתרון לבעיית המובייל */
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -843,13 +705,13 @@ body {
   margin-top: 30px;
 }
 
-/* כרטיס פרויקט משופר */
 .project-card {
   background: white;
   border-radius: 18px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .project-card:hover {
@@ -857,45 +719,10 @@ body {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
 }
 
-.card-img-box {
-  height: 220px;
-  position: relative;
-}
-
 .card-img-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  /* פותר את הבעיה שרואים בתמונה f34c61 */
-}
-
-/* רספונסיביות למובייל (image_f33222) */
-@media (max-width: 768px) {
-  .profile-hero {
-    flex-direction: column;
-    text-align: center;
-    padding: 30px 20px;
-  }
-
-  .profile-meta-grid {
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .projects-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-:root {
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --text-main: #1f2937;
-  --text-muted: #6b7280;
-  --bg-subtle: #f9fafb;
-  --white: #ffffff;
-  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
 
 .profile-page-root {
@@ -908,12 +735,6 @@ body {
   height: 200px;
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   width: 100%;
-}
-
-.profile-container {
-  max-width: 1100px;
-  margin: -100px auto 0;
-  padding: 0 20px;
 }
 
 .profile-card-main {
@@ -1025,7 +846,6 @@ body {
   border-color: var(--primary);
 }
 
-/* Grid העבודות */
 .portfolio-section {
   margin-top: 60px;
 }
@@ -1044,15 +864,16 @@ body {
 .title-underline {
   width: 60px;
   height: 5px;
-  background: var(--primary);
+  background: var(--teal-dark);
   border-radius: 10px;
   margin-bottom: 40px;
 }
 
 .portfolio-grid-modern {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
 }
 
 .modern-project-card {
@@ -1110,7 +931,7 @@ body {
   padding: 5px 12px;
   border-radius: 8px;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--teal-primary);
 }
 
 .card-details {
@@ -1147,7 +968,6 @@ body {
   border-radius: 8px;
 }
 
-/* Pagination */
 .modern-pagination {
   display: flex;
   justify-content: center;
@@ -1177,26 +997,8 @@ body {
 .pag-btn:not(:disabled):hover {
   background: var(--primary);
   color: white;
-  border-color: var(--primary);
 }
 
-@media (max-width: 768px) {
-  .profile-upper-info {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .stats-badges {
-    justify-content: center;
-  }
-
-  .social-links-wrapper {
-    justify-content: center;
-  }
-}
-
-/* רקע הפופ-אפ */
 .project-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1210,7 +1012,6 @@ body {
   animation: fadeIn 0.3s ease;
 }
 
-/* תוכן הפופ-אפ */
 .project-modal-content {
   background: white;
   width: 100%;
@@ -1239,10 +1040,7 @@ body {
   cursor: pointer;
   z-index: 10;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-html {
-  overflow-y: scroll;
+  padding: 5px;
 }
 
 .modal-body-grid {
@@ -1258,11 +1056,16 @@ html {
   object-fit: cover;
 }
 
+.modal-image-side {
+  background: #f0f4f4;
+}
+
 .modal-info-side {
   padding: 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background: white;
 }
 
 .modal-category {
@@ -1300,7 +1103,7 @@ html {
 }
 
 .add-to-cart-btn {
-  background: #4f46e5;
+  background: var(--teal-dark);
   color: white;
   border: none;
   padding: 14px;
@@ -1320,53 +1123,6 @@ html {
   font-size: 0.9rem;
 }
 
-/* אנימציות */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-/* התאמה למובייל */
-@media (max-width: 768px) {
-  .modal-body-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .modal-image-side {
-    height: 250px;
-  }
-
-  .modal-info-side {
-    padding: 25px;
-  }
-}
-
-/* פריסת הגריד */
-.portfolio-grid-modern {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 25px;
-  margin-top: 30px;
-}
-
-/* כרטיס בסגנון העמוד הראשי */
 .main-style-card {
   background: white;
   border-radius: 20px;
@@ -1392,7 +1148,6 @@ html {
   object-fit: cover;
 }
 
-/* תג המחיר הטורקיז מהדוגמה */
 .price-badge-floating {
   position: absolute;
   bottom: 15px;
@@ -1444,7 +1199,6 @@ html {
   padding: 0;
 }
 
-/* מודאל ותשלום */
 .payment-section {
   margin-top: 25px;
   padding-top: 20px;
@@ -1457,20 +1211,6 @@ html {
   color: #333;
 }
 
-.modal-close-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  z-index: 100;
-  background: white;
-  border-radius: 50%;
-  border: none;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  padding: 5px;
-}
-
-/* מבנה דף כללי */
 .profile-page-wrapper {
   background-color: #f8f9fa;
   min-height: 100vh;
@@ -1487,7 +1227,6 @@ html {
   padding: 0 20px 60px;
 }
 
-/* כרטיס פרופיל (Hero) - תיקון הבעיה מהתמונה */
 .profile-header-card {
   background: white;
   border-radius: 20px;
@@ -1509,7 +1248,6 @@ html {
 
 .profile-img-main {
   width: 120px;
-  /* גודל שפוי במקום הענק שהיה */
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
@@ -1530,7 +1268,6 @@ html {
   font-weight: bold;
 }
 
-/* גריד הכרטיסים החדש (ללא יוצר) */
 .projects-display-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -1568,7 +1305,6 @@ html {
   bottom: 12px;
   right: 12px;
   background: #008080;
-  /* הצבע הטורקיז מהדוגמה ששלחת */
   color: white;
   padding: 6px 14px;
   border-radius: 12px;
@@ -1610,93 +1346,6 @@ html {
   cursor: pointer;
 }
 
-/* מובייל */
-@media (max-width: 768px) {
-  .header-flex-container {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .profile-main-content {
-    margin-top: -40px;
-  }
-}
-
-/* שכבת הרקע הכהה */
-.project-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  /* ערך גבוה מאוד כדי לעבור את ה-Navbar */
-  padding: 20px;
-}
-
-/* קופסת המודאל */
-.project-modal-content {
-  background: #fff;
-  width: 100%;
-  max-width: 950px;
-  max-height: 90vh;
-  border-radius: 28px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  animation: modalEnter 0.3s ease-out;
-}
-
-/* חלוקה ל-2 עמודות */
-.modal-body-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  height: 100%;
-  min-height: 550px;
-}
-
-.modal-image-side {
-  background: #f0f4f4;
-}
-
-.modal-image-side img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.modal-info-side {
-  padding: 40px;
-  display: flex;
-  flex-direction: column;
-  background: white;
-  overflow-y: auto;
-}
-
-/* כפתור סגירה צף */
-.modal-close-btn {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 10;
-  background: white;
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-/* עיצוב טקסט בתוך המודאל */
 .modal-category-tag {
   color: #008080;
   font-weight: 800;
@@ -1726,38 +1375,9 @@ html {
   font-size: 0.9rem;
 }
 
-/* אנימציה */
-@keyframes modalEnter {
-  from {
-    opacity: 0;
-    transform: scale(0.95) translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* התאמה למובייל */
-@media (max-width: 850px) {
-  .modal-body-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .modal-image-side {
-    height: 250px;
-  }
-
-  .modal-info-side {
-    padding: 25px;
-  }
-}
-
 .searching-opacity {
   opacity: 0.6;
   pointer-events: none;
-  /* מונע לחיצות בזמן טעינה */
   transition: opacity 0.2s ease;
 }
 
@@ -1774,7 +1394,6 @@ html {
 .reset-search-btn,
 .btn-export,
 .submit-project-btn,
-.btn-export,
 .link-btn,
 .btn-download-action,
 .btn-delete-action,
@@ -1790,54 +1409,6 @@ html {
   transition: all 0.3s;
 }
 
-/* --- טאבלטים (מתחת ל-992px) --- */
-@media (max-width: 992px) {
-  .hero h1 {
-    font-size: 2.2rem;
-    /* הקטנת טקסטים גדולים */
-  }
-
-  .profile-management-grid {
-    grid-template-columns: 1fr;
-    /* מעבר משני טורים לטור אחד */
-  }
-}
-
-/* --- מובייל (מתחת ל-768px) --- */
-@media (max-width: 768px) {
-  .catalog-header {
-    flex-direction: column;
-    /* כותרת וחיפוש אחד מתחת לשני */
-    gap: 20px;
-    align-items: flex-start;
-  }
-
-  .catalog-toolbar {
-    width: 100%;
-    flex-direction: column;
-    /* שדה חיפוש וסינון אחד מתחת לשני */
-  }
-
-  .catalog-search-input {
-    width: 100%;
-    /* החיפוש יתפוס את כל הרוחב */
-  }
-
-  .profile-header-card {
-    padding: 20px;
-  }
-
-  .header-flex-container {
-    flex-direction: column;
-    /* תמונת פרופיל מעל הטקסט */
-    text-align: center;
-  }
-
-  /* התאמת טפסים למובייל */
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
 
 .user-role-badge {
   display: inline-block;
@@ -1848,38 +1419,30 @@ html {
   font-weight: bold;
   text-transform: uppercase;
   background-color: #f0f0f0;
-  /* צבע ברירת מחדל */
   color: #333;
 }
 
-/* עיצוב ספציפי לפי תפקיד */
 .user-role-badge.admin {
   background-color: #ffd700;
-  /* זהב למנהל */
   color: #000;
   border: 1px solid #b8860b;
 }
 
 .user-role-badge.creator {
   background-color: #e3f2fd;
-  /* כחול ליוצר */
   color: #1976d2;
 }
 
 .user-role-badge.businessmanager {
   background-color: gray;
-  /* כחול ליוצר */
-  color: #1976d2;
+  color: var(--teal-light);
 }
-
 
 .required-star {
   color: #ff4d4f;
-  /* אדום בולט */
   margin-right: 4px;
   font-weight: bold;
 }
-
 
 .note {
   color: red;
@@ -1891,9 +1454,7 @@ html {
   margin: 20px 0;
   padding: 15px;
   background-color: #fff9db;
-  /* צהוב עדין */
   border-right: 4px solid #fab005;
-  /* פס צדדי להדגשה */
   border-radius: 4px;
 }
 
@@ -1918,7 +1479,6 @@ html {
   background-color: #f08c00;
 }
 
-/* עיצוב כפתור כבוי */
 .submit-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
@@ -1942,7 +1502,6 @@ html {
 
 .file-preview-card.main-selected {
   border-color: #f59e0b;
-  /* צבע זהב/כתום */
   background-color: #fffbeb;
 }
 
@@ -1968,8 +1527,6 @@ html {
   color: YELLOW;
 }
 
-
-
 .file-name-tag {
   display: block;
   font-size: 10px;
@@ -1977,4 +1534,178 @@ html {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 4px;
+}
+
+.XAxis {
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.consult {
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.dashboard-footer-credits {
+  margin-top: 40px;
+  text-align: center;
+  color: #b2bec3;
+  font-size: 0.9rem;
+  border-top: 1px solid #eee;
+  padding: 20px;
+}
+
+.showResent-wrapper {
+  margin-top: 10px;
+}
+
+.item-info {
+  cursor: pointer;
+  flex: 1;
+}
+
+.error-publicProfile {
+  background: #ffe5e5;
+  padding: 12;
+  border-Radius: 8;
+}
+
+@media (max-width: 600px) {
+
+  .form-grid-3,
+  .profile-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group-inline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .strategic-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .export-btns {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .manager-kpi-grid,
+  .bi-strategic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .stat-card.manager-style {
+    padding: 15px;
+  }
+
+  .profile-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 30px 20px;
+  }
+
+  .profile-meta-grid {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-badges {
+    justify-content: center;
+  }
+
+  .social-links-wrapper {
+    justify-content: center;
+  }
+
+  .profile-upper-info {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .modal-body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-image-side {
+    height: 250px;
+  }
+
+  .modal-info-side {
+    padding: 25px;
+  }
+
+  .catalog-header {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .catalog-toolbar {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .catalog-search-input {
+    width: 100%;
+  }
+
+  .header-flex-container {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+@media (max-width: 850px) {
+  .modal-body-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-image-side {
+    height: 250px;
+  }
+
+  .modal-info-side {
+    padding: 25px;
+  }
+}
+
+@media (max-width: 992px) {
+  .hero h1 {
+    font-size: 2.2rem;
+  }
+
+  .profile-management-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) {
+  .manager-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-main-layout {
+    grid-template-columns: 1fr;
+  }
 }

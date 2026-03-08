@@ -5,30 +5,28 @@ import api from '../api/axios';
 import { PayPalButtons } from '@paypal/react-paypal-js';
 import './componentStyle.css';
 import { usePermission } from '../Hooks/usePermission.jsx';
-import { useAiQuota } from '../Hooks/useAiQuota.jsx'; // ✅ הוסף שורה זו - בדוק שהנתיב נכון!
+import { useAiQuota } from '../Hooks/useAiQuota.jsx';
+/*
+ * The Popup component is a multi-functional modal window designed to display detailed information about
+ * a specific project. It serves as the primary interface for project interaction,
+ * including viewing details, purchasing via PayPal, managing user reviews, and consulting with an AI agent.
+ */
 
-const Popup = ({
-  project,
-  onClose,
-  onUpdate,
-  isLoggedIn,
-  onAiUpdate,
-  externalAiQuota,
-}) => {
+const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   const [existingFiles, setExistingFiles] = useState(project?.files || []);
   const [newFiles, setNewFiles] = useState([]);
   const { hasPermission, user: currentUser } = usePermission();
   const [orderStatus, setOrderStatus] = useState(null);
   const [categories, setCategories] = useState([]);
-
-  // ✅ החלף את השורה הישנה (const [aiQuota, setAiQuota]...)
-  const { aiQuota, setAiQuota, fetchAiQuota, decrementQuota } = useAiQuota();
+  //Tracks the remaining AI interactions available to the user via the useAiQuota hook.
+  const { aiQuota, fetchAiQuota, decrementQuota } = useAiQuota();
 
   const navigate = useNavigate();
-
+  //Tracks if the current user has a successful order for this project.
   const [alreadyPurchased, setAlreadyPurchased] = useState(false);
 
   const [, setCurrentMainImageId] = useState(project?.mainImageId || '');
+  //Users with administrative privileges. Can manage all content and reviews.
   const isAdmin = hasPermission('admin');
 
   const projectId = project?._id || project?.id;
@@ -40,8 +38,9 @@ const Popup = ({
     project?.createdBy?._id || project?.createdBy || ''
   );
   const currentUserId = String(currentUser?._id || currentUser?.id || '');
+  //The user who created the project. Can edit details and use AI.
   const isOwner = currentUserId && createdById && currentUserId === createdById;
-
+  //Granted if the user is the owner and has the specific ai.consult permission.
   const canUseAi = isOwner && hasPermission('ai.consult');
   const canEdit = isOwner || hasPermission('admin');
   const [reviews, setReviews] = useState([]);
@@ -52,10 +51,11 @@ const Popup = ({
   const [imagePreview, setImagePreview] = useState(project?.mainImageUrl || '');
   const fileInputRef = useRef(null);
   const [editReviewData, setEditReviewData] = useState({ rating: 5, text: '' });
+  //Toggles between the display view and the project edit form.
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState({ type: '', msg: null });
-
+  const [feedback] = useState({ type: '', msg: null });
+  //Stores the conversation history for the AI chat session.
   const [aiMessages, setAiMessages] = useState([]);
   const [chatId, setChatId] = useState(null);
   const [userQuery, setUserQuery] = useState('');
@@ -92,6 +92,7 @@ const Popup = ({
     fetchCategories();
   }, []);
 
+  //Validates the user's purchase status to unlock content or hide payment buttons.
   const checkIfProjectPurchased = useCallback(() => {
     if (!project) {
       setAlreadyPurchased(false);
@@ -113,6 +114,7 @@ const Popup = ({
     }
   }, [project]);
 
+  //Synchronizes the local state with the latest project data (media, files, and order status) from the server.
   const fetchProjectFilesFromDB = useCallback(async () => {
     if (!projectId) return;
     try {
@@ -140,39 +142,7 @@ const Popup = ({
     }
   }, [projectId]);
 
-  const fetchAiChat = useCallback(
-    async (forcedChatId = null) => {
-      const targetChatId = forcedChatId || chatId;
-
-      try {
-        if (!targetChatId) {
-          if (!projectId) return;
-
-          const chatRes = await api.get('/api/ai-chats', {
-            params: { projectId },
-          });
-
-          const chats = chatRes.data.data || [];
-          if (chats.length > 0) {
-            const firstChatId = chats[0]._id;
-            setChatId(firstChatId);
-            await loadMessages(firstChatId);
-          }
-          return;
-        }
-
-        const msgRes = await api.get(`/api/ai-chats/${targetChatId}/messages`, {
-          params: { limit: 50, order: 'asc' },
-        });
-
-        setAiMessages(msgRes.data.data || []);
-      } catch (err) {
-        console.error('Failed to fetch AI chat', err);
-      }
-    },
-    [projectId, chatId]
-  );
-
+  //Retrieves all reviews associated with the project ID.
   const fetchReviews = useCallback(async () => {
     setReviewsLoading(true);
     try {
@@ -260,15 +230,13 @@ const Popup = ({
       ) {
         hasFetchedRef.current = true;
 
-        // 1. קבלת ה-ID של הצ'אט מהפרויקט (אם הגענו מההיסטוריה) או מה-URL
         const queryParams = new URLSearchParams(location.search);
         const targetChatId = project.initialChatId || queryParams.get('chat');
 
         if (targetChatId) {
           setChatId(targetChatId);
-          await loadMessages(targetChatId); // פונקציה שכבר קיימת אצלך וקוראת ל-messages
+          await loadMessages(targetChatId);
         } else {
-          // 2. אם אין צ'אט ספציפי, ננסה למצוא אם יש צ'אט קיים לפרויקט הזה ב-DB
           try {
             const res = await api.get('/api/ai-chats', {
               params: { projectId },
@@ -287,8 +255,14 @@ const Popup = ({
       }
     };
     initPopup();
-  }, [projectId, isLoggedIn, project, fetchAiQuota]);
-
+  }, [
+    projectId,
+    isLoggedIn,
+    project,
+    fetchAiQuota,
+    hasPermission,
+    location.search,
+  ]);
   useEffect(() => {
     if (isLoggedIn && !isOwner && project) {
       checkIfProjectPurchased();
@@ -296,12 +270,11 @@ const Popup = ({
   }, [project, isLoggedIn, isOwner, checkIfProjectPurchased]);
 
   useEffect(() => {
-    // גלילה לסוף בכל פעם שמערך ההודעות משתנה
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [aiMessages]);
 
   if (!project) return null;
-
+  //Submits a FormData object to the API to update project details and files. It handles both existing and new file uploads.
   const handleSaveProjectEdit = async () => {
     try {
       const tagsArray = editData.tags
@@ -370,7 +343,7 @@ const Popup = ({
   };
 
   const safeReviews = Array.isArray(reviews) ? reviews.filter(Boolean) : [];
-
+  //Validates and posts a new rating and comment.
   const handleAddReview = async (e) => {
     e.preventDefault();
     if (!isLoggedIn) return window.window.alert('עליך להתחבר כדי להגיב');
@@ -401,7 +374,7 @@ const Popup = ({
       window.window.alert(err.friendlyMessage || 'שגיאה בהוספת תגובה');
     }
   };
-
+  //Manages the local preview of a newly selected main image.
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -413,7 +386,7 @@ const Popup = ({
       reader.readAsDataURL(file);
     }
   };
-
+  //Allows authorized users to modify existing feedback.
   const handleUpdateReview = async (reviewId) => {
     if (!editReviewData.text.trim())
       return window.window.alert('לא ניתן לשמור תגובה ריקה');
@@ -446,6 +419,7 @@ const Popup = ({
     }
   };
 
+  //Allows authorized users to remove existing feedback.
   const handleDeleteReview = async (reviewId) => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק את התגובה?')) return;
 
@@ -468,7 +442,7 @@ const Popup = ({
     setAiMessages(msgRes.data.data || []);
   };
 
-  // ✅ עדכן את handleSendAiMessage
+  //Sends the user's query to the AI backend, updates the UI optimistically, and decrements the user's AI quota upon a successful response.
   const handleSendAiMessage = async () => {
     if (!userQuery.trim() || aiQuota.remaining === 0 || loading) return;
 
@@ -479,24 +453,20 @@ const Popup = ({
     try {
       let currentChatId = chatId;
 
-      // 1. יצירת צ'אט אם הוא לא קיים
       if (!currentChatId) {
         const chatRes = await api.post('/api/ai-chats', {
           projectId,
           title: `ייעוץ עבור ${project.title}`,
         });
-        // וידוא שליפת ה-ID הנכון מהמבנה של הבק-אנד
         currentChatId = chatRes.data.data.chatId || chatRes.data.data._id;
         setChatId(currentChatId);
       }
 
-      // 2. עדכון זמני של ה-UI (אופטימי)
       setAiMessages((prev) => [
         ...prev,
         { role: 'user', content: messageContent, _id: Date.now() },
       ]);
 
-      // 3. שליחת ההודעה לבק-אנד - שלחי רק מה שנחוץ!
       const response = await api.post(
         `/api/ai-chats/${currentChatId}/messages`,
         {
@@ -506,7 +476,6 @@ const Popup = ({
       );
 
       if (response.data?.data) {
-        // עדכון התשובה מה-AI
         setAiMessages((prev) => [
           ...prev,
           {
@@ -516,7 +485,6 @@ const Popup = ({
           },
         ]);
 
-        // עדכון מכסה
         decrementQuota();
         if (onAiUpdate) onAiUpdate();
       }
@@ -528,12 +496,12 @@ const Popup = ({
       );
     } finally {
       setLoading(false);
-      // גלילה לסוף הצ'אט
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
   };
+  //Triggers a secure blob-based download of project source files, ensuring only authorized purchasers can access the data.
   const handleOpenFile = async (file) => {
     const filename = file.filename || file.name || 'download.txt';
     const fileUrl = file.url || file.fileUrl;
@@ -627,7 +595,6 @@ const Popup = ({
                             accept="image/*"
                             onChange={handleFileChange}
                             ref={fileInputRef}
-                            style={{ display: 'none' }}
                           />
                           <button
                             type="button"
@@ -649,7 +616,7 @@ const Popup = ({
                                 })
                               }
                             />
-                            <small style={{ color: '#666' }}>
+                            <small className="small">
                               הפרד בין מילים באמצעות פסיק (,)
                             </small>
                           </div>
@@ -769,7 +736,6 @@ const Popup = ({
                               <input
                                 type="file"
                                 multiple
-                                style={{ display: 'none' }}
                                 onChange={(e) =>
                                   setNewFiles([
                                     ...newFiles,
@@ -778,23 +744,10 @@ const Popup = ({
                                 }
                               />
                             </label>
-                            <p
-                              className="files-note"
-                              style={{
-                                color: 'red',
-                                fontSize: '0.9em',
-                                textAlign: 'center',
-                              }}
-                            >
+                            <p className="files-note">
                               שים לב! רק סוגי הקבצים הבאים מתקבלים:
-                              <p
-                                className="files-note"
-                                style={{
-                                  color: 'red',
-                                  fontSize: '0.9em',
-                                  textAlign: 'center',
-                                }}
-                              ></p>
+                            </p>
+                            <p className="files-note">
                               jpeg, jpg, png, gif, mp4, avi, mov, pdf, doc,
                               docx, ppt, pptx, txt, zip
                             </p>
@@ -858,18 +811,7 @@ const Popup = ({
                 <div className="paypal-button-container">
                   {alreadyPurchased ||
                   ['PAID', 'PAYOUT_SENT'].includes(orderStatus) ? (
-                    <div
-                      className="purchased-message"
-                      style={{
-                        textAlign: 'center',
-                        padding: '20px',
-                        color: '#28a745',
-                        fontWeight: 'bold',
-                        backgroundColor: '#e9f7ef',
-                        borderRadius: '8px',
-                        border: '1px solid #28a745',
-                      }}
-                    >
+                    <div className="purchased-message">
                       ✅ כבר רכשת את הפרויקט הזה! התכנים פתוחים עבורך.
                     </div>
                   ) : (
@@ -878,26 +820,18 @@ const Popup = ({
                         !['CANCELED', 'PAID', 'PAYOUT_SENT'].includes(
                           orderStatus
                         ) && (
-                          <div
-                            className="pending-order-window.alert"
-                            style={{
-                              backgroundColor: '#fff3cd',
-                              padding: '10px',
-                              borderRadius: '8px',
-                              marginBottom: '10px',
-                            }}
-                          >
+                          <div className="pending-order-window.alert">
                             <small>⚠️ מערכת זיהתה הזמנה קיימת</small>
                           </div>
                         )}
 
                       <PayPalButtons
-                        style={{
-                          layout: 'vertical',
-                          shape: 'rect',
-                          height: 45,
-                        }}
+                        className="paypal-buttons"
                         createOrder={async () => {
+                          {
+                            /* Initiates a PayPal transaction on the backend and returns the Order ID. */
+                          }
+
                           try {
                             const myOrders = await api.get(
                               `/api/orders/my?projectId=${projectId}`
@@ -937,6 +871,9 @@ const Popup = ({
                           }
                         }}
                         onApprove={async (data) => {
+                          {
+                            /* Captures the payment and reloads the state upon success.. */
+                          }
                           try {
                             setLoading(true);
                             const res = await api.post(

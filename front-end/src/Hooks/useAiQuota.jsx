@@ -2,6 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import api from '../api/axios';
 
 const QUOTA_STORAGE_KEY = 'aiQuotaCache';
+/*The useAiQuota hook is a specialized React custom hook designed to manage and track the usage limits for AI-powered features
+ *(such as the AI Agent in the project popup). It handles data synchronization between the backend API,
+ *the component state, and the browser's localStorage to ensure a consistent user experience even after page refreshes.
+ */
 
 export const useAiQuota = () => {
   const [aiQuota, setAiQuota] = useState({
@@ -9,8 +13,7 @@ export const useAiQuota = () => {
     limit: 20,
     remaining: 20,
   });
-
-  // שליפת המכסה מהשרת וחסימתה ב-localStorage
+  //Synchronizes the local state with the actual usage data stored on the server.
   const fetchAiQuota = useCallback(async () => {
     try {
       const res = await api.get('/api/ai-chats');
@@ -26,8 +29,6 @@ export const useAiQuota = () => {
 
         const newQuota = { used, limit, remaining };
         setAiQuota(newQuota);
-
-        // שמירה ב-localStorage עם timestamp
         localStorage.setItem(
           QUOTA_STORAGE_KEY,
           JSON.stringify({
@@ -43,8 +44,7 @@ export const useAiQuota = () => {
       return null;
     }
   }, []);
-
-  // טעינת המכסה מ-localStorage אם היא קיימת
+  //Retrieves the most recent quota data from localStorage.
   const loadQuotaFromStorage = useCallback(() => {
     try {
       const cached = localStorage.getItem(QUOTA_STORAGE_KEY);
@@ -58,8 +58,7 @@ export const useAiQuota = () => {
     }
     return null;
   }, []);
-
-  // עדכון המכסה כשמשתמש משלח הודעה (הורדה ב-1)
+  //Manually reduces the remaining quota by 1.
   const decrementQuota = useCallback(() => {
     setAiQuota((prev) => {
       const updated = {
@@ -67,8 +66,6 @@ export const useAiQuota = () => {
         used: prev.used + 1,
         remaining: Math.max(0, prev.remaining - 1),
       };
-
-      // שמירה ב-localStorage
       localStorage.setItem(
         QUOTA_STORAGE_KEY,
         JSON.stringify({
@@ -81,19 +78,16 @@ export const useAiQuota = () => {
     });
   }, []);
 
-  // טעינה בעת mount
   useEffect(() => {
     const cached = loadQuotaFromStorage();
     if (!cached) {
-      // אם אין cache, שלוף מהשרת
       fetchAiQuota();
     }
-  }, []);
+  }, [fetchAiQuota, loadQuotaFromStorage]);
 
   return {
     aiQuota,
-    setAiQuota, // ← הוסף
-
+    setAiQuota,
     fetchAiQuota,
     loadQuotaFromStorage,
     decrementQuota,

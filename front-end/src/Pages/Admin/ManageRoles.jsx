@@ -1,4 +1,3 @@
-//src/Pages/Admin/ManageRoles.jsx
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
@@ -16,7 +15,11 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import './AdminDesign.css';
-
+/*The ManageRoles page is the most critical security module within the Admin Panel.
+ *It provides a dynamic interface for Role-Based Access Control (RBAC) management.
+ *Administrators use this page to define user roles (e.g., "Editor," "Manager") and assign specific granular permissions to those roles.
+ *Changes made here immediately affect the capabilities of all users assigned to that role across the platform.
+ */
 const ManageRoles = () => {
   const { hasPermission, loading: permissionLoading } = usePermission();
   const [roles, setRoles] = useState([]);
@@ -25,15 +28,12 @@ const ManageRoles = () => {
   const [newRoleData, setNewRoleData] = useState({ key: '', label: '' });
   const [dynamicPermissions, setDynamicPermissions] = useState([]);
 
-  // הפרדת משתני טעינה למניעת הבהובים
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
-
-  const allAvailablePermissions = Object.values(PERMS);
-
+  //The component uses useMemo to categorize permissions into logical groups
   const groupedPermissions = useMemo(() => {
     const groups = {
       'ניהול משתמשים': dynamicPermissions.filter(
@@ -68,31 +68,20 @@ const ManageRoles = () => {
     };
     return groups;
   }, [dynamicPermissions]);
-
-  // פונקציית טעינה יציבה
-  // בתוך ManageRoles.jsx - החליפי את החלקים הרלוונטיים:
-
-  // 1. נגדיר state להרשאות הדינמיות
-
-  // 2. עדכון פונקציית fetchRoles
+  //This function retrieves all roles from /api/admin/roles
   const fetchRoles = useCallback(async () => {
     try {
       setIsPageLoading(true);
       const res = await api.get('/api/admin/roles');
       const rolesList = res.data?.roles || res.data?.data || [];
       setRoles(rolesList);
-
-      // לוגיקה דינמית: איסוף כל ההרשאות הייחודיות מכל התפקידים שקיימים ב-DB
       const extractedPerms = new Set();
       rolesList.forEach((role) => {
         if (Array.isArray(role.permissions)) {
           role.permissions.forEach((p) => extractedPerms.add(p));
         }
       });
-
-      // הוספת הרשאות ה-Constants כגיבוי למקרה שהן עוד לא משויכות לאף תפקיד
       Object.values(PERMS).forEach((p) => extractedPerms.add(p));
-
       setDynamicPermissions(Array.from(extractedPerms).sort());
     } catch (err) {
       console.error('Failed to fetch roles', err);
@@ -101,11 +90,8 @@ const ManageRoles = () => {
     }
   }, []);
 
-  // עדכון ה-useEffect ב-ManageRoles.jsx
   useEffect(() => {
     const token = localStorage.getItem('token');
-
-    // אם אין טוקן, אל תנסה אפילו לבצע את הקריאה כדי למנוע לולאת שגיאות
     if (!token) {
       setMessage({ type: 'error', text: 'החיבור פג תוקף, אנא התחברי מחדש' });
       return;
@@ -114,8 +100,8 @@ const ManageRoles = () => {
     if (!permissionLoading && hasPermission('roles.manage')) {
       fetchRoles();
     }
-  }, [permissionLoading, hasPermission, fetchRoles]); // הסרנו את fetchRoles מהתלויות כדי למנוע לולאה
-
+  }, [permissionLoading, hasPermission, fetchRoles]);
+  //Validates the "Key" (slug) to ensure it only contains lowercase English letters and hyphens before sending a POST request
   const handleCreateRole = async (e) => {
     if (e) e.preventDefault();
     if (isSubmitting) return;
@@ -150,10 +136,10 @@ const ManageRoles = () => {
       const serverMsg = err.response?.data?.message || 'שגיאה ביצירת תפקיד';
       setMessage({ type: 'error', text: getFriendlyError(serverMsg) });
     } finally {
-      setIsSubmitting(false); // כאן אנחנו עוצרים את ה"הבהוב"
+      setIsSubmitting(false);
     }
   };
-
+  //Persists the modified permission array to the backend via a PUT request.
   const handleSavePermissions = async () => {
     if (!selectedRole?.key || isSubmitting) return;
 
@@ -165,15 +151,10 @@ const ManageRoles = () => {
         permissions: selectedRole.permissions,
         label: selectedRole.label,
       });
-
-      // עדכון הרשימה הכללית כדי שהשינוי ישתקף ב-Sidebar
       setRoles((prev) =>
         prev.map((r) => (r.key === selectedRole.key ? res.data.role : r))
       );
-
-      setMessage({ type: 'success', text: 'השינויים נשמרו בהצלחה!' });
-
-      // העלמת ההודעה אחרי 3 שניות
+      alert('השינויים נשמרו בהצלחה!');
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {
       console.error('Save error:', err);
@@ -182,7 +163,7 @@ const ManageRoles = () => {
       setIsSubmitting(false);
     }
   };
-
+  //Manages the local state of a role's permission array. It adds or removes a permission string when an admin clicks a checkbox.
   const handleTogglePermission = (perm) => {
     setSelectedRole((prev) => ({
       ...prev,
@@ -208,8 +189,8 @@ const ManageRoles = () => {
       await api.delete(`/api/admin/roles/${roleKey}`);
 
       setMessage({ type: 'success', text: 'התפקיד נמחק בהצלחה' });
-      setSelectedRole(null); // ניקוי הבחירה
-      await fetchRoles(); // רענון הרשימה
+      setSelectedRole(null);
+      await fetchRoles();
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'שגיאה במחיקת התפקיד';
       setMessage({ type: 'error', text: getFriendlyError(errorMsg) });
@@ -357,7 +338,6 @@ const ManageRoles = () => {
                 <input
                   value={newRoleData.key}
                   onChange={(e) => {
-                    // ולידציה מיידית: מונע הקלדת עברית או תווים אסורים
                     const val = e.target.value
                       .toLowerCase()
                       .replace(/[^a-z0-9-]/g, '');

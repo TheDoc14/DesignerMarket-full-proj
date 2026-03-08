@@ -4,6 +4,10 @@ import { UserCog } from 'lucide-react';
 import { usePermission } from '../../Hooks/usePermission.jsx';
 import './AdminDesign.css';
 
+/*The UserApproval page is a specialized administrative module designed to vet new registrants, particularly those applying for Designer or Student roles.
+ *Since these roles require verification (such as diploma uploads or student IDs),
+ *this page serves as a secure gatekeeper where administrators can review supporting documents before granting full access to the platform.
+ */
 const UserApproval = () => {
   const {
     hasPermission,
@@ -11,13 +15,12 @@ const UserApproval = () => {
     loading: permissionLoading,
   } = usePermission();
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false); // התחלה מ-false
-
-  // שימוש ב-Ref כדי לוודא שלא נכנסים ללולאה אינסופית
+  const [loading, setLoading] = useState(false);
+  //Uses a React Ref to ensure the data is only fetched once per component mount.
+  // This prevents redundant network requests and potential infinite loops that state-based triggers might cause.
   const isInitialFetched = useRef(false);
-
+  //Queries the /api/admin/users endpoint specifically with the parameter { approved: false }.
   const fetchUsers = useCallback(async () => {
-    // שימוש ב-Ref כדי למנוע כפילויות ללא תלות ב-State של loading
     if (isInitialFetched.current) return;
 
     try {
@@ -34,10 +37,9 @@ const UserApproval = () => {
     } finally {
       setLoading(false);
     }
-  }, []); // רשימת תלויות ריקה - הפונקציה יציבה
+  }, []);
 
   useEffect(() => {
-    // התנאי הקריטי: מריצים רק אם ההרשאות מוכנות, המשתמש מורשה, וטרם שלפנו נתונים
     if (
       !permissionLoading &&
       currentUser?.id &&
@@ -47,7 +49,8 @@ const UserApproval = () => {
       fetchUsers();
     }
   }, [currentUser?.id, permissionLoading, hasPermission, fetchUsers]);
-
+  //Sends a PUT request to update the user's status. Upon success, the user is
+  //removed from the local state list (filtering them out of the "Pending" view) to provide immediate visual confirmation.
   const handleApprove = async (userId) => {
     if (!hasPermission('users.approve')) {
       alert('אין לך הרשאה לאשר משתמשים');
@@ -64,16 +67,12 @@ const UserApproval = () => {
       alert('שגיאה בתהליך האישור');
     }
   };
-
-  // UserApproval.jsx - עדכון פונקציית הצפייה
+  //This function handles the complex task of fetching private files.
   const handleViewDocument = async (documentUrl, username, role) => {
     try {
-      // 1. חילוץ שם הקובץ הגולמי כפי ששמור ב-DB
       const rawFilename = documentUrl.split('/').pop();
-
-      // 2. קריאה לשרת
       const response = await api.get(
-        `api/files/approvalDocuments/${rawFilename}`, // שולחים את השם הגולמי
+        `api/files/approvalDocuments/${rawFilename}`,
         { responseType: 'blob' }
       );
 
@@ -81,9 +80,6 @@ const UserApproval = () => {
         type: response.headers['content-type'] || 'application/octet-stream',
       });
       const url = window.URL.createObjectURL(blob);
-
-      // 3. יצירת שם הורדה "נקי" למשתמש
-      // כאן אנחנו משתמשים בפורמט שביקשת
       const extension = rawFilename.split('.').pop();
       const customFileName = `DesignerMarket_${username}-${role}.${extension}`;
 
@@ -100,7 +96,6 @@ const UserApproval = () => {
       alert('לא ניתן למצוא את הקובץ בשרת. ייתכן שיש בעיית קידוד בשם הקובץ.');
     }
   };
-  // אבטחת גישה ברמת העמוד
   if (permissionLoading)
     return <div className="loader">בודק הרשאות אבטחה...</div>;
   if (!hasPermission('admin.panel.access')) {

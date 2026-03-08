@@ -13,6 +13,11 @@ import {
 } from 'lucide-react';
 import './PublicPages.css';
 
+/*
+ *The About page is the primary informational landing page of the Designer Market platform.
+ *It is designed to communicate the brand's mission, the specific market problems it solves for industrial design students,
+ *and the robust technical stack powering the system. It serves as both a marketing tool for prospective users and a technical summary for stakeholders.
+ */
 const About = () => {
   return (
     <div className="about-container" dir="rtl">
@@ -29,7 +34,7 @@ const About = () => {
         </p>
       </section>
 
-      {/* --- Section: חזון וייעוד --- */}
+      {/* --- Section: Purpose of the website--- */}
       <section className="mission-statement">
         <div className="section-header">
           <h2>החזון והייעוד שלנו</h2>
@@ -64,7 +69,7 @@ const About = () => {
         </div>
       </section>
 
-      {/* --- Section: הבעיה והפתרון --- */}
+      {/* --- Section: Problem and solution--- */}
       <section className="market-analysis">
         <div className="section-header">
           <h2>למה Designer Market?</h2>
@@ -138,7 +143,7 @@ const About = () => {
         </div>
       </section>
 
-      {/* --- Section: אימות ואיכות (QA) --- */}
+      {/* --- Section: Validation and quality --- */}
       <section className="qa-section">
         <div className="section-header">
           <h2>הבטחת איכות וסטנדרטים</h2>

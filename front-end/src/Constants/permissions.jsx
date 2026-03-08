@@ -1,4 +1,10 @@
-// src/Constants/permissions.js
+/*
+The primary goal of this file is to define a single source of truth for all granular permissions available within the system. 
+By using constants instead of hardcoded strings, you prevent typos and ensure that permission logic is consistent
+ across both the frontend (UI rendering) and backend (API protection).
+*/
+
+//This object maps the technical permission "keys" to human-readable Hebrew labels.
 export const PERMISSION_LABELS = {
   'admin.panel.access': 'גישה לפאנל ניהול',
   'business.panel.access': 'צפייה בדשבורד ניהול עסקי',
@@ -20,6 +26,7 @@ export const PERMISSION_LABELS = {
   'ai.consult': 'ייעוץ בינה מלאכותית',
 };
 
+//This object serves as the programmatic reference for permissions
 export const PERMS = {
   ADMIN_PANEL_ACCESS: 'admin.panel.access',
   BUSINESS_PANEL_ACCESS: 'business.panel.access',

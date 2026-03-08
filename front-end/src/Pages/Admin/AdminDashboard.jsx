@@ -1,10 +1,14 @@
-//src/Pages/Admin/AdminDashboard.jsx
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { Link } from 'react-router-dom';
 import './AdminDesign.css';
-import { usePermission } from '../../Hooks/usePermission.jsx'; // ייבוא ה-Hook החדש
+import { usePermission } from '../../Hooks/usePermission.jsx';
 
+/*The AdminDashboard serves as the primary oversight interface for platform administrators.
+ *It provides a high-level summary of system activity, user growth, and content performance.
+ *The page is heavily protected by the Role-Based Access Control (RBAC) system, ensuring that only authorized personnel
+ *can view sensitive statistics or access administrative management tools.
+ */
 const AdminDashboard = () => {
   const { hasPermission } = usePermission();
   const [stats, setStats] = useState(null);
@@ -21,11 +25,10 @@ const AdminDashboard = () => {
         setLoading(false);
       }
     };
-
+    //Statistics are only fetched if the user has the stats.read permission.
     if (hasPermission('stats.read')) fetchStats();
     else setLoading(false);
   }, [hasPermission]);
-  // אם אין הרשאה כללית לפאנל האדמין, נחסום את הגישה מיד
   if (!hasPermission('admin.panel.access')) {
     return <div className="alert alert-error">אין לך הרשאות לצפות בדף זה.</div>;
   }
@@ -41,9 +44,7 @@ const AdminDashboard = () => {
         <p>סיכום פעילות המערכת וביצועים</p>
       </header>
 
-      {/* שורת פעולות דחופות - אישורים ממתינים */}
       <div className="action-cards">
-        {/* הצגת כרטיס אישורי משתמשים רק למי שמורשה לאשר משתמשים */}
         {hasPermission('users.approve') && (
           <Link to="/admin/user-approval" className="stat-card">
             <div className="stat-icon">🔔</div>
@@ -67,7 +68,7 @@ const AdminDashboard = () => {
         )}
       </div>
 
-      {/* נתונים כלליים */}
+      {/* General Data*/}
       <div className="dashboard-grid">
         <div className="stat-card">
           <div>סה"כ משתמשים</div>
@@ -86,7 +87,7 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* ניתוח נתונים ודירוגים */}
+      {/* Data and rank analyze*/}
       <div className="analytics-section">
         <div className="analytics-card">
           <h3>🏆 מובילים בדירוג</h3>

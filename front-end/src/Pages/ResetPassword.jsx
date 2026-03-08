@@ -1,13 +1,18 @@
-//src/Pages/ResetPassword.jsx
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import '../App.css';
 
+/*
+ *The ResetPassword component is the final stage of the account recovery workflow.
+ *It provides a secure interface for users to establish a new password after verifying their identity via a unique token sent to their email.
+ *The component handles token extraction from the URL, password validation, and secure communication with the backend authentication service.
+ */
+
 const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
-
+  //Upon mounting, the component utilizes the useLocation hook to parse the browser's URL. It specifically looks for a ?token=... parameter.
   const queryParams = new URLSearchParams(location.search);
   const token = queryParams.get('token');
 
@@ -22,7 +27,7 @@ const ResetPassword = () => {
   useEffect(() => {
     if (!token) setError('קישור לא תקין או חסר טוקן אימות.');
   }, [token]);
-
+  //Sends a POST request to /api/auth/reset-password containing the token and the newPassword.
   const handleSubmit = async (e) => {
     e.preventDefault();
 

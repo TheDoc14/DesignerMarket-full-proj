@@ -1,9 +1,13 @@
-//src/Pages/Register.jsx
 import { useState } from 'react';
 import api from '../api/axios';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useNavigate } from 'react-router-dom';
 
+/*
+ *The Register component is a complex onboarding module that serves as the entry point for three distinct user types: Customers,
+ *Students, and Industrial Designers. It implements a conditional form logic that adapts based on the selected role, requiring formal
+ *verification documents for academic and professional accounts. The component is fortified with Google reCAPTCHA v3 to prevent automated bot registrations.
+ */
 const Register = () => {
   const [formData, setFormData] = useState({
     username: '',
@@ -28,11 +32,10 @@ const Register = () => {
       setFormData({ ...formData, [name]: value });
     }
   };
-
+  //Ensures executeRecaptcha is ready, checks for required documents and validates file extensions (.pdf, .jpg, .png).
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // reCAPTCHA provider לא מוכן עדיין
     if (!executeRecaptcha) {
       setError('שירות האבטחה אינו מוכן. נסה שנית בעוד רגע.');
       return;
@@ -68,7 +71,7 @@ const Register = () => {
     } catch (err) {
       const serverMsg = err.response?.data?.message;
       console.log('REGISTER ERROR STATUS:', err.response?.status);
-
+      //A dedicated dictionary maps English backend error messages to Hebrew instructions
       const errorTranslations = {
         'User already exists with this email.':
           'כבר קיים משתמש עם כתובת אימייל זו.',

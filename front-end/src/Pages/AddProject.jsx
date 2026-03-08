@@ -1,10 +1,14 @@
-//src/Pages/AddProject.jsx
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
-import { useNavigate } from 'react-router-dom'; // וודאי שזה מותקן
-// הוסיפי את Plus ו-Star לתוך הרשימה
+import { useNavigate } from 'react-router-dom';
 import { FileText, X, Star, Plus, Tag } from 'lucide-react';
+
+/*
+ *The AddProject page is the primary interface for creators (Students and Designers) to upload their industrial design work to the marketplace.
+ *It is a comprehensive multi-part form that handles complex data types, including metadata (title, price, category), social tagging,
+ *and multiple file uploads with a specialized "Main Image" selection logic.
+ */
 const AddProject = ({ project }) => {
   const { hasPermission, user, loading: permissionLoading } = usePermission();
 
@@ -12,35 +16,29 @@ const AddProject = ({ project }) => {
     title: '',
     description: '',
     price: '',
-    category: '', // מתחיל ריק ומתעדכן מהשרת
+    category: '',
     paypalEmail: '',
   });
-  const navigate = useNavigate(); // הוספה כאן
-  const [existingFiles, setExistingFiles] = useState(project?.files || []);
-  const [newFiles, setNewFiles] = useState([]); // קבצים נוספים להעלאה
+  const navigate = useNavigate();
+  const [newFiles, setNewFiles] = useState([]);
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
-  const [categories, setCategories] = useState([]); // רשימת קטגוריות דינמית
-  const [files, setFiles] = useState([]);
-  const [previews, setPreviews] = useState([]);
+  const [categories, setCategories] = useState([]);
+  //Manages which file in the newFiles array is designated as the primary image.
+  // If a user deletes a file that was set as "Main," the logic automatically shifts the index to maintain a valid selection.
   const [mainImageIndex, setMainImageIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // 1. שליפת קטגוריות דינמית מהשרת
-  // 1. עדכון הנתיב ל-api/admin/categories
+  //Fetches valid categories from the API on mount. It automatically sets the first available category as the default to improve user experience.
   const fetchCategories = useCallback(async () => {
     try {
-      // הוספת /admin לנתיב ושימוש ב-Token כי הראוט מוגן
       const res = await api.get('/api/categories');
       const categoriesData = res.data?.categories || res.data?.data || [];
       setCategories(categoriesData);
-
-      // בחירת קטגוריה ראשונה כברירת מחדל
       if (categoriesData.length > 0) {
         setFormData((prev) => ({
           ...prev,
-          category: categoriesData[0].key, // השרת משתמש ב-key ולא ב-slug
+          category: categoriesData[0].key,
         }));
       }
     } catch (err) {
@@ -48,81 +46,35 @@ const AddProject = ({ project }) => {
     }
   }, []);
   const HE_VALIDATION_MAP = {
-    // title
     'Title is required': 'חובה להזין שם פרויקט.',
     'Title must be between 2 and 80 characters':
       'שם הפרויקט חייב להיות בין 2 ל־80 תווים.',
 
-    // description
     'Description is too long': 'התיאור ארוך מדי (מקסימום 5000 תווים).',
 
-    // price
     'Price is required': 'חובה להזין מחיר.',
     'Price must be a valid number': 'המחיר חייב להיות מספר תקין וחיובי.',
 
-    // category
     'category must be a string': 'קטגוריה חייבת להיות טקסט.',
     'Invalid category': 'הקטגוריה שנבחרה לא קיימת במערכת.',
 
-    // mainImageIndex
     'mainImageIndex is required': 'חובה לבחור תמונה ראשית.',
     'mainImageIndex must be a non-negative integer':
       'בחירת תמונה ראשית אינה תקינה.',
   };
-  const handleOpenFile = async (file) => {
-    const filename = file.filename || file.name || 'download.txt';
-    const fileUrl = file.url || file.fileUrl;
-
-    if (!fileUrl) return window.alert('כתובת קובץ חסרה');
-
-    try {
-      window.alert(`מוריד את ${filename}...`);
-
-      const response = await api.get(fileUrl, {
-        responseType: 'blob',
-        skipAuthRefresh: true,
-      });
-
-      const blob = new Blob([response.data]);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      window.alert('הקובץ ירד בהצלחה');
-    } catch (err) {
-      console.error('Download failed, preventing logout:', err);
-
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        window.alert(
-          'אין לך הרשאה להוריד את קובץ המקור הזה (ייתכן שלא רכשת את הפרויקט).'
-        );
-      } else {
-        window.alert('שגיאה בהורדת הקובץ');
-      }
-    }
-  };
+  //A mapping utility that catches technical server errors (e.g., express-validator messages) and translates them into user-friendly Hebrew instructions.
   const translateBackendError = (err) => {
-    // 1) אם הבק מחזיר מערך שגיאות של express-validator
     const errorsArr =
       err?.response?.data?.errors ||
       err?.response?.data?.details ||
       err?.response?.data?.error?.errors;
 
     if (Array.isArray(errorsArr) && errorsArr.length > 0) {
-      // express-validator לרוב מחזיר { msg, param, ... }
       const first = errorsArr[0];
       const msg = first?.msg || first?.message || '';
       const param = first?.param;
-
-      // תרגום לפי msg
       if (msg && HE_VALIDATION_MAP[msg]) return HE_VALIDATION_MAP[msg];
 
-      // fallback לפי param (במקרה שה-msg משתנה)
       if (param === 'title') return 'בדוק את שם הפרויקט (2–80 תווים).';
       if (param === 'description')
         return 'בדוק את התיאור (מקסימום 5000 תווים).';
@@ -133,11 +85,9 @@ const AddProject = ({ project }) => {
       return 'יש שגיאה באחד השדות. בדוק את הטופס.';
     }
 
-    // 2) אם הבק מחזיר message בודד
     const msg = err?.response?.data?.message || err?.message;
     if (msg && HE_VALIDATION_MAP[msg]) return HE_VALIDATION_MAP[msg];
 
-    // 3) fallback כללי
     const status = err?.response?.status;
     if (status === 400) return 'הנתונים שנשלחו לא תקינים. בדוק את הטופס.';
     if (status === 401) return 'אין לך הרשאה לבצע פעולה זו. התחבר מחדש.';
@@ -157,30 +107,8 @@ const AddProject = ({ project }) => {
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    const validNewFiles = [];
-
-    selectedFiles.forEach((file) => {
-      if (file.size <= 5 * 1024 * 1024) {
-        validNewFiles.push(file);
-      }
-    });
-
-    setFiles((prev) => [...prev, ...validNewFiles]);
-    const newPreviews = validNewFiles.map((file) =>
-      file.type.startsWith('image/') ? URL.createObjectURL(file) : 'document'
-    );
-    setPreviews((prev) => [...prev, ...newPreviews]);
-  };
-
-  const removeFile = (indexToRemove) => {
-    setFiles(files.filter((_, i) => i !== indexToRemove));
-    setPreviews(previews.filter((_, i) => i !== indexToRemove));
-    if (mainImageIndex === indexToRemove) setMainImageIndex(0);
-  };
-
+  //Implements a "Chips" style input where pressing Enter or , converts text into a separate tag.
+  //It prevents duplicate tags and manages the array for submission.
   const handleTagKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
@@ -197,10 +125,9 @@ const AddProject = ({ project }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // חשוב: להעביר להתחלה כדי למנוע ריענון דף בשגיאות ולידציה
+    e.preventDefault();
     setError(null);
 
-    // 1. ולידציות בסיסיות
     if (!formData.title.trim()) return setError('חובה להזין שם פרויקט.');
     if (formData.title.trim().length < 2 || formData.title.trim().length > 80)
       return setError('שם הפרויקט חייב להיות בין 2 ל־80 תווים.');
@@ -208,12 +135,10 @@ const AddProject = ({ project }) => {
     if (formData.price === '' || formData.price === null)
       return setError('חובה להזין מחיר.');
 
-    // 2. בדיקת קבצים - משתמשים ב-newFiles כי זה מה שמתעדכן ב-JSX
     if (newFiles.length === 0) {
       return setError('חובה להעלות לפחות קובץ אחד.');
     }
 
-    // 3. בדיקה שהתמונה הראשית היא אכן תמונה
     const mainFile = newFiles[mainImageIndex];
     if (mainFile && !mainFile.type.startsWith('image/')) {
       return setError(
@@ -224,25 +149,13 @@ const AddProject = ({ project }) => {
     setLoading(true);
     try {
       const data = new FormData();
-
-      // הוספת שדות הטופס
       Object.keys(formData).forEach((key) => {
         data.append(key, formData[key]);
       });
-
-      // הוספת תגיות כמחרוזת
       data.append('tags', tags.join(','));
-
-      // הוספת אינדקס תמונה ראשית
       data.append('mainImageIndex', mainImageIndex);
-
-      // הוספת הקבצים מהמערך הנכון
       newFiles.forEach((file) => {
         data.append('files', file);
-      });
-
-      const response = await api.post('/api/projects', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       alert('הפרויקט הועלה בהצלחה!');
@@ -350,7 +263,7 @@ const AddProject = ({ project }) => {
                   key={`new-${idx}`}
                   className={`file-preview-card ${isMain ? 'main-selected' : ''}`}
                 >
-                  {/* תצוגה מקדימה - אם זו תמונה מציגים אותה, אם לא מציגים אייקון מסמך */}
+                  {/* PREVIEW*/}
                   <div className="preview-content">
                     {isImage ? (
                       <img
@@ -364,7 +277,7 @@ const AddProject = ({ project }) => {
                   </div>
 
                   <div className="preview-actions">
-                    {/* כפתור בחירה כתמונה ראשית - פעיל רק אם זה קובץ תמונה */}
+                    {/* Chosing the main image*/}
                     {isImage && (
                       <button
                         type="button"
@@ -379,7 +292,7 @@ const AddProject = ({ project }) => {
                       </button>
                     )}
 
-                    {/* כפתור מחיקה */}
+                    {/* Delete files*/}
                     <button
                       type="button"
                       className="remove-file-btn"
@@ -407,7 +320,6 @@ const AddProject = ({ project }) => {
             <input
               type="file"
               multiple
-              style={{ display: 'none' }}
               onChange={(e) =>
                 setNewFiles([...newFiles, ...Array.from(e.target.files)])
               }
@@ -424,7 +336,7 @@ const AddProject = ({ project }) => {
               <button
                 type="button"
                 className="profile-link-btn"
-                onClick={() => navigate('/PersonalDashboard')} // וודאי שזה הנתיב הנכון אצלך
+                onClick={() => navigate('/PersonalDashboard')}
               >
                 להגדרת תשלומים בפרופיל האישי
               </button>
@@ -436,7 +348,7 @@ const AddProject = ({ project }) => {
         <button
           type="submit"
           className="submit-btn"
-          disabled={loading || !formData.paypalEmail} // חוסם את הכפתור אם אין מייל
+          disabled={loading || !formData.paypalEmail}
         >
           {loading ? 'מעלה...' : 'פרסם פרויקט'}
         </button>

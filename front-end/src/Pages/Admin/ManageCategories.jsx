@@ -1,4 +1,3 @@
-//src/Pages/Admin/ManageCategories.jsx
 import { useState, useEffect, useCallback } from 'react';
 import api from '../../api/axios';
 import { usePermission } from '../../Hooks/usePermission.jsx';
@@ -6,14 +5,19 @@ import { getFriendlyError } from '../../Constants/errorMessages';
 import { Plus, Trash2 } from 'lucide-react';
 import '../PublicPages.css';
 
+/*The ManageCategories page is an administrative interface used to manage the platform's taxonomy.
+ *It allows authorized administrators to create new project categories and delete existing ones.
+ *This page ensures that the marketplace remains organized by providing a controlled way to update the available categories list.
+ */
 const ManageCategories = () => {
-  const { hasPermission, user, loading: permissionLoading } = usePermission(); // מוסיפים את user
+  const { hasPermission, user, loading: permissionLoading } = usePermission();
   const [categories, setCategories] = useState([]);
-  const [newCategoryLabel, setNewCategoryLabel] = useState(''); // שם לתצוגה
+  const [newCategoryLabel, setNewCategoryLabel] = useState('');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // שליפת קטגוריות מנתיב האדמין כדי לקבל את האובייקטים המלאים (key, label)
+  //An asynchronous function wrapped in useCallback that retrieves the full category objects (including keys, labels, and system status)
+  //from the /api/admin/categories endpoint.
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
@@ -34,7 +38,7 @@ const ManageCategories = () => {
       fetchCategories();
     }
   }, [user, hasPermission, fetchCategories]);
-
+  //It trims the input and generates a lowercase key by replacing spaces with hyphens (e.g., "Digital Art" becomes "digital-art")
   const handleAddCategory = async (e) => {
     e.preventDefault();
     if (!newCategoryLabel.trim()) return;
@@ -59,7 +63,7 @@ const ManageCategories = () => {
       setMessage({ type: 'error', text: getFriendlyError(serverMsg) });
     }
   };
-
+  //Triggers a native browser confirmation dialog before proceeding.
   const handleDeleteCategory = async (catKey) => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק קטגוריה זו?')) return;
 
@@ -91,7 +95,7 @@ const ManageCategories = () => {
       )}
 
       <div className="category-management-grid">
-        {/* טופס הוספה */}
+        {/* Add category form*/}
         <div className="admin-card add-category-section">
           <form onSubmit={handleAddCategory}>
             <div className="form-group">
@@ -113,7 +117,7 @@ const ManageCategories = () => {
           </form>
         </div>
 
-        {/* רשימת קטגוריות */}
+        {/*Categories list*/}
         <div className="admin-card list-category-section">
           <div className="category-list-wrapper">
             {loading ? (

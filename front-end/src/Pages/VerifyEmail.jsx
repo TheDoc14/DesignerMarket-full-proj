@@ -1,8 +1,12 @@
-//src/Pages/VerifyEmail.jsx
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
+/*
+ *The VerifyEmail component is a dedicated landing page that handles the asynchronous verification of a user's email address.
+ *It acts as the final step in the registration workflow, where a user clicks a link sent to their inbox to activate their account.
+ *The component automatically extracts the verification token from the URL and communicates with the backend to finalize the authentication process.
+ */
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -12,7 +16,8 @@ const VerifyEmail = () => {
   const [msg, setMsg] = useState('מבצע אימות...');
 
   useEffect(() => {
-    if (ranRef.current) return; // ✅ מונע ריצה כפולה ב-StrictMode
+    //Because React's useEffect can run twice in development mode, the component uses const ranRef = useRef(false).
+    if (ranRef.current) return;
     ranRef.current = true;
 
     const verify = async () => {
@@ -29,7 +34,7 @@ const VerifyEmail = () => {
       try {
         await Promise.all([
           api.get('/api/auth/verify-email', { params: { token } }),
-          delay(1000), // לא חייב 3 שניות, אבל תשאיר אם אתה רוצה UX
+          delay(1000),
         ]);
 
         setStatus('success');
