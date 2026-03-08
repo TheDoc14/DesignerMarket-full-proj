@@ -81,8 +81,9 @@ const extractProjectFiles = (project) => {
 };
 
 // ----------------------------------------------------
-// חדש: בניית תמונות כ-data URL (base64) מתוך ה-localPath
-// משתמש ב-mime-types (כמו שיש לכם ב-fileTextExtractor) כדי לא לשכפל לוגיקה
+// Build images as data URLs (base64) from local uploads
+// IMPORTANT: in DB, f.path may be a PUBLIC URL, not a filesystem path.
+// لذلك we resolve fs path from filename.
 // ----------------------------------------------------
 const extractProjectImageDataUrls = async (project) => {
   const out = [];
@@ -91,22 +92,44 @@ const extractProjectImageDataUrls = async (project) => {
   for (const f of files) {
     if (out.length >= MAX_IMAGES) break;
 
-    if (!f?.path) continue;
     if (f?.fileType !== 'image') continue;
 
     try {
-      const stat = await fs.stat(f.path);
+      // Prefer real fs path if it exists AND looks like a local path
+      let fsPath = '';
+
+      const maybePath = String(f?.path || '').trim();
+      const hasHttp = /^https?:\/\//i.test(maybePath);
+
+      if (maybePath && !hasHttp) {
+        fsPath = maybePath;
+      } else if (f?.filename) {
+        // Fallback: build path from filename (uploads/projects/projectImages)
+        fsPath = path.join(
+          __dirname,
+          '..',
+          '..',
+          'uploads',
+          'projects',
+          'projectImages',
+          String(f.filename)
+        );
+      }
+
+      if (!fsPath) continue;
+
+      const stat = await fs.stat(fsPath);
       if (stat.size > MAX_IMAGE_BYTES) continue;
 
-      const ext = path.extname(String(f.path)).toLowerCase();
+      const ext = path.extname(fsPath).toLowerCase();
       const contentType = mime.lookup(ext) || 'image/jpeg';
 
-      const buf = await fs.readFile(f.path);
+      const buf = await fs.readFile(fsPath);
       const b64 = buf.toString('base64');
 
       out.push(`data:${contentType};base64,${b64}`);
     } catch (_) {
-      // best-effort: אם תמונה אחת בעייתית, לא מפילים את כל הקונטקסט
+      // best-effort: do not fail the whole context if one image fails
     }
   }
 
