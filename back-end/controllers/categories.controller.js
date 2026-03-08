@@ -1,6 +1,7 @@
-const Category = require('../models/Category.model'); // תעדכן נתיב/שם אם אצלך שונה
+// controllers/categories.controller.js
+const Category = require('../models/Category.model');
 
-const { getPaging, escapeRegex } = require('../utils/query.utils'); // תעדכן אם אצלך שם/מיקום אחר
+const { getPaging, escapeRegex } = require('../utils/query.utils');
 const { buildMeta } = require('../utils/meta.utils');
 
 const listCategories = async (req, res, next) => {

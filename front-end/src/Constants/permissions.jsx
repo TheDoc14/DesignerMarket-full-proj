@@ -1,3 +1,4 @@
+//src/Constants/permissions.jsx
 /*
 The primary goal of this file is to define a single source of truth for all granular permissions available within the system. 
 By using constants instead of hardcoded strings, you prevent typos and ensure that permission logic is consistent

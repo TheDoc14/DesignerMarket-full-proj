@@ -832,14 +832,18 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
                             <small>⚠️ מערכת זיהתה הזמנה קיימת</small>
                           </div>
                         )}
-
+                      {/*
+                       * Main client-side payment entry point for purchasing a project.
+                       * The popup triggers the marketplace purchase flow but does not own the business logic.
+                       * Sensitive decisions such as order creation, duplicate pending-order handling,
+                       * payment capture, and seller payout are delegated to the backend.
+                       * This keeps financial logic protected from client-side manipulation.
+                       */}
                       <PayPalButtons
                         className="paypal-buttons"
+                        // Request a backend-managed PayPal order for the selected project.
+                        // The backend remains the source of truth for validation, pricing, and order lifecycle rules.
                         createOrder={async () => {
-                          {
-                            /* Initiates a PayPal transaction on the backend and returns the Order ID. */
-                          }
-
                           try {
                             const myOrders = await api.get(
                               `/api/orders/my?projectId=${projectId}`
@@ -878,10 +882,10 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
                             throw err;
                           }
                         }}
+                        // Finalize the payment only after PayPal approval.
+                        // The backend captures the payment, updates the internal order state,
+                        // and continues the payout flow to the seller.
                         onApprove={async (data) => {
-                          {
-                            /* Captures the payment and reloads the state upon success.. */
-                          }
                           try {
                             setLoading(true);
                             const res = await api.post(

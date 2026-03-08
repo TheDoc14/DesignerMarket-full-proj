@@ -12,8 +12,6 @@ const { getPaging, toSort } = require('../utils/query.utils');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
 
-
-
 // ----------------------------------------------------
 // Create Chat
 // ----------------------------------------------------
@@ -100,7 +98,11 @@ const addMessageWithAI = async (req, res, next) => {
 
     // חשוב: נשלח baseUrl כדי לבנות image URLs תקינים
     const baseUrl = req.publicBaseUrl || process.env.PUBLIC_BASE_URL || '';
-    const { textContext, imageDataUrls } = await buildFullProjectContext({ project, reviews, baseUrl });
+    const { textContext, imageDataUrls } = await buildFullProjectContext({
+      project,
+      reviews,
+      baseUrl,
+    });
 
     const userMsg = await AiMessage.create({
       chatId,

@@ -16,10 +16,12 @@ const {
   capturePaypalOrderValidators,
 } = require('../validators/orders.validators');
 
-/**
- * 🛒 Order Routes
- * אחריות: יצירת והשלמת הזמנות PayPal.
- *
+/*
+ * Order routes for the marketplace payment lifecycle.
+ * These endpoints separate the purchase flow into clear stages:
+ * order creation, payment capture, provider return/cancel handling,
+ * user-side pending-order cancellation, and purchase history retrieval.
+ * This structure supports a full end-to-end transactional process rather than a simple payment button.
  */
 
 // POST /api/orders/paypal/create

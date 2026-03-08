@@ -31,6 +31,12 @@ import SystemDashboard from './Pages/systemManager/SystemDashboard';
 import ManageCategories from './Pages/Admin/ManageCategories.jsx';
 
 function App() {
+  /*
+   * Global application bootstrap for external integrations.
+   * The PayPalScriptProvider loads the official PayPal SDK once at the application level,
+   * so payment components inside the project flow can securely reuse the same provider context.
+   * This design keeps the payment integration centralized, consistent, and easier to maintain.
+   */
   const initialOptions = {
     'client-id': process.env.REACT_APP_PAYPAL_CLIENT_ID,
     currency: 'ILS',
