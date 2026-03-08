@@ -16,7 +16,7 @@ const ROLE_PERMISSIONS = {
 
 export const usePermission = () => {
   const { user } = useAuth();
-//This is the primary function returned by the hook. It follows a hierarchical "Water-Fall" logic to validate access:
+  //This is the primary function returned by the hook. It follows a hierarchical "Water-Fall" logic to validate access:
   const hasPermission = useCallback(
     (permissionKey) => {
       if (!user) return false;

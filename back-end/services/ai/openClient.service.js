@@ -63,6 +63,14 @@ const callDesignConsultationAI = async ({ messages, language, safetyIdentifier }
       usage: response.usage || null,
     };
   } catch (e) {
+    try {
+      console.log('[OPENAI_RAW_ERROR]', {
+        name: e?.name,
+        message: e?.message,
+        status: e?.status,
+        code: e?.code,
+      });
+    } catch (_) {}
     // מיפוי שגיאות לתשובות “נחמדות” ללקוח
     const err = new Error(e?.name === 'AbortError' ? 'AI request timed out' : 'AI request failed');
     err.statusCode = e?.name === 'AbortError' ? 504 : 502;

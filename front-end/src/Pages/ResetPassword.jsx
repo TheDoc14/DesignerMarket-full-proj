@@ -16,7 +16,7 @@ const ResetPassword = () => {
   //Upon mounting, the component utilizes the useLocation hook to parse the browser's URL. It specifically looks for a ?token=... parameter.
   const queryParams = new URLSearchParams(location.search);
   const token = queryParams.get('token');
-   const { executeRecaptcha } = useGoogleReCaptcha();
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -36,7 +36,7 @@ const ResetPassword = () => {
     if (formData.newPassword !== formData.confirmPassword) {
       return setError('הסיסמאות אינן תואמות');
     }
-     if (!executeRecaptcha) {
+    if (!executeRecaptcha) {
       return setError('שירות האבטחה אינו זמין כרגע, נסה שוב');
     }
 
@@ -45,10 +45,10 @@ const ResetPassword = () => {
     setMessage('');
 
     try {
-            const captchaToken = await executeRecaptcha('reset_password');
+      const captchaToken = await executeRecaptcha('reset_password');
 
       await api.post('/api/auth/reset-password', {
-            token,
+        token,
         newPassword: formData.newPassword,
         captchaToken,
       });

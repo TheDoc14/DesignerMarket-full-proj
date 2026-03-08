@@ -23,10 +23,13 @@ api.interceptors.response.use(
     const serverMsg = error.response?.data?.message;
     error.friendlyMessage = getFriendlyError(serverMsg);
 
-    if (status === 401 && !error.config?.skipAuthRedirect) { // ← הוסיפי את זה
+    if (status === 401 && !error.config?.skipAuthRedirect) {
+      // ← הוסיפי את זה
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      const isOnLogin = window.location.pathname.toLowerCase().includes('login');
+      const isOnLogin = window.location.pathname
+        .toLowerCase()
+        .includes('login');
       if (!isOnLogin) {
         window.location.href = '/login?reason=session_expired';
       }
@@ -35,6 +38,5 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-
 
 export default api;
