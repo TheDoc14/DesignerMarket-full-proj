@@ -26,6 +26,14 @@ const markOrderExpired = async (order, reason = 'expired') => {
   return order;
 };
 
+/*
+ * Create a new marketplace order before redirecting the buyer to PayPal.
+ * This function validates the project, blocks invalid purchase scenarios,
+ * calculates marketplace financial values, stores an internal pending order,
+ * and then creates the external PayPal order.
+ * The backend owns this flow to prevent client-side tampering with payment data.
+ */
+
 const paypalCreateOrder = async (req, res, next) => {
   try {
     const { projectId } = req.body;
@@ -122,6 +130,14 @@ const paypalCreateOrder = async (req, res, next) => {
   }
 };
 
+/*
+ * Complete the purchase after the buyer approves the payment on PayPal.
+ * This function validates order ownership and state, captures the payment,
+ * updates the internal order record, marks the project as sold,
+ * and automatically sends the seller payout.
+ * It also records payout failure states to keep the transaction lifecycle auditable.
+ */
+
 const paypalCaptureOrder = async (req, res, next) => {
   try {
     const { paypalOrderId } = req.body;
@@ -192,7 +208,12 @@ const paypalCaptureOrder = async (req, res, next) => {
   }
 };
 
-// PayPal שולח את המשתמש חזרה ל-returnUrl שלנו אחרי התשלום (או לבטל ל-cancelUrl אם ביטל)
+/*
+ * Handle the return path from PayPal after buyer approval.
+ * If the user returns from the provider before the capture step is completed,
+ * the system marks the order as APPROVED so the transaction stage remains traceable.
+ */
+
 const paypalReturn = async (req, res, next) => {
   try {
     // PayPal שולח token=PAYPAL_ORDER_ID ברוב הזרימות
@@ -226,7 +247,12 @@ const paypalReturn = async (req, res, next) => {
   }
 };
 
-// אם המשתמש ביטל את התשלום בפייפאל — נסמן את ההזמנה כ-canceled כדי לא לחסום אותו
+/*
+ * Handle the cancellation path from PayPal.
+ * Pending orders are explicitly marked as canceled so they do not block
+ * future purchase attempts for the same project.
+ */
+
 const paypalCancel = async (req, res, next) => {
   try {
     const paypalOrderId = String(req.query.token || '').trim();
@@ -249,7 +275,11 @@ const paypalCancel = async (req, res, next) => {
   }
 };
 
-// משתמש יכול לבטל בעצמו הזמנה pending כדי לא להיתקע
+/*
+ * Allow the buyer to manually cancel a still-pending order.
+ * This recovery path prevents users from getting stuck with unfinished transactions.
+ */
+
 const cancelMyPendingOrder = async (req, res, next) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -270,10 +300,11 @@ const cancelMyPendingOrder = async (req, res, next) => {
   }
 };
 
-// ----------------------------------------------------
-// List My Orders (Buyer history)
-// GET /api/orders/my?status=&projectId=&page=&limit=&sortBy=&order=
-// ----------------------------------------------------
+/*
+ * Return the authenticated buyer's order history with filtering, sorting, and pagination.
+ * This endpoint supports transparency for the user and allows the frontend
+ * to detect existing pending or completed purchases for a project.
+ */
 const listMyOrders = async (req, res, next) => {
   try {
     const buyerId = req.user.id;

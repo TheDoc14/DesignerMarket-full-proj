@@ -1,6 +1,14 @@
 // back-end/models/Order.model.js
 const mongoose = require('mongoose');
 
+/*
+ * Persistent order record for the marketplace payment lifecycle.
+ * This schema links the buyer, seller, and purchased project,
+ * while also storing financial values, provider identifiers,
+ * payout tracking fields, and transaction state transitions.
+ * It acts as the central source of truth for the full purchase flow.
+ */
+
 const orderSchema = new mongoose.Schema(
   {
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },

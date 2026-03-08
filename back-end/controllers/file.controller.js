@@ -8,16 +8,12 @@ const Order = require('../models/Order.model');
 const { FILE_FOLDERS } = require('../constants/files.constants');
 const { PERMS } = require('../constants/permissions.constants');
 
-/**
- * 📥 getFile
- * מגיש קבצים מתוך uploads דרך /api/files/... בצורה מבוקרת.
- *
- * כללים:
- * - profileImages + projectImages: פתוח לציבור (routes בלי auth)
- * - projectFiles: דורש JWT + (owner או purchased) + bypass למי שיש הרשאה מתאימה
- * - approvalDocuments: דורש JWT + permission files.approvalDocs.read
- *
- * חשוב: ה־routes כבר מגינים עם permitPerm, אבל כאן יש defense-in-depth כדי למנוע פתיחה מקרית.
+/*
+ * Controlled file delivery for uploaded marketplace assets.
+ * Public images can be served openly, but protected project files require authorization.
+ * For paid project files, access is granted only to an administrator,
+ * the project owner, or a buyer with a successful paid order.
+ * This directly connects the payment process to content protection.
  */
 const getFile = async (req, res, next) => {
   try {

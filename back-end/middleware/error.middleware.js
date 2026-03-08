@@ -212,6 +212,11 @@ const classifyError = (err, _req, _res, _next) => {
   // =================================
   // =======💳 Orders / PayPal=======
   // =================================
+  /*
+   * Centralized mapping of payment and order errors to stable HTTP responses.
+   * This layer converts internal business and provider failures into predictable API messages,
+   * which improves frontend handling, debugging, and consistency across the purchase flow.
+   */
   else if (msg.includes('Order not found')) {
     statusCode = 404;
     message = 'Order not found.';
