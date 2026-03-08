@@ -69,10 +69,12 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   });
 
   useEffect(() => {
-     if (!isEditing) return;
+    if (!isEditing) return;
     const fetchCategories = async () => {
       try {
-const res = await api.get('/api/categories', { skipAuthRedirect: true });
+        const res = await api.get('/api/categories', {
+          skipAuthRedirect: true,
+        });
 
         let catList = [];
         if (Array.isArray(res.data)) {
@@ -120,10 +122,10 @@ const res = await api.get('/api/categories', { skipAuthRedirect: true });
     if (!projectId) return;
     try {
       setLoading(true);
-const res = await api.get(`/api/projects/${projectId}`, { 
-  skipAuthRedirect: true 
-});     
- const fullData = res.data?.project || res.data?.data || res.data;
+      const res = await api.get(`/api/projects/${projectId}`, {
+        skipAuthRedirect: true,
+      });
+      const fullData = res.data?.project || res.data?.data || res.data;
       if (fullData) {
         const allFiles = [...(fullData.media || []), ...(fullData.files || [])];
         setExistingFiles(allFiles);
@@ -149,10 +151,11 @@ const res = await api.get(`/api/projects/${projectId}`, {
   const fetchReviews = useCallback(async () => {
     setReviewsLoading(true);
     try {
-const res = await api.get('/api/reviews', { 
-  params: { projectId },
-  skipAuthRedirect: true
-});      const list = res.data?.reviews || res.data?.data || res.data || [];
+      const res = await api.get('/api/reviews', {
+        params: { projectId },
+        skipAuthRedirect: true,
+      });
+      const list = res.data?.reviews || res.data?.data || res.data || [];
       setReviews(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error('Failed to fetch reviews', err);
@@ -162,9 +165,9 @@ const res = await api.get('/api/reviews', {
     }
   }, [projectId]);
 
-useEffect(() => {
-  if (projectId && isLoggedIn) fetchReviews();
-}, [projectId, isLoggedIn, fetchReviews]);
+  useEffect(() => {
+    if (projectId && isLoggedIn) fetchReviews();
+  }, [projectId, isLoggedIn, fetchReviews]);
 
   useEffect(() => {
     if (isLoggedIn && !isOwner) {
@@ -215,9 +218,9 @@ useEffect(() => {
           setAlreadyPurchased(false);
         }
       } catch (err) {
-    if (err.response?.status !== 401) {
-        console.error('Failed to fetch data:', err);
-      }
+        if (err.response?.status !== 401) {
+          console.error('Failed to fetch data:', err);
+        }
       } finally {
         setLoading(false);
       }

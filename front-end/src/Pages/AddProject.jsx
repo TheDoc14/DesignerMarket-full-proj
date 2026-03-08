@@ -162,7 +162,7 @@ const AddProject = ({ project }) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-if (response.status === 201 || response.status === 200) {
+      if (response.status === 201 || response.status === 200) {
         alert('הפרויקט הועלה בהצלחה!');
         navigate('/projects');
       }
