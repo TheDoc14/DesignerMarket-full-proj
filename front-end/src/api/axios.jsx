@@ -17,20 +17,16 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  //This interceptor acts as a "filter" for data coming back from the server, specifically focusing on handling failures.
   (response) => response,
   (error) => {
     const status = error?.response?.status;
     const serverMsg = error.response?.data?.message;
-    //The logic extracts the raw server error message (serverMsg) and it passes this message through a utility function getFriendlyError().
     error.friendlyMessage = getFriendlyError(serverMsg);
-    //indicating an invalid, expired, or missing token
-    if (status === 401) {
+
+    if (status === 401 && !error.config?.skipAuthRedirect) { // ← הוסיפי את זה
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      const isOnLogin = window.location.pathname
-        .toLowerCase()
-        .includes('login');
+      const isOnLogin = window.location.pathname.toLowerCase().includes('login');
       if (!isOnLogin) {
         window.location.href = '/login?reason=session_expired';
       }
@@ -39,5 +35,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
 
 export default api;
