@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../api/axios';
 import { usePermission } from '../Hooks/usePermission.jsx';
-// 1. ייבוא קומפוננטת הפופאפ המלאה
+import defaultUserPic from '../DefaultPics/userDefault.jpg';
+
 import Popup from '../Components/Popup';
 import {
   MapPin,
@@ -14,6 +15,12 @@ import {
 } from 'lucide-react';
 import './PublicPages.css';
 
+/*
+ *The PublicProfile component is a public-facing landing page designed to showcase a specific creator's professional identity and portfolio.
+ *It serves as a digital business card for designers and students on the Designer Market platform, allowing visitors to view a creator's biography,
+ *social links, location, and all published projects in a unified, professional layout.
+ */
+
 const PublicProfile = () => {
   const { userId } = useParams();
   const { loading: permissionLoading, user: currentUser } = usePermission();
@@ -24,9 +31,8 @@ const PublicProfile = () => {
   const [error, setError] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
 
-  // בדיקה פשוטה אם המשתמש מחובר (נדרש עבור תגובות בפופאפ)
   const isLoggedIn = !!currentUser;
-
+  //An asynchronous function that retrieves data from the /api/profile/${userId} endpoint.
   const fetchUserData = useCallback(async () => {
     try {
       setLoading(true);
@@ -43,12 +49,12 @@ const PublicProfile = () => {
   useEffect(() => {
     if (!permissionLoading) fetchUserData();
   }, [userId, permissionLoading, fetchUserData]);
-
+  //Triggers the detailed project view.
   const openProjectModal = (project) => {
     setSelectedProject(project);
     document.body.style.overflow = 'hidden';
   };
-
+  //Reverts the scroll behavior and clears the selectedProject state.
   const closeModal = () => {
     setSelectedProject(null);
     document.body.style.overflow = 'auto';
@@ -66,16 +72,12 @@ const PublicProfile = () => {
       <div className="profile-top-banner"></div>
 
       <div className="profile-main-content">
-        {error && (
-          <div style={{ background: '#ffe5e5', padding: 12, borderRadius: 8 }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="error-publicProfile">{error}</div>}
         <header className="profile-header-card">
           <div className="header-flex-container">
             <div className="profile-avatar-area">
               <img
-                src={profile?.profileImage || '/default-avatar.png'}
+                src={profile?.profileImage || defaultUserPic}
                 alt={profile?.username}
                 className="profile-img-main"
               />
@@ -160,14 +162,12 @@ const PublicProfile = () => {
         </section>
       </div>
 
-      {/* 2. שימוש בקומפוננטת ה-Popup המשותפת במקום ה-Portal המקומי */}
       {selectedProject && (
         <Popup
           project={selectedProject}
           onClose={closeModal}
           isLoggedIn={isLoggedIn}
           onUpdate={(updatedProject) => {
-            // עדכון הפרויקט ברשימה המקומית במידה ובוצע שינוי
             setUserProjects((prev) =>
               prev.map((p) =>
                 (p._id || p.id) === (updatedProject._id || updatedProject.id)

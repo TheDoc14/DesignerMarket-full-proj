@@ -1,4 +1,3 @@
-//src/Pages/systemManager/SystemDashboard.jsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
 import {
@@ -267,7 +266,7 @@ const SystemDashboard = () => {
                   dataKey="category"
                   axisLine={false}
                   tickLine={false}
-                  style={{ fontSize: '0.8rem', fontWeight: 'bold' }}
+                  className="XAxis"
                 />
                 <YAxis axisLine={false} tickLine={false} />
                 <Tooltip cursor={{ fill: 'transparent' }} />
@@ -312,7 +311,7 @@ const SystemDashboard = () => {
               זיהינו כי הקטגוריה <strong>{bestCategory}</strong> מובילה
               בביקושים.
             </p>
-            <p style={{ fontWeight: 'bold', marginTop: '10px' }}>
+            <p className="consult">
               פעולה נדרשת: פתח קמפיין שיווקי ממוקד למעצבים בתחום זה כדי להעלות
               את ה-AOV מעבר ל-₪{Number(aov) + 50}.
             </p>
@@ -320,17 +319,7 @@ const SystemDashboard = () => {
         </div>
       </div>
 
-      <footer
-        className="dashboard-footer-credits"
-        style={{
-          marginTop: '40px',
-          textAlign: 'center',
-          color: '#b2bec3',
-          fontSize: '0.9rem',
-          borderTop: '1px solid #eee',
-          padding: '20px',
-        }}
-      >
+      <footer className="dashboard-footer-credits">
         דוח זה הופק עבור Designer Market ע"י זאב ליידרמן ואיל דוקטורי.
       </footer>
     </div>

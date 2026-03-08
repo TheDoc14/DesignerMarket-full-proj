@@ -1,4 +1,3 @@
-//src/Pages/ProjectLibrary.jsx
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,23 +5,25 @@ import api from '../api/axios';
 import Popup from '../Components/Popup';
 import './PublicPages.css';
 import projectDefault from '../DefaultPics/projectDefault.png';
-import { usePermission } from '../Hooks/usePermission.jsx'; // ייבוא ה-Hook החדש
+import { usePermission } from '../Hooks/usePermission.jsx';
 
+/*
+ *The ProjectLibrary component serves as the central marketplace hub of the application.
+ *It provides a public-facing gallery where users can browse, search, and filter through published industrial design projects.
+ *The page is designed for high performance, utilizing server-side pagination and an interactive grid layout to showcase designer work.
+ */
 const ProjectLibrary = () => {
   const { user } = usePermission();
   const [projects, setProjects] = useState([]);
   const [displayList, setDisplayList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeProject, setActiveProject] = useState(null);
-  //const [users, setUsers] = useState([]); // State חדש לשמירת המשתמשים
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [meta, setMeta] = useState({ page: 1, totalPages: 1 });
   const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
-
-  // הסרנו את ה-state של usernames כי השמות כבר מגיעים בתוך הפרויקט
-
+  //An asynchronous function that queries the /api/projects endpoint
   const loadLibraryData = useCallback(async () => {
     try {
       setLoading(true);
@@ -43,8 +44,6 @@ const ProjectLibrary = () => {
 
       setMeta(res.data.meta || { page: 1, totalPages: 1 });
 
-      // אם השרת כבר מחזיר createdBy כאובייקט (populate) — זה יספיק:
-
       setProjects(allProjects);
 
       setDisplayList(allProjects);
@@ -54,8 +53,6 @@ const ProjectLibrary = () => {
       setLoading(false);
     }
   }, [currentPage, searchTerm]);
-
-  // הפעלה ראשונית של הטעינה המאוחדת
 
   useEffect(() => {
     loadLibraryData();
@@ -70,7 +67,7 @@ const ProjectLibrary = () => {
       result = result.filter(
         (p) =>
           p.title?.toLowerCase().includes(term) ||
-          p.creatorName?.toLowerCase().includes(term) // חיפוש לפי השם המוצלב
+          p.creatorName?.toLowerCase().includes(term)
       );
     }
 
@@ -84,7 +81,7 @@ const ProjectLibrary = () => {
 
     setDisplayList(result);
   }, [searchTerm, sortBy, projects]);
-
+  //A safety function that replaces broken image links with a local default asset to maintain a clean UI.
   const handleImageError = (e) => {
     e.target.onerror = null;
 
@@ -92,8 +89,6 @@ const ProjectLibrary = () => {
   };
 
   const getImageUrl = (project) => {
-    // בדיקה אם הפרויקט קיים למניעת קריסת ה-TypeError
-
     if (!project) return projectDefault;
 
     if (project.mainImageUrl) return project.mainImageUrl;
@@ -102,9 +97,10 @@ const ProjectLibrary = () => {
 
     return projectDefault;
   };
-
+  //A callback passed to the Popup.
+  //If a project is modified (e.g., an Admin edits it from the public view), the entire library reloads to ensure the displayed data is fresh.
   const handleProjectUpdate = (updatedProject) => {
-    loadLibraryData(); // רענון מלא כדי לוודא שמות עדכניים
+    loadLibraryData();
 
     setActiveProject(null);
   };
@@ -145,8 +141,6 @@ const ProjectLibrary = () => {
         <main className="projects-grid">
           {displayList.map((project, index) => (
             <article
-              // תיקון: שימוש ב-fallback ל-index כדי למנוע את שגיאת ה-Key בקונסול
-
               key={project._id || index}
               className="project-card"
               onClick={() => setActiveProject(project)}
@@ -183,13 +177,11 @@ const ProjectLibrary = () => {
                     </span>
                   </div>
 
-                  {/* ניתן להוסיף תנאי הרשאה לכפתור "צפה בפרטים" אם נרצה להגביל צפייה */}
-
                   <span className="view-btn">צפה בפרטים ←</span>
                 </div>
               </div>
 
-              {/* רכיב פגינציה לקטלוג הכללי */}
+              {/* Pagination*/}
 
               {meta.totalPages > 1 && (
                 <div className="pagination-container">
@@ -240,14 +232,12 @@ const ProjectLibrary = () => {
         </div>
       )}
 
-      {/* חפשי את החלק הזה בסוף הקומפוננטה ProjectLibrary */}
-
       {activeProject && (
         <Popup
           project={activeProject}
           onClose={() => setActiveProject(null)}
           onUpdate={handleProjectUpdate}
-          isLoggedIn={!!user} // שליחת בוליאן: אמת אם המשתמש מחובר
+          isLoggedIn={!!user}
         />
       )}
     </div>

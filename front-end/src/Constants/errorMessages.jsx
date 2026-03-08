@@ -1,8 +1,10 @@
-// src/Constants/errorMessages.js
-
+/*
+*The purpose of this file, specifically named ERROR_TRANSLATIONS, 
+is to provide a centralized error mapping and localization utility.
+ It acts as a bridge between technical system messages and user-friendly communication.
+*/
 export const ERROR_TRANSLATIONS = {
-  // === אימות והתחברות (Auth & JWT) ===
-  'Captcha token is required': 'נא לאמת שאינך רובוט (Captcha).',
+  // === Auth & JWT ===
   'Username is required': 'שם משתמש הוא שדה חובה.',
   'Username must be between 3 and 20 characters':
     'שם המשתמש חייב להכיל בין 3 ל-20 תווים.',
@@ -21,14 +23,14 @@ export const ERROR_TRANSLATIONS = {
   'Your account is awaiting admin approval.': 'חשבונך ממתין לאישור מנהל מערכת.',
   'User is already verified.': 'המשתמש כבר מאומת במערכת.',
 
-  // === ניהול תפקידים (RBAC) ===
+  // === RBAC ===
   'Role already exists.': 'תפקיד זה כבר קיים במערכת.',
   'Cannot delete role that is assigned to users.':
     'לא ניתן למחוק תפקיד שמשויך למשתמשים.',
   'Cannot delete system role.': 'לא ניתן למחוק תפקיד מערכת מובנה.',
   'Role not found.': 'התפקיד לא נמצא.',
 
-  // === קטגוריות (Categories) ===
+  // === Categories ===
   'Category already exists.': 'קטגוריה זו כבר קיימת.',
   'Category not found.': 'הקטגוריה לא נמצאה.',
   'key must be lowercase slug: a-z 0-9':
@@ -38,7 +40,7 @@ export const ERROR_TRANSLATIONS = {
   'Cannot delete category that is used by projects.':
     'לא ניתן למחוק קטגוריה שמשוייכת לפרויקטים קיימים.',
 
-  // === פרופיל ורישום (Profile & Signup) ===
+  // === Profile & Signup ===
   'Invalid credentials.': 'שם משתמש או סיסמה שגויים.',
   'User already exists with this email.': 'כבר קיים משתמש עם כתובת אימייל זו.',
   'Username already taken.': 'שם המשתמש כבר תפוס, נסה שם אחר.',
@@ -50,7 +52,7 @@ export const ERROR_TRANSLATIONS = {
   'Invalid birthDate format (expected ISO date).':
     'פורמט תאריך הלידה אינו תקין.',
 
-  // === פרויקטים וקבצים (Projects & Files) ===
+  // === Projects & Files ===
   'Project not found.': 'הפרויקט לא נמצא.',
   'Project ID is required.': 'מזהה פרויקט הוא שדה חובה.',
   'No files uploaded.': 'לא הועלו קבצים.',
@@ -60,7 +62,7 @@ export const ERROR_TRANSLATIONS = {
   'File too large.': 'הקובץ גדול מדי (עד 5MB).',
   'Too many files uploaded.': 'העלית יותר מדי קבצים בבת אחת.',
 
-  // === הזמנות ותשלומים (Orders & PayPal) ===
+  // === Orders & PayPal ===
   'Order not found.': 'ההזמנה לא נמצאה.',
   'Order already processed.': 'הזמנה זו כבר עובדה.',
   'You already have a pending order for this project.':
@@ -79,7 +81,7 @@ export const ERROR_TRANSLATIONS = {
   'Payment provider error (capture failed).': 'שגיאה באישור התשלום הסופי.',
   'Missing PayPal order id.': 'חסר מזהה הזמנה של PayPal.',
 
-  // === שגיאות בסיס נתונים ותשתית (Infra) ===
+  // === Infra & DB ===
   'Database connection failed.': 'שגיאה בחיבור לבסיס הנתונים.',
   'Database refused connection.': 'החיבור לבסיס הנתונים נדחה.',
   'Network communication error.': 'שגיאת תקשורת ברשת.',
@@ -100,22 +102,17 @@ export const ERROR_TRANSLATIONS = {
   // --- Routes ---
   'Route not found': 'הנתיב המבוקש לא נמצא בשרת.',
 
-  // === כללי ===
+  // === General ===
   'Internal Server Error': 'אירעה שגיאה פנימית בשרת, אנא נסו שוב מאוחר יותר.',
   'Access denied: insufficient permissions.':
     'אין לך הרשאות מתאימות לביצוע פעולה זו.',
   'Invalid request.': 'בקשה לא תקינה.',
 };
 
-/**
- * פונקציה המחזירה תרגום ידידותי להודעות השגיאה מהשרת
- */
+/*Function that returns friendly hebrew messages */
 export const getFriendlyError = (serverMsg, fallback = null) => {
-  // 0) אם הגיע כבר בעברית
   if (typeof serverMsg === 'string' && /[\u0590-\u05FF]/.test(serverMsg))
     return serverMsg;
-
-  // 1) אם אין הודעה מהשרת (Network / CORS / timeout)
   if (!serverMsg) {
     return (
       fallback ||
@@ -123,16 +120,13 @@ export const getFriendlyError = (serverMsg, fallback = null) => {
     );
   }
 
-  // 2) התאמה מדויקת
   if (ERROR_TRANSLATIONS[serverMsg]) return ERROR_TRANSLATIONS[serverMsg];
 
-  // 3) התאמה חלקית (כולל הבדלי רישיות)
   const translationKey = Object.keys(ERROR_TRANSLATIONS).find((key) =>
     serverMsg.toLowerCase().includes(key.toLowerCase())
   );
   if (translationKey) return ERROR_TRANSLATIONS[translationKey];
 
-  // 4) שגיאות נפוצות בפרודקשן שלא תמיד מגיעות אותו דבר
   const lower = serverMsg.toLowerCase();
 
   if (lower.includes('cors'))

@@ -1,28 +1,26 @@
-// /src/Hooks/usePermission.jsx
 import { useCallback } from 'react';
 import { useAuth } from '../Context/AuthContext';
 
 const ROLE_PERMISSIONS = {
   admin: ['*'],
   businessmanager: ['business.panel.access', 'stats.read'],
-
-  // ⚠️ התאמה לשמות האמיתיים בבאק:
-  designer: ['projects.create', 'projects.update', 'ai.consult', ],
-  student: ['projects.create','projects.update','ai.consult', ],
+  designer: ['projects.create', 'projects.update', 'ai.consult'],
+  student: ['projects.create', 'projects.update', 'ai.consult'],
   customer: [],
 };
 
+/*The usePermission hook is a core security utility used for Role-Based Access Control (RBAC) throughout the frontend application.
+ *It provides a simple, unified interface to determine whether the current authenticated user has the authority to view a specific UI
+ *element or perform a specific action.
+ */
+
 export const usePermission = () => {
   const { user } = useAuth();
-
+//This is the primary function returned by the hook. It follows a hierarchical "Water-Fall" logic to validate access:
   const hasPermission = useCallback(
     (permissionKey) => {
       if (!user) return false;
-
-      // אדמין הכל
       if (user.role === 'admin') return true;
-
-      // אם בעתיד השרת ישלח permissions
       if (
         Array.isArray(user.permissions) &&
         user.permissions.includes(permissionKey)
@@ -34,7 +32,6 @@ export const usePermission = () => {
 
       return permissionsForRole.includes(permissionKey);
     },
-    // ✅ התלות היא רק במשתמש. אז הפונקציה נשארת יציבה ולא נוצרת מחדש סתם.
     [user]
   );
 

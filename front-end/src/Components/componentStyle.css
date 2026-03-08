@@ -1,24 +1,18 @@
-/* /src/Components/componentStyle.css */
 :root {
   --teal-bg: #006D77;
-  /* הטורקיז שאהבת */
   --teal-accent: #83C5BE;
-  /* טורקיז בהיר להדגשות */
   --white-text: #ffffff;
   --sidebar-width: 300px;
 }
 
-/* --- Sidebar Container --- */
 .sidebar {
   position: fixed;
   top: 0;
   right: -300px;
-  /* מתחיל מחוץ למסך */
   width: var(--sidebar-width);
   height: 100vh;
   background-color: var(--teal-bg);
   transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  /* פתיחה חלקה */
   z-index: 2000;
   padding: 30px 20px;
   display: flex;
@@ -29,35 +23,9 @@
 
 .sidebar.open {
   right: 0;
-  /* מחליק פנימה */
-}
-
-/* כפתור X לסגירה */
-.close-btn {
-  align-self: flex-start;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: white;
-  font-size: 1.5rem;
-  cursor: pointer;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 30px;
-  transition: background 0.2s;
-}
-
-.close-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: #006D77;
 }
 
 
-
-/* --- שיפור הטקסט והאייקונים --- */
 .sidebar-item {
   color: var(--white-text) !important;
   text-decoration: none;
@@ -70,18 +38,15 @@
   align-items: center;
   gap: 15px;
   background: rgba(255, 255, 255, 0.05);
-  /* רקע עדין לכל פריט */
   transition: all 0.2s ease;
 }
 
 .sidebar-item:hover {
   background: rgba(255, 255, 255, 0.15);
   color: #006D77;
-
   transform: translateX(-5px);
 }
 
-/* כותרות סקציה (ניהול אדמין וכו') */
 .section-title {
   color: var(--teal-accent);
   font-size: 0.9rem;
@@ -93,10 +58,8 @@
   padding-bottom: 5px;
 }
 
-/* פריטי אדמין קטנים יותר ומסודרים */
 .admin-item {
   color: #e0f2f1 !important;
-  /* לבן-טורקיזי עדין */
   font-size: 1rem;
   padding: 10px 15px;
   display: flex;
@@ -109,12 +72,9 @@
   color: #006D77 !important;
 }
 
-/* --- כפתור התנתקות --- */
 .logout-btn-sidebar {
   margin-top: auto;
-  /* דוחף לתחתית */
   background: #83C5BE;
-  /* כחול בולט */
   color: white;
   border: none;
   padding: 15px;
@@ -128,7 +88,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
-/* שכבת Overlay כשהתפריט פתוח */
 .overlay {
   position: fixed;
   inset: 0;
@@ -137,7 +96,6 @@
   z-index: 1500;
 }
 
-/* --- Navbar Premium Layout --- */
 .navbar {
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(10px);
@@ -153,20 +111,26 @@
   padding: 0 30px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   direction: rtl;
-  /* מבטיח שהכל מתחיל מימין */
 }
 
 .navbar-fixed-part {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  /* דוחף הכל לימין */
   gap: 25px;
-  /* מרווח קבוע ונעים בין ההמבורגר, הלוגו והשם */
   width: 100%;
+  height: 70px;
+  padding: 0 20px;
+  box-sizing: border-box;
 }
 
-/* כפתור המבורגר (שלושת הפסים) */
+.navbar-fixed-part img {
+  max-height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
 .hamburger {
   background: none;
   border: none;
@@ -184,26 +148,22 @@
   background-color: #83c5bfb0;
 }
 
-/* לוגו בגודל אופטימלי */
 .logo-container {
   display: flex;
   align-items: center;
 }
 
 .logo-container img {
-  height: 60px;
-  /* גובה מדויק שלא משתלט אבל נראה ברור */
+  height: 70px;
   width: auto;
   object-fit: contain;
 }
 
-/* שלום שם משתמש */
 .user-greeting {
   font-size: 1.05rem;
   color: var(--teal-dark);
   font-weight: 500;
   white-space: nowrap;
-  /* מונע מהשם לרדת שורה */
 }
 
 .user-greeting strong {
@@ -212,7 +172,7 @@
 }
 
 /* =========================================
-   POPUP PREMIUM RE-DESIGN (Teal/Turquoise)
+   POPUP PREMIUM DESIGN (Teal/Turquoise)
    ========================================= */
 
 .popup-overlay {
@@ -239,28 +199,18 @@
   flex-direction: column;
 }
 
-/* מיכל גלילה פנימי */
-.popup-scroll-container {
-  padding: 30px;
-  overflow-y: auto;
-  flex: 1;
-}
 
-/* חלוקה ראשית: תמונה מצד אחד, מידע מצד שני */
 .popup-main-layout {
   display: flex;
   flex-direction: row-reverse;
-  /* לתצוגה נכונה בעברית */
   gap: 30px;
   margin-bottom: 30px;
   align-items: flex-start;
 }
 
-/* הגבלת התמונה - שלא תשתלט */
 .image-side {
   flex: 1;
   max-width: 400px;
-  /* הגבלה קשיחה */
 }
 
 .main-popup-img {
@@ -270,7 +220,6 @@
   object-fit: contain;
 }
 
-/* צד המידע - מרווח ויוקרתי */
 .info-side {
   flex: 1.2;
   display: flex;
@@ -299,8 +248,6 @@
   color: var(--teal-dark);
 }
 
-
-/* כפתורי מערכת בצבעי הטורקיז של ה-Navbar */
 .submit-review-btn,
 .edit-trigger-btn,
 .save-btn,
@@ -309,7 +256,10 @@
 .btn-cancel-project,
 .btn-save-project,
 .btn-save-review,
-.btn-cancel-review {
+.btn-cancel-review,
+.submit-review-btn,
+.edit-trigger-btn,
+.save-btn {
   background: var(--teal-gradient) !important;
   color: white;
   border: none;
@@ -329,12 +279,14 @@
 .btn-cancel-project:hover,
 .btn-save-project:hover,
 .btn-save-review:hover,
-.btn-cancel-review:hover {
+.btn-cancel-review:hover,
+.submit-review-btn:hover,
+.edit-trigger-btn:hover,
+.save-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 15px rgba(0, 109, 119, 0.3);
 }
 
-/* --- שיפור אזור התגובות --- */
 .reviews-section {
   border-top: 1px solid #edf2f2;
   padding-top: 25px;
@@ -353,7 +305,6 @@
   font-size: 1.1rem;
 }
 
-/* תיקון דירוג הכוכבים (ביטול הכחול המיותר) */
 .rating-select .star {
   font-size: 2rem;
   color: #dfe6e9;
@@ -372,18 +323,14 @@
   color: var(--teal-bg) !important;
 }
 
-/* כפתור ה-X */
 .close-btn {
   position: absolute;
   top: 20px;
   left: 20px;
-  /* הגדרת גודל שווה מבטיחה עיגול מושלם */
   width: 40px;
   height: 40px;
   padding: 0;
-  /* ביטול פדינג שמעוות את הצורה */
   border-radius: 50%;
-  /* הופך לריבוע לעיגול */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -396,31 +343,13 @@
 }
 
 .close-btn:hover {
-  background: #97260363;
-  color: var(--teal-primary);
+  background: var(--teal-primary);
+  color: white;
 }
 
-.submit-review-btn {
-  color: #ffffff !important;
-  background-color: #83C5BE;
-  align-self: flex-end;
-  margin-right: 10px;
-  margin-bottom: 30px;
-}
-
-.edit-trigger-btn {
-  color: #ffffff !important;
-  background-color: #83C5BE;
-  align-self: flex-end;
-  margin-right: 10px;
-  margin-bottom: 30px;
-}
-
-/* --- תיקון כפתורי עריכה (שמור וביטול) --- */
 .footer-actions {
   display: flex;
   justify-content: space-between;
-  /* דוחף שמור לימין וביטול לשמאל */
   align-items: center;
   width: 100%;
   margin-top: 20px;
@@ -431,7 +360,6 @@
 .cancel-btn {
   background: white !important;
   color: #ef4444 !important;
-  /* אדום עדין לביטול */
   border: 1px solid #fee2e2 !important;
   padding: 10px 20px;
   border-radius: 12px;
@@ -439,18 +367,7 @@
   cursor: pointer;
 }
 
-/* כפתור שמור - מיושר לימין */
-.save-btn {
-  background: var(--teal-gradient) !important;
-  color: var(--teal-bg) !important;
-  padding: 10px 25px;
-  border-radius: 12px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-}
 
-/* תיקון שדות קלט במצב עריכה */
 .edit-mode {
   display: flex;
   flex-direction: column;
@@ -473,23 +390,14 @@
   align-items: center;
 }
 
-
-
-
-
-/* האזור שאחראי על הגלילה */
 .popup-scroll-container {
   flex: 1;
-  /* לוקח את כל השטח הנותר בין ההדר לפוטר */
   overflow-y: auto;
-  /* מאפשר גלילה אנכית רק כאן */
   padding: 20px;
-  /* מראה פס גלילה נקי בדפדפנים מודרניים */
   scrollbar-width: thin;
   scrollbar-color: #008080 #f0f0f0;
 }
 
-/* עיצוב פס הגלילה ל-Chrome/Safari */
 .popup-scroll-container::-webkit-scrollbar {
   width: 6px;
 }
@@ -499,11 +407,8 @@
   border-radius: 10px;
 }
 
-
-
 .project-modal-content {
   flex: 1 1 auto !important;
-  /* תופס את כל השטח שנותר */
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
@@ -512,9 +417,6 @@
   background: white;
 }
 
-
-
-
 .ai-chat-messages {
   padding: 15px;
   display: flex;
@@ -522,45 +424,11 @@
   gap: 12px;
 }
 
-/* ביטול השפעות של ה-Overlay הישן שעלולות להפריע */
 .project-modal-overlay {
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-
-
-/* צד שמאל - תוכן הפרויקט */
-.project-modal-content {
-  flex: 1 1 0% !important;
-  /* יתפוס את כל מה שנשאר */
-  min-width: 0;
-  /* קריטי כדי שהתוכן לא יחרוג */
-  display: flex;
-  flex-direction: column;
-  background: white;
-}
-
-
-
-/* הקונטיינר של הגלילה בתוך הפופאפ - כאן נמצאות התגובות */
-.popup-scroll-container {
-  flex: 1;
-  overflow-y: auto;
-  /* זה יחזיר את הגלילה לתגובות */
-  padding: 25px;
-}
-
-/* תיקון לתמונה כדי שלא תתפרס מדי */
-.main-popup-img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 12px;
-}
-
-
-
 
 .chat-bubble.assistant {
   background-color: #f8fafc;
@@ -568,7 +436,6 @@
   align-self: flex-start;
   max-width: 90%;
   white-space: pre-wrap;
-  /* שומר על ירידות שורה של ה-AI */
   font-size: 0.9rem;
   line-height: 1.6;
 }
@@ -593,7 +460,6 @@
   margin: 0 auto;
 }
 
-/* מכולת התשלום - PayPal */
 .paypal-purchase-section {
   margin: 25px 0;
   padding: 20px;
@@ -613,20 +479,17 @@
   font-weight: 600;
 }
 
-/* התאמת כפתור הפייפאל למכולה */
 .paypal-button-container {
   width: 100%;
   max-width: 350px;
 }
 
-/* קו מפריד מעוצב בין סקציות */
 .popup-sections-divider {
   height: 1px;
   background: linear-gradient(to right, transparent, #eee, transparent);
   margin: 30px 0;
 }
 
-/* סקציית תגובות */
 .reviews-section {
   padding: 10px 5px;
 }
@@ -640,7 +503,6 @@
   gap: 8px;
 }
 
-/* טופס הוספת תגובה */
 .add-review-form {
   background: #f9fbfd;
   padding: 15px;
@@ -677,7 +539,6 @@
 .add-review-form textarea:focus {
   outline: none;
   border-color: #1abc9c;
-  /* צבע הטורקיז של הכפתורים שלך */
 }
 
 .submit-review-btn {
@@ -690,7 +551,6 @@
   cursor: pointer;
   transition: transform 0.2s, background-color 0.2s;
   float: left;
-  /* הצמדה לשמאל */
   margin-top: 10px;
 }
 
@@ -699,7 +559,6 @@
   transform: translateY(-1px);
 }
 
-/* כרטיס תגובה קיימת */
 .review-card {
   background: white;
   border-bottom: 1px solid #f0f0f0;
@@ -713,7 +572,6 @@
 .popup-main-wrapper {
   display: flex;
   flex-direction: row-reverse;
-  /* AI בצד ימין */
   width: 95vw;
   max-width: 1400px;
   height: 90vh;
@@ -721,7 +579,6 @@
   margin: auto;
 }
 
-/* --- רשימת תגובות (Reviews List) --- */
 .reviews-list {
   display: flex;
   flex-direction: column;
@@ -729,7 +586,6 @@
   margin-top: 20px;
 }
 
-/* כרטיסיית תגובה בודדת */
 .review-card {
   background: #ffffff;
   border: 1px solid #eef2f6;
@@ -743,7 +599,6 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* שורה עליונה: שם, דירוג וכפתורי ניהול */
 .review-top-row {
   display: flex;
   justify-content: space-between;
@@ -768,7 +623,6 @@
   font-size: 0.9rem;
 }
 
-/* כפתורי עריכה ומחיקה */
 .review-controls {
   display: flex;
   gap: 8px;
@@ -799,14 +653,12 @@
   color: #9b1c1c;
 }
 
-/* תוכן הטקסט של התגובה */
 .review-content {
   color: #4a5568;
   line-height: 1.6;
   font-size: 0.95rem;
   margin-bottom: 8px;
   white-space: pre-wrap;
-  /* שומר על ירידות שורה */
 }
 
 .review-timestamp {
@@ -814,7 +666,6 @@
   color: #a0aec0;
 }
 
-/* --- עיצוב מצב עריכה (Edit Mode) --- */
 .review-edit-form {
   display: flex;
   flex-direction: column;
@@ -872,13 +723,9 @@
   border-radius: 4px;
 }
 
-
-
-/* מבנה עמודות לעריכה */
 .edit-layout-columns {
   display: flex;
   flex-direction: row-reverse;
-  /* הופך את הסדר: טופס בימין, תמונה בשמאל */
   gap: 30px;
   align-items: flex-start;
   margin-bottom: 20px;
@@ -886,7 +733,6 @@
 
 .edit-fields-side {
   flex: 2;
-  /* הטופס יתפוס יותר מקום */
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -894,7 +740,6 @@
 
 .edit-image-side {
   flex: 1;
-  /* התמונה תתפוס פחות מקום */
   min-width: 200px;
 }
 
@@ -908,12 +753,10 @@
 .edit-image-preview {
   width: 100%;
   aspect-ratio: 1;
-  /* הופך אותה לריבועית ויפה */
   object-fit: cover;
   display: block;
 }
 
-/* כפתור החלפת תמונה שצף על התמונה */
 .change-image-btn-overlay {
   position: absolute;
   bottom: 0;
@@ -974,7 +817,6 @@
   padding: 20px;
   background: #fdfdfd;
   border: 1px dashed #006D77;
-  /* הצבע הטורקיז שלך */
   border-radius: 15px;
 }
 
@@ -1073,15 +915,12 @@
   border: 1px dashed #f59e0b;
 }
 
-/* המכולה שעוטפת את הכל - תיקון פריסה */
 .popup-main-container {
   display: flex !important;
   flex-direction: row-reverse !important;
-  /* AI בימין, תוכן בשמאל */
   width: 95vw;
   max-width: 1300px;
   height: 85vh;
-  /* גובה קבוע רק למסכים גדולים */
   margin: auto;
   background: white;
   border-radius: 24px;
@@ -1090,21 +929,8 @@
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
-
-
-/* אזור הגלילה הפנימי של הפרויקט */
-.popup-scroll-container {
-  flex: 1;
-  overflow-y: auto !important;
-  /* כאן קורית הגלילה של התגובות */
-  padding: 25px;
-}
-
-/* צד ימין - סוכן ה-AI */
-/* סיידבר ה-AI - כאן התיקון לרוחב */
 .ai-sidebar {
   flex: 0 0 350px !important;
-  /* רוחב קשיח של 350px - לא יגדל ולא יקטן */
   width: 350px !important;
   background: #fdfaff;
   border-left: 1px solid #eee;
@@ -1113,14 +939,12 @@
   height: 100%;
 }
 
-/* תיקון לגלילה בתוך הצ'אט */
 .ai-content-area {
   flex: 1;
   overflow-y: auto;
   padding: 15px;
 }
 
-/* --- רספונסיביות ותיקון גלילה במובייל --- */
 @media (max-width: 1050px) {
   .ai-sidebar {
     flex: 0 0 300px !important;
@@ -1131,13 +955,9 @@
 @media (max-width: 850px) {
   .popup-main-container {
     flex-direction: column !important;
-    /* אחד מעל השני */
     height: auto !important;
-    /* ביטול גובה קשיח - מאפשר גלילה של כל המודאל */
     max-height: 90vh;
-    /* מגביל את המודאל כדי שלא יברח מהמסך */
     overflow-y: auto;
-    /* מאפשר גלילה פנימית של כל המבנה */
     width: 98vw;
   }
 
@@ -1151,8 +971,132 @@
     flex: none !important;
     width: 100% !important;
     height: 400px !important;
-    /* גובה קבוע לסוכן במובייל */
     border-left: none;
     border-top: 2px solid #eee;
   }
+}
+
+.wrapper-accessibility {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 10001;
+  direction: rtl;
+}
+
+.button-accessibility {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.button-accessibility:hover {
+  transform: scale(1.1);
+}
+
+.option-accessibility {
+  position: absolute;
+  bottom: 60px;
+  left: 0;
+  width: 220px;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.close-btn-accessiblity {
+  padding: 10px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  color: #000000;
+  text-align: right;
+  font-weight: bold;
+  font-size: 14px;
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.btnStyle {
+  padding: 10px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #000000;
+  text-align: right;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.btnStyle:hover {
+  padding: 17px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #000000;
+  text-align: right;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.close-btn-accessiblity:hover {
+  padding: 17px;
+  cursor: pointer;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #000000;
+  text-align: right;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.small {
+  color: #ccc;
+}
+
+.files-note {
+  color: red;
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.purchased-message {
+  text-align: center;
+  padding: 20px;
+  color: #28a745;
+  font-weight: bold;
+  background-color: #e9f7ef;
+  border-radius: 8px;
+  border: 1px solid #28a745;
+}
+
+.pending-order-window.alert {
+  background-color: #fff3cd;
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.paypal-buttons {
+  table-layout: vertical;
+  shape-outside: rect;
+  height: 45;
 }

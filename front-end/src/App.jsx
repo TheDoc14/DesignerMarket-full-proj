@@ -17,7 +17,6 @@ import VerifyEmail from './Pages/VerifyEmail';
 import NotFound from './Pages/NotFound';
 import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
-import EditProject from './Pages/EditProject';
 import PublicProfile from './Pages/PublicProfile';
 import About from './Pages/About';
 
@@ -72,7 +71,6 @@ function App() {
                 />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/edit-project/:id" element={<EditProject />} />
                 <Route path="/profile/:userId" element={<PublicProfile />} />
                 <Route path="/about" element={<About />} />
 

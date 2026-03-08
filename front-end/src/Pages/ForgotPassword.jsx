@@ -1,16 +1,20 @@
-//src/Pages/ForgotPassword.jsx
 import { useState } from 'react';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3'; // שינוי פה
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import api from '../api/axios';
 import { Link } from 'react-router-dom';
 
+/*
+ *The ForgotPassword component is a critical security feature within the authentication module.
+ *it provides a secure way for users to regain access to their accounts if they have lost their credentials.
+ *The component integrates an invisible Google reCAPTCHA v3 layer to protect the "Reset Password" endpoint from automated bot attacks
+ *and brute-force attempts.
+ */
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // שימוש ב-Hook של v3
+  //This function is called immediately upon form submission. It assigns a "score" to the user's interaction in the background.
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   const handleSubmit = async (e) => {
@@ -26,15 +30,14 @@ const ForgotPassword = () => {
     setError('');
 
     try {
-      // יצירת טוקן של v3 עבור הפעולה הספציפית הזו
       const token = await executeRecaptcha('forgot_password');
 
       const res = await api.post('/api/auth/forgot-password', {
         email,
-        captchaToken: token, // הטוקן שנוצר אוטומטית ברקע
+        captchaToken: token,
       });
 
-      setMessage(res.data?.message || 'נשלח מייל לאיפוס סיסמה.');
+setMessage('אם האימייל קיים במערכת, נשלח לך לינק לאיפוס סיסמה.');
     } catch (err) {
       setError(
         err.friendlyMessage ||
@@ -58,7 +61,6 @@ const ForgotPassword = () => {
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-        {/* אין כאן יותר ReCAPTCHA ויזואלי! גוגל מציגה באדג' קטן בצד המסך */}
         <button type="submit" disabled={loading}>
           {loading ? 'שולח...' : 'שלח בקשה'}
         </button>
