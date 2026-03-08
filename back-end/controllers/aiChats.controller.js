@@ -12,35 +12,7 @@ const { getPaging, toSort } = require('../utils/query.utils');
 const Project = require('../models/Project.model');
 const Review = require('../models/Review.model');
 
-// ----------------------------------------------------
-// helpers
-// ----------------------------------------------------
-const isPubliclyReachableUrl = (url) => {
-  try {
-    if (!url) return false;
 
-    const str = String(url).trim();
-    if (!str) return false;
-
-    // רק http/https
-    if (!/^https?:\/\//i.test(str)) return false;
-
-    const u = new URL(str);
-    const host = (u.hostname || '').toLowerCase();
-
-    // חסימת localhost / loopback
-    if (host === 'localhost' || host === '127.0.0.1') return false;
-
-    // חסימת רשתות פנימיות נפוצות
-    if (/^10\./.test(host)) return false;
-    if (/^192\.168\./.test(host)) return false;
-    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return false;
-
-    return true;
-  } catch (_) {
-    return false;
-  }
-};
 
 // ----------------------------------------------------
 // Create Chat
@@ -128,11 +100,7 @@ const addMessageWithAI = async (req, res, next) => {
 
     // חשוב: נשלח baseUrl כדי לבנות image URLs תקינים
     const baseUrl = req.publicBaseUrl || process.env.PUBLIC_BASE_URL || '';
-    const { textContext, imageUrls, imageDataUrls } = await buildFullProjectContext({
-      project,
-      reviews,
-      baseUrl,
-    });
+    const { textContext, imageDataUrls } = await buildFullProjectContext({ project, reviews, baseUrl });
 
     const userMsg = await AiMessage.create({
       chatId,
@@ -159,13 +127,10 @@ const addMessageWithAI = async (req, res, next) => {
 
     // ----------------------------------------------------
     // NOTE:
-    // 1) Prefer data URLs (base64) for our images => no external fetch issues
-    // 2) Fallback to publicly reachable URLs
+    // Prefer base64 images (data URLs). If unavailable, do NOT send image URLs
+    // to avoid OpenAI download failures from our domain.
     // ----------------------------------------------------
-    const safeImageUrls =
-      Array.isArray(imageDataUrls) && imageDataUrls.length
-        ? imageDataUrls
-        : (imageUrls || []).filter(isPubliclyReachableUrl);
+    const safeImageUrls = Array.isArray(imageDataUrls) ? imageDataUrls : [];
 
     const input = toOpenAIMessages(history, systemText, userText, safeImageUrls);
 
