@@ -157,9 +157,15 @@ const AddProject = ({ project }) => {
       newFiles.forEach((file) => {
         data.append('files', file);
       });
-
-      alert('הפרויקט הועלה בהצלחה!');
-      navigate('/projects');
+      const response = await api.post('/api/projects', data, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+if (response.status === 201 || response.status === 200) {
+        alert('הפרויקט הועלה בהצלחה!');
+        navigate('/projects');
+      }
     } catch (err) {
       console.error('Upload error:', err.response?.data);
       setError(translateBackendError(err));

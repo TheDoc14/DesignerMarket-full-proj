@@ -37,7 +37,7 @@ const ForgotPassword = () => {
         captchaToken: token,
       });
 
-      setMessage(res.data?.message || 'נשלח מייל לאיפוס סיסמה.');
+setMessage('אם האימייל קיים במערכת, נשלח לך לינק לאיפוס סיסמה.');
     } catch (err) {
       setError(
         err.friendlyMessage ||

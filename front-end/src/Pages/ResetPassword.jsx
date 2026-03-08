@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import api from '../api/axios';
 import '../App.css';
 
@@ -15,6 +16,7 @@ const ResetPassword = () => {
   //Upon mounting, the component utilizes the useLocation hook to parse the browser's URL. It specifically looks for a ?token=... parameter.
   const queryParams = new URLSearchParams(location.search);
   const token = queryParams.get('token');
+   const { executeRecaptcha } = useGoogleReCaptcha();
 
   const [formData, setFormData] = useState({
     newPassword: '',
@@ -34,15 +36,21 @@ const ResetPassword = () => {
     if (formData.newPassword !== formData.confirmPassword) {
       return setError('הסיסמאות אינן תואמות');
     }
+     if (!executeRecaptcha) {
+      return setError('שירות האבטחה אינו זמין כרגע, נסה שוב');
+    }
 
     setLoading(true);
     setError('');
     setMessage('');
 
     try {
+            const captchaToken = await executeRecaptcha('reset_password');
+
       await api.post('/api/auth/reset-password', {
-        token,
+            token,
         newPassword: formData.newPassword,
+        captchaToken,
       });
 
       setMessage('הסיסמה שונתה בהצלחה! מועבר לעמוד ההתחברות...');

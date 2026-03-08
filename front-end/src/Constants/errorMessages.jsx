@@ -5,7 +5,6 @@ is to provide a centralized error mapping and localization utility.
 */
 export const ERROR_TRANSLATIONS = {
   // === Auth & JWT ===
-  'Captcha token is required': 'נא לאמת שאינך רובוט (Captcha).',
   'Username is required': 'שם משתמש הוא שדה חובה.',
   'Username must be between 3 and 20 characters':
     'שם המשתמש חייב להכיל בין 3 ל-20 תווים.',
