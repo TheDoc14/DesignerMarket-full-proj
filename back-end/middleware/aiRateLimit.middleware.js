@@ -1,13 +1,11 @@
 // back-end/middleware/aiRateLimit.middleware.js
-/**
- * aiRateLimit.middleware.js
- * מידלוור זה מיישם הגבלת קצב (Rate Limiting) ספציפית לנתיבי ה-AI שלנו, כדי למנוע שימוש יתר או התקפות DDoS על נקודות הקצה הרגישות של ה-AI.
- * הגבלת הקצב מוגדרת ל-10 בקשות לדקה לכל IP, מה שמאפשר שימוש סביר אך מונע עומס יתר על השרת.
- * ההגדרה כוללת גם הודעת שגיאה מותאמת שתוחזר כאשר משתמש חורג מהמגבלה, כדי לספק חווית משתמש טובה יותר.
- * המידלוור משתמש בחבילת express-rate-limit הפופולרית, שמטפלת בכל הלוגיקה של ספירת הבקשות והחזרת השגיאות בצורה יעילה ואמינה.
- * ניתן להוסיף את המידלוור הזה לנתיבי ה-AI שלנו ב-server.js, כך שכל בקשה לנתיבים אלו תעבור דרך הגבלת הקצב הזו.
- */
 const rateLimit = require('express-rate-limit');
+
+/*
+ * Limit the frequency of AI requests per IP before they reach the expensive AI pipeline.
+ * This middleware reduces abuse, accidental flooding, and denial-of-service style pressure
+ * on the consultation endpoints.
+ */
 
 const aiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute

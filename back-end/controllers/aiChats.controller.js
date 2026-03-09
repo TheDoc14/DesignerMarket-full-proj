@@ -15,6 +15,11 @@ const Review = require('../models/Review.model');
 // ----------------------------------------------------
 // Create Chat
 // ----------------------------------------------------
+/*
+ * Create a new AI consultation chat for a specific project.
+ * The backend verifies that the requested project is actually owned by the authenticated user,
+ * which prevents unauthorized users from opening private AI workspaces for projects they do not own.
+ */
 const createChat = async (req, res, next) => {
   try {
     const ownerId = req.user.id;
@@ -74,10 +79,16 @@ function toOpenAIMessages(historyMessages, systemText, userText, imageUrls) {
 }
 
 // ----------------------------------------------------
-// addMessageWithAI (השאר שלך, אבל שים לב לשני שינויים)
-// 1) project owner = createdBy
-// 2) reviews filter = projectId
+// addMessageWithAI
 // ----------------------------------------------------
+/*
+ * Main AI consultation pipeline.
+ * This function validates chat ownership, loads the related project and reviews,
+ * builds a rich context from project materials, stores the user's message,
+ * sends the request to the external AI provider, stores the assistant response,
+ * and records usage metrics for quota control and monitoring.
+ * It is designed as an end-to-end business process rather than a simple API proxy.
+ */
 const addMessageWithAI = async (req, res, next) => {
   const start = Date.now();
 
@@ -89,14 +100,13 @@ const addMessageWithAI = async (req, res, next) => {
     const chat = await AiChat.findOne({ _id: chatId, ownerId, deletedAt: null });
     if (!chat) throw new Error('Chat not found');
 
-    // ✅ אצלכם זה createdBy (לא owner)
     const project = await Project.findOne({ _id: chat.projectId, createdBy: ownerId }).lean();
     if (!project) throw new Error('Project not found or not owned by user');
 
-    // ✅ אצלכם Review מצביע על projectId
     const reviews = await Review.find({ projectId: project._id }).sort({ createdAt: -1 }).lean();
 
-    // חשוב: נשלח baseUrl כדי לבנות image URLs תקינים
+    // Build a combined project context from project data, uploaded materials, and user reviews
+    // so the AI response is based on the actual design artifact and not only on the latest question.
     const baseUrl = req.publicBaseUrl || process.env.PUBLIC_BASE_URL || '';
     const { textContext, imageDataUrls } = await buildFullProjectContext({
       project,
@@ -127,15 +137,14 @@ const addMessageWithAI = async (req, res, next) => {
         ? `הקשר פרויקט (כולל קבצים/ביקורות):\n${textContext}\n\nשאלת המשתמש:\n${content.trim()}`
         : `Project context (including files/reviews):\n${textContext}\n\nUser question:\n${content.trim()}`;
 
-    // ----------------------------------------------------
-    // NOTE:
-    // Prefer base64 images (data URLs). If unavailable, do NOT send image URLs
-    // to avoid OpenAI download failures from our domain.
-    // ----------------------------------------------------
+    // Prefer prepared image data only when available.
+    // This prevents failures caused by remote image fetching from the AI provider side.
     const safeImageUrls = Array.isArray(imageDataUrls) ? imageDataUrls : [];
 
     const input = toOpenAIMessages(history, systemText, userText, safeImageUrls);
 
+    // Send the fully prepared conversation payload to the external AI service.
+    // The request includes prior history, structured system guidance, project context, and safety identification.
     const safetyIdentifier = String(ownerId);
     const aiResult = await callDesignConsultationAI({
       messages: input,
@@ -154,6 +163,7 @@ const addMessageWithAI = async (req, res, next) => {
       latencyMs: Date.now() - start,
     });
 
+    // Persist usage metadata for quota tracking, monitoring, debugging, and future analytics.
     await AiUsageLog.create({
       userId: ownerId,
       chatId,

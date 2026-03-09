@@ -26,7 +26,13 @@ const {
   addMessageWithAI,
 } = require('../controllers/aiChats.controller');
 
+// ----------------------------------------------------
+// AI Chats Routes
+// ----------------------------------------------------
+
 // POST /api/ai-chats
+// יצירת שיחת AI חדשה עבור פרויקט ששייך למשתמש המחובר
+// רק משתמש עם הרשאת AI_CONSULT יכול ליצור שיחה
 router.post(
   '/',
   authMiddleware,
@@ -36,7 +42,9 @@ router.post(
   createChat
 );
 
-// GET /api/ai-chats?projectId=&page=&limit=&sortBy=&order=.
+// GET /api/ai-chats
+// שליפת כל שיחות ה-AI של המשתמש המחובר
+// מחזיר רק שיחות שלא סומנו כמחוקות
 router.get(
   '/',
   authMiddleware,
@@ -46,7 +54,9 @@ router.get(
   listMyChats
 );
 
-// GET /api/ai-chats/:chatId/messages?page=&limit=&sortBy=&order=
+// GET /api/ai-chats/:chatId/messages
+// שליפת כל ההודעות של שיחת AI מסוימת
+// מוודא שהשיחה שייכת למשתמש המחובר
 router.get(
   '/:chatId/messages',
   authMiddleware,
@@ -56,7 +66,9 @@ router.get(
   listChatMessages
 );
 
-// DELETE /api/ai-chats/:chatId (soft delete)
+// DELETE /api/ai-chats/:chatId
+// מחיקה לוגית של שיחת AI
+// השיחה לא נמחקת פיזית מה-DB אלא מסומנת כמחוקה
 router.delete(
   '/:chatId',
   authMiddleware,
@@ -67,6 +79,8 @@ router.delete(
 );
 
 // POST /api/ai-chats/:chatId/messages
+// שליחת הודעה חדשה ל-AI בתוך שיחה קיימת
+// כולל Rate Limit + מכסה יומית + בדיקות הרשאה ובעלות
 router.post(
   '/:chatId/messages',
   authMiddleware,

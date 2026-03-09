@@ -3,18 +3,21 @@ import { useState, useCallback, useEffect } from 'react';
 import api from '../api/axios';
 
 const QUOTA_STORAGE_KEY = 'aiQuotaCache';
-/*The useAiQuota hook is a specialized React custom hook designed to manage and track the usage limits for AI-powered features
- *(such as the AI Agent in the project popup). It handles data synchronization between the backend API,
- *the component state, and the browser's localStorage to ensure a consistent user experience even after page refreshes.
+/*
+ * This custom hook manages the client-side state of the AI usage quota.
+ * It synchronizes quota information between the backend API, React state,
+ * and localStorage so the user can see remaining AI usage even after refresh.
+ * The backend still remains the source of truth for quota enforcement.
  */
-
 export const useAiQuota = () => {
   const [aiQuota, setAiQuota] = useState({
     used: 0,
     limit: 20,
     remaining: 20,
   });
-  //Synchronizes the local state with the actual usage data stored on the server.
+
+  // Fetch the latest quota metadata from the backend and update the local cache.
+  // This keeps the user interface aligned with the real server-side usage counters.
   const fetchAiQuota = useCallback(async () => {
     try {
       const res = await api.get('/api/ai-chats');
@@ -45,7 +48,9 @@ export const useAiQuota = () => {
       return null;
     }
   }, []);
-  //Retrieves the most recent quota data from localStorage.
+
+  // Restore the most recent known quota snapshot from localStorage
+  // to improve responsiveness before the next server synchronization.
   const loadQuotaFromStorage = useCallback(() => {
     try {
       const cached = localStorage.getItem(QUOTA_STORAGE_KEY);
@@ -59,7 +64,9 @@ export const useAiQuota = () => {
     }
     return null;
   }, []);
-  //Manually reduces the remaining quota by 1.
+
+  // Optimistically decrease the local remaining quota after a successful AI request.
+  // This improves UX, while the backend still performs the actual quota validation.
   const decrementQuota = useCallback(() => {
     setAiQuota((prev) => {
       const updated = {

@@ -1,6 +1,13 @@
 //back-end/models/AiUsageLog.model.js
 const mongoose = require('mongoose');
 
+/*
+ * Audit and analytics log for AI usage.
+ * Each record stores operational metadata such as user, chat, project,
+ * latency, token usage, prompt size, response size, and success or failure outcome.
+ * This supports quota counting, monitoring, debugging, and future reporting.
+ */
+
 const aiUsageLogSchema = new mongoose.Schema(
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },

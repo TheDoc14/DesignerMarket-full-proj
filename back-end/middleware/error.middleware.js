@@ -180,6 +180,11 @@ const classifyError = (err, _req, _res, _next) => {
   // ===================================
   // =========== 🤖 AI / OpenAI =========
   // ===================================
+  /*
+   * Centralized mapping of AI-related failures to stable HTTP responses.
+   * This layer converts internal and provider-side AI errors into predictable API messages
+   * so the frontend can handle quota, timeout, provider, and chat-state failures consistently.
+   */
   else if (msg.includes('Daily AI limit reached')) {
     statusCode = 429;
     message = 'Daily AI limit reached.';
