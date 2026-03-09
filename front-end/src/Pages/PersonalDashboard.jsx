@@ -12,9 +12,9 @@ import { useSharedProject } from '../Hooks/useSharedProject.jsx';
 import './PublicPages.css';
 
 /*
- *The PersonalDashboard is a comprehensive user-centric hub that serves as the "My Account" area for all platform members.
- *It centralizes profile management, project history, financial settings, and AI-powered tools.
- *The dashboard dynamically adjusts its features based on the user's role (Designer, Student, or Customer) and granted permissions.
+ * The personal dashboard acts as the user's central workspace.
+ * In the AI consultation flow, it connects quota tracking, chat history,
+ * selected project context, and the popup-based AI interface into one screen.
  */
 const PersonalDashboard = () => {
   // --- Hooks & Auth ---
@@ -28,6 +28,8 @@ const PersonalDashboard = () => {
   const fileInputRef = useRef(null);
 
   // --- States ---
+  // Connect the dashboard to the reusable AI quota hook
+  // so the user can view and update AI usage state from one central page.
   const { aiQuota, setAiQuota, decrementQuota } = useAiQuota();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -66,7 +68,11 @@ const PersonalDashboard = () => {
     !userId || String(userId) === String(currentUser?.id || user?.id);
 
   // --- API Functions ---
-  //Retrieves past conversations with the AI agent. It parses the API's meta object to synchronize the daily usage quota.
+  /*
+   * Display the user's previous AI consultation sessions only when the user
+   * has the dedicated AI permission. Each history item can reopen the related
+   * project and restore the selected chat context inside the popup.
+   */
   const fetchMyAiHistory = useCallback(async () => {
     try {
       setHistoryLoading(true);
@@ -649,6 +655,8 @@ const PersonalDashboard = () => {
         </div>
       )}
 
+      {/* Open the project popup as the execution point of the AI consultation flow. */}
+      {/* The dashboard passes the current quota and a callback for post-AI quota updates. */}
       {selectedProject && (
         <Popup
           project={selectedProject}

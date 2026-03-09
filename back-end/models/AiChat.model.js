@@ -1,6 +1,12 @@
 // back-end/models/AiChat.model.js
 const mongoose = require('mongoose');
 
+/*
+ * Persistent chat session for AI consultations.
+ * Each chat belongs to one user and one project, stores the preferred language,
+ * and supports soft deletion so consultation history can be hidden without immediate physical removal.
+ */
+
 const aiChatSchema = new mongoose.Schema(
   {
     ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
