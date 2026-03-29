@@ -30,7 +30,7 @@ const PersonalDashboard = () => {
   // --- States ---
   // Connect the dashboard to the reusable AI quota hook
   // so the user can view and update AI usage state from one central page.
-  const { aiQuota, setAiQuota, decrementQuota } = useAiQuota();
+  const { aiQuota, setAiQuota, decrementQuota } = useAiQuota({ enabled: hasPermission('ai.consult') });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message] = useState({ type: '', text: '' });
