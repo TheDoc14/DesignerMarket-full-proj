@@ -27,10 +27,20 @@ const PersonalDashboard = () => {
   const { userId } = useParams();
   const fileInputRef = useRef(null);
 
+  // Admins have wildcard permissions so hasPermission('ai.consult') returns true
+  // for them, but the backend only serves AI quota to designer/student roles.
+  // isOwnProfile must also be true — admins viewing other profiles must not call it.
+  const isOwnProfile =
+    !userId || String(userId) === String(currentUser?.id || user?.id);
+  const canAccessAiFeature =
+    isOwnProfile &&
+    hasPermission('ai.consult') &&
+    currentUser?.role !== 'admin';
+
   // --- States ---
   // Connect the dashboard to the reusable AI quota hook
   // so the user can view and update AI usage state from one central page.
-  const { aiQuota, setAiQuota, decrementQuota } = useAiQuota({ enabled: hasPermission('ai.consult') });
+  const { aiQuota, setAiQuota, decrementQuota } = useAiQuota({ enabled: canAccessAiFeature });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message] = useState({ type: '', text: '' });
@@ -62,10 +72,6 @@ const PersonalDashboard = () => {
     },
     profileImage: null,
   });
-
-  // --- Logic Helpers ---
-  const isOwnProfile =
-    !userId || String(userId) === String(currentUser?.id || user?.id);
 
   // --- API Functions ---
   /*
@@ -220,22 +226,14 @@ const PersonalDashboard = () => {
   }, [user?.id, permissionLoading, fetchDashboardData]);
 
   useEffect(() => {
-    if (isOwnProfile && user?.id && !permissionLoading) {
-      const hasAiPermission = hasPermission('ai.consult');
-
-      if (hasAiPermission) {
+    if (user?.id && !permissionLoading) {
+      if (canAccessAiFeature) {
         fetchMyAiHistory();
       } else {
         setAiHistory([]);
       }
     }
-  }, [
-    isOwnProfile,
-    user?.id,
-    permissionLoading,
-    fetchMyAiHistory,
-    hasPermission,
-  ]);
+  }, [canAccessAiFeature, user?.id, permissionLoading, fetchMyAiHistory]);
 
   // --- Handlers ---
   const handleChange = (e) =>
