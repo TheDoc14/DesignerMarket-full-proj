@@ -9,7 +9,7 @@ const QUOTA_STORAGE_KEY = 'aiQuotaCache';
  * and localStorage so the user can see remaining AI usage even after refresh.
  * The backend still remains the source of truth for quota enforcement.
  */
-export const useAiQuota = () => {
+export const useAiQuota = ({ enabled = true } = {}) => {
   const [aiQuota, setAiQuota] = useState({
     used: 0,
     limit: 20,
@@ -19,6 +19,7 @@ export const useAiQuota = () => {
   // Fetch the latest quota metadata from the backend and update the local cache.
   // This keeps the user interface aligned with the real server-side usage counters.
   const fetchAiQuota = useCallback(async () => {
+    if (!enabled) return null;
     try {
       const res = await api.get('/api/ai-chats');
       const meta = res.data?.meta;
@@ -47,7 +48,7 @@ export const useAiQuota = () => {
       console.error('Failed to fetch quota:', err);
       return null;
     }
-  }, []);
+  }, [enabled]);
 
   // Restore the most recent known quota snapshot from localStorage
   // to improve responsiveness before the next server synchronization.
@@ -87,11 +88,12 @@ export const useAiQuota = () => {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     const cached = loadQuotaFromStorage();
     if (!cached) {
       fetchAiQuota();
     }
-  }, [fetchAiQuota, loadQuotaFromStorage]);
+  }, [enabled, fetchAiQuota, loadQuotaFromStorage]);
 
   return {
     aiQuota,

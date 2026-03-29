@@ -18,7 +18,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   const [orderStatus, setOrderStatus] = useState(null);
   const [categories, setCategories] = useState([]);
   //Tracks the remaining AI interactions available to the user via the useAiQuota hook.
-  const { aiQuota, fetchAiQuota, decrementQuota } = useAiQuota();
+  const { aiQuota, fetchAiQuota, decrementQuota } = useAiQuota({ enabled: hasPermission('ai.consult') });
 
   const navigate = useNavigate();
   //Tracks if the current user has a successful order for this project.
