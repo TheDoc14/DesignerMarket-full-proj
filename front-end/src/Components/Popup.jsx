@@ -55,6 +55,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [feedback] = useState({ type: '', msg: null });
+  const [pendingPaypalOrderId, setPendingPaypalOrderId] = useState(null);
   //Stores the conversation history for the AI chat session.
   const [aiMessages, setAiMessages] = useState([]);
   const [chatId, setChatId] = useState(null);
@@ -174,6 +175,57 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
       checkIfProjectPurchased();
     }
   }, [projectId, currentUserId, isLoggedIn, isOwner, checkIfProjectPurchased]);
+
+  // Pre-create the PayPal order as soon as the popup opens so the order ID is
+  // ready instantly when the user clicks the PayPal button.  Without this the
+  // browser blocks the popup because the async API calls inside createOrder
+  // break the "direct user-gesture" requirement.
+  useEffect(() => {
+    if (
+      !isLoggedIn ||
+      isOwner ||
+      alreadyPurchased ||
+      !projectId ||
+      !(project?.price > 0)
+    )
+      return;
+
+    let cancelled = false;
+
+    const preCreateOrder = async () => {
+      try {
+        const myOrders = await api.get(
+          `/api/orders/my?projectId=${projectId}`
+        );
+        const existing = (myOrders.data?.data || []).find((o) =>
+          ['CREATED', 'APPROVED'].includes(o.status)
+        );
+        if (existing) {
+          await api.post(`/api/orders/${existing.id}/cancel`);
+        }
+        const res = await api.post('/api/orders/paypal/create', { projectId });
+        if (!cancelled) {
+          setPendingPaypalOrderId(res.data.order.paypalOrderId);
+        }
+      } catch (err) {
+        if (err.response?.status === 409) {
+          const paypalId =
+            err.response.data?.details?.paypalOrderId ||
+            err.response.data?.paypalOrderId;
+          if (paypalId && !cancelled) {
+            setPendingPaypalOrderId(String(paypalId));
+            return;
+          }
+        }
+        console.error('PayPal pre-create failed:', err);
+      }
+    };
+
+    preCreateOrder();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, isLoggedIn, isOwner, alreadyPurchased, project?.price]);
 
   useEffect(() => {
     const fetchFullData = async () => {
@@ -841,41 +893,30 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
                        */}
                       <PayPalButtons
                         className="paypal-buttons"
-                        // Request a backend-managed PayPal order for the selected project.
-                        // The backend remains the source of truth for validation, pricing, and order lifecycle rules.
+                        // Return the pre-created order ID immediately so the
+                        // browser treats the popup as a direct result of the
+                        // click (avoids popup-blocked errors).
                         createOrder={async () => {
+                          if (pendingPaypalOrderId) {
+                            const orderId = pendingPaypalOrderId;
+                            // Clear so a second attempt triggers a fresh order.
+                            setPendingPaypalOrderId(null);
+                            return orderId;
+                          }
+                          // Fallback: order not ready yet — create inline.
                           try {
-                            const myOrders = await api.get(
-                              `/api/orders/my?projectId=${projectId}`
-                            );
-                            const existing = (myOrders.data?.data || []).find(
-                              (o) => ['CREATED', 'APPROVED'].includes(o.status)
-                            );
-
-                            if (existing) {
-                              await api.post(
-                                `/api/orders/${existing.id}/cancel`
-                              );
-                            }
-
                             const res = await api.post(
                               '/api/orders/paypal/create',
                               { projectId }
                             );
                             return res.data.order.paypalOrderId;
                           } catch (err) {
-                            console.error(
-                              'PayPal Flow Failed:',
-                              err.response?.data || err.message
-                            );
-
                             if (err.response?.status === 409) {
                               const paypalId =
                                 err.response.data?.details?.paypalOrderId ||
                                 err.response.data?.paypalOrderId;
                               if (paypalId) return String(paypalId);
                             }
-
                             window.alert(
                               'לא ניתן להתחיל בתשלום. נסה לרענן את הדף.'
                             );
