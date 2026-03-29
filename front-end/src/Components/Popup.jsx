@@ -2,7 +2,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../api/axios';
-import { PayPalButtons } from '@paypal/react-paypal-js';
 import './componentStyle.css';
 import { usePermission } from '../Hooks/usePermission.jsx';
 import { useAiQuota } from '../Hooks/useAiQuota.jsx';
@@ -56,6 +55,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [feedback] = useState({ type: '', msg: null });
   const [pendingPaypalOrderId, setPendingPaypalOrderId] = useState(null);
+  const [pendingApproveLink, setPendingApproveLink] = useState(null);
   //Stores the conversation history for the AI chat session.
   const [aiMessages, setAiMessages] = useState([]);
   const [chatId, setChatId] = useState(null);
@@ -176,56 +176,110 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
     }
   }, [projectId, currentUserId, isLoggedIn, isOwner, checkIfProjectPurchased]);
 
-  // Pre-create the PayPal order as soon as the popup opens so the order ID is
-  // ready instantly when the user clicks the PayPal button.  Without this the
-  // browser blocks the popup because the async API calls inside createOrder
-  // break the "direct user-gesture" requirement.
-  useEffect(() => {
-    if (
-      !isLoggedIn ||
-      isOwner ||
-      alreadyPurchased ||
-      !projectId ||
-      !(project?.price > 0)
-    )
+  // Prepare a PayPal order in the background as soon as the purchase section
+  // becomes visible.  Storing approveLink lets us call window.open() directly
+  // from our own <button> click handler — bypassing the cross-origin iframe
+  // restriction that causes Chrome to block PayPal's built-in popup.
+  const preCreatePaypalOrder = useCallback(async () => {
+    if (!isLoggedIn || isOwner || alreadyPurchased || !projectId || !(project?.price > 0))
       return;
-
-    let cancelled = false;
-
-    const preCreateOrder = async () => {
-      try {
-        const myOrders = await api.get(
-          `/api/orders/my?projectId=${projectId}`
-        );
-        const existing = (myOrders.data?.data || []).find((o) =>
-          ['CREATED', 'APPROVED'].includes(o.status)
-        );
-        if (existing) {
-          await api.post(`/api/orders/${existing.id}/cancel`);
-        }
-        const res = await api.post('/api/orders/paypal/create', { projectId });
-        if (!cancelled) {
-          setPendingPaypalOrderId(res.data.order.paypalOrderId);
-        }
-      } catch (err) {
-        if (err.response?.status === 409) {
-          const paypalId =
-            err.response.data?.details?.paypalOrderId ||
-            err.response.data?.paypalOrderId;
-          if (paypalId && !cancelled) {
-            setPendingPaypalOrderId(String(paypalId));
-            return;
-          }
-        }
-        console.error('PayPal pre-create failed:', err);
+    try {
+      const myOrders = await api.get(`/api/orders/my?projectId=${projectId}`);
+      const existing = (myOrders.data?.data || []).find((o) =>
+        ['CREATED', 'APPROVED'].includes(o.status)
+      );
+      if (existing) {
+        await api.post(`/api/orders/${existing.id}/cancel`);
       }
-    };
-
-    preCreateOrder();
-    return () => {
-      cancelled = true;
-    };
+      const res = await api.post('/api/orders/paypal/create', { projectId });
+      setPendingPaypalOrderId(res.data.order.paypalOrderId);
+      setPendingApproveLink(res.data.order.approveLink);
+    } catch (err) {
+      if (err.response?.status === 409) {
+        const paypalId =
+          err.response.data?.details?.paypalOrderId ||
+          err.response.data?.paypalOrderId;
+        if (paypalId) {
+          setPendingPaypalOrderId(String(paypalId));
+          return;
+        }
+      }
+      console.error('PayPal pre-create failed:', err);
+    }
   }, [projectId, isLoggedIn, isOwner, alreadyPurchased, project?.price]);
+
+  useEffect(() => {
+    preCreatePaypalOrder();
+  }, [preCreatePaypalOrder]);
+
+  // Open the PayPal checkout in a popup window directly from our own click
+  // handler.  window.open() called here (same-origin button, real DOM click)
+  // is always allowed by Chrome.  Once the popup navigates back to our domain
+  // after approval/cancellation we detect it, close the popup, and capture.
+  const handlePayPalClick = useCallback(() => {
+    if (!pendingApproveLink || !pendingPaypalOrderId) return;
+
+    const approveLink = pendingApproveLink;
+    const orderId = pendingPaypalOrderId;
+
+    setPendingApproveLink(null);
+    setPendingPaypalOrderId(null);
+
+    const popup = window.open(
+      approveLink,
+      'PayPalCheckout',
+      'width=568,height=750,scrollbars=yes,resizable=yes'
+    );
+
+    if (!popup) {
+      // Hard-blocked by an extension — fall back to full-page redirect.
+      window.location.href = approveLink;
+      return;
+    }
+
+    const poll = setInterval(async () => {
+      let href = '';
+      try {
+        // Readable only once the popup navigates to our own origin.
+        href = popup.location?.href || '';
+      } catch (_) {
+        // Still on paypal.com (cross-origin) — keep waiting.
+        return;
+      }
+
+      const approved = href.includes('/api/orders/paypal/return');
+      const canceled = href.includes('/api/orders/paypal/cancel');
+
+      if (!approved && !canceled && !popup.closed) return;
+
+      clearInterval(poll);
+      if (!popup.closed) popup.close();
+
+      if (canceled || popup.closed && !approved) {
+        // User canceled or closed without paying — refresh order for next try.
+        preCreatePaypalOrder();
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const res = await api.post('/api/orders/paypal/capture', {
+          paypalOrderId: orderId,
+        });
+        if (['PAID', 'PAYOUT_SENT'].includes(res.data.order.status)) {
+          window.alert('✅ הרכישה הושלמה בהצלחה!');
+          setTimeout(() => window.location.reload(), 1500);
+          return;
+        }
+      } catch (e) {
+        window.alert('שגיאה באישור התשלום');
+      } finally {
+        setLoading(false);
+      }
+
+      preCreatePaypalOrder();
+    }, 500);
+  }, [pendingApproveLink, pendingPaypalOrderId, preCreatePaypalOrder]);
 
   useEffect(() => {
     const fetchFullData = async () => {
@@ -891,63 +945,13 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
                        * payment capture, and seller payout are delegated to the backend.
                        * This keeps financial logic protected from client-side manipulation.
                        */}
-                      <PayPalButtons
+                      <button
                         className="paypal-buttons"
-                        // Return the pre-created order ID immediately so the
-                        // browser treats the popup as a direct result of the
-                        // click (avoids popup-blocked errors).
-                        createOrder={async () => {
-                          if (pendingPaypalOrderId) {
-                            const orderId = pendingPaypalOrderId;
-                            // Clear so a second attempt triggers a fresh order.
-                            setPendingPaypalOrderId(null);
-                            return orderId;
-                          }
-                          // Fallback: order not ready yet — create inline.
-                          try {
-                            const res = await api.post(
-                              '/api/orders/paypal/create',
-                              { projectId }
-                            );
-                            return res.data.order.paypalOrderId;
-                          } catch (err) {
-                            if (err.response?.status === 409) {
-                              const paypalId =
-                                err.response.data?.details?.paypalOrderId ||
-                                err.response.data?.paypalOrderId;
-                              if (paypalId) return String(paypalId);
-                            }
-                            window.alert(
-                              'לא ניתן להתחיל בתשלום. נסה לרענן את הדף.'
-                            );
-                            throw err;
-                          }
-                        }}
-                        // Finalize the payment only after PayPal approval.
-                        // The backend captures the payment, updates the internal order state,
-                        // and continues the payout flow to the seller.
-                        onApprove={async (data) => {
-                          try {
-                            setLoading(true);
-                            const res = await api.post(
-                              '/api/orders/paypal/capture',
-                              { paypalOrderId: data.orderID }
-                            );
-                            if (
-                              ['PAID', 'PAYOUT_SENT'].includes(
-                                res.data.order.status
-                              )
-                            ) {
-                              window.alert('✅ הרכישה הושלמה בהצלחה!');
-                              setTimeout(() => window.location.reload(), 1500);
-                            }
-                          } catch (e) {
-                            window.alert('שגיאה באישור התשלום');
-                          } finally {
-                            setLoading(false);
-                          }
-                        }}
-                      />
+                        onClick={handlePayPalClick}
+                        disabled={!pendingApproveLink || loading}
+                      >
+                        {pendingApproveLink ? 'שלם עם PayPal' : 'מאתחל תשלום...'}
+                      </button>
                     </div>
                   )}
                 </div>
