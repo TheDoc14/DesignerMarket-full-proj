@@ -17,8 +17,6 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   const { hasPermission, user: currentUser } = usePermission();
   const [orderStatus, setOrderStatus] = useState(null);
   const [categories, setCategories] = useState([]);
-  //Tracks the remaining AI interactions available to the user via the useAiQuota hook.
-  const { aiQuota, fetchAiQuota, decrementQuota } = useAiQuota({ enabled: hasPermission('ai.consult') });
 
   const navigate = useNavigate();
   //Tracks if the current user has a successful order for this project.
@@ -41,6 +39,9 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
   const isOwner = currentUserId && createdById && currentUserId === createdById;
   //Granted if the user is the owner and has the specific ai.consult permission.
   const canUseAi = isOwner && hasPermission('ai.consult');
+  //Tracks the remaining AI interactions available to the user via the useAiQuota hook.
+  //Enabled only for project owners with ai.consult — admins viewing other projects are excluded.
+  const { aiQuota, fetchAiQuota, decrementQuota } = useAiQuota({ enabled: canUseAi });
   const canEdit = isOwner || hasPermission('admin');
   const [reviews, setReviews] = useState([]);
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
@@ -338,7 +339,7 @@ const Popup = ({ project, onClose, onUpdate, isLoggedIn, onAiUpdate }) => {
     const initPopup = async () => {
       if (
         isLoggedIn &&
-        hasPermission('ai.consult') &&
+        canUseAi &&
         project &&
         !hasFetchedRef.current
       ) {
